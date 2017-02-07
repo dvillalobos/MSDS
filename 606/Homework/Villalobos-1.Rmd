@@ -199,16 +199,34 @@ Answer: The box plot suggest that the heart transplant increases the survival ra
 
 (c) What proportion of patients in the treatment group and what proportion of patients in the control group died?
 
-Answer: Where do I obtain the sample numbers from?
+Answer:
 
-Treatment Group:
+From the article we can find as follows:
 
-$$\frac{Treatment \: Dead}{Total \: Treatment}$$ 
+__Control Group__ 	
 
+alive = 4
 
-Control Group:
+dead = 30
 
-$$\frac{Control \: Dead}{Total \: Control}$$
+total control = 34
+	
+
+__Treatment Group__
+	
+
+alive = 24
+
+dead = 45
+
+treatment total = 69
+
+__Control Group died proportion:__
+
+$$\frac{Control \: Dead}{Total \: Control}=\frac{30}{34}$$
+__Treatment Group died proportion:__
+
+$$\frac{Treatment \: Dead}{Total \: Treatment}=\frac{45}{69}$$ 
 
 (d) One approach for investigating whether or not the treatment is effective is to use a randomization technique.
 
@@ -222,9 +240,9 @@ __HA__: We also have an alternative hypothesis that represents our research ques
 
 ii. The paragraph below describes the set up for such approach, if we were to do it without using statistical software. Fill in the blanks with a number or phrase, whichever is appropriate.
 
-Answer: "From the book I can't find the correct proportions; if I know the sample size, treatment and control numbers along with dead and survived I can complete the below model. But not sure of the numbers, once I know them I can run simulation."
+Answer: 
 
-We write alive on __BLANK__ cards representing patients who were alive at the end of the study, and dead __BLANK__ on cards representing patients who were not. Then, we shuffle these cards and split them into two groups: one group of size __BLANK__ representing treatment, and another group of size __BLANK__ representing control. We calculate the difference between the proportion of dead cards in the treatment and control groups (treatment - control) and record this value. We repeat this 100 times to build a distribution centered at __BLANK__. If this fraction is low, we conclude that it is unlikely to have observed such an outcome by chance and that the null hypothesis should be rejected in favor of the alternative.
+We write alive on $28$ cards representing patients who were alive at the end of the study, and dead on $75$ cards representing patients who were not. Then, we shuffle these cards and split them into two groups: one group of size $69$ representing treatment, and another group of size $34$ representing control. We calculate the difference between the proportion of dead cards in the treatment and control groups (treatment - control) and record this value. We repeat this 100 times to build a distribution centered at $\frac{45}{69}-\frac{30}{34} = -0.230179$. If this fraction is low, we conclude that it is unlikely to have observed such an outcome by chance and that the null hypothesis should be rejected in favor of the alternative.
 
 iii. What do the simulation results shown below suggest about the effectiveness of the transplant program?
 
