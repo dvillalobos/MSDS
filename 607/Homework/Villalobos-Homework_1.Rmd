@@ -1,0 +1,127 @@
+---
+title: "Homework Week 1"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "February 5, 2017"
+output:
+  html_document: default
+  pdf_document: default
+subtitle: CUNY MSDA DATA 607
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(htmlTable)
+```
+
+R Assignment - Basic Data Loading and Transformations
+ 
+Loading Data into a Data Frame
+
+Very often, we're tasked with taking data in one form and transforming it for easier downstream analysis.  We will spend several weeks in this course on tidying and transformation operations.  Some of this work could be done in SQL or R (or Python or...).  Here, you are asked to use R -you may use base functions or packages as you like.
+
+Mushrooms Dataset.  A famous-if slightly moldy-dataset about mushrooms can be found in the UCI repository here: https://archive.ics.uci.edu/ml/datasets/Mushroom.  The fact that this is such a well-known dataset in the data science community makes it a good dataset to use for comparative benchmarking.  For example, if someone was working to build a better decision tree algorithm (or other predictive classifier) to analyze categorical data, this dataset could be useful.  A typical problem (which is beyond the scope of this assignment!) is to answer the question, "Which other attribute or attributes are the best predictors of whether a particular mushroom is poisonous or edible?"
+
+Your task is to study the dataset and the associated description of the data (i.e. "data dictionary").  You may need to look around a bit, but it's there!  You should take the data, and create a data frame with a subset of the columns in the dataset.  You should include the column that indicates edible or poisonous and three or four other columns.  You should also add meaningful column names and replace the abbreviations used in the data-for example, in the
+appropriate column, "e" might become "edible."  Your deliverable is the R code to perform these transformation tasks.
+
+If you are working in a group, you also have the option of replacing the mushroom dataset in the assignment with a different data set that your group members might find more interesting.
+
+Please place your solution in to a single R Markdown (.Rmd) file and publish your solution out to rpubs.com.  You should post the .Rmd file in your GitHub repository, and provide the appropriate URLs to your GitHub repository and your rpubs.com file in your assignment link.  You should also have the original data file accessible through your code-for example, stored in a GitHub repository and referenced in your code. We'll look together at some of the most interesting student solutions in next week's meetup. 
+
+## Solution
+
+### Read data from url
+
+```{r read_url, warning=FALSE}
+url <- 'https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data'
+mushrooms <- read.table(url, sep=",", header=FALSE, stringsAsFactors = FALSE)
+head(mushrooms)
+```
+
+### Provide Column Names
+
+I have saved the dictionary from https://archive.ics.uci.edu/ml/machine-learning-databases/bridges/bridges.names in a Dictionary.txt file
+
+The file I have included into GitHub with the following link: https://raw.githubusercontent.com/dvillalobos/MSDA/master/607/Homework/Villalobos-Homework1-dictionary.txt
+
+```{r}
+file <- 'https://raw.githubusercontent.com/dvillalobos/MSDA/master/607/Homework/Villalobos-Homework1-dictionary.txt'
+mushroomsdict <- read.table(file, sep="|", header=TRUE, stringsAsFactors = FALSE)
+mushroomsdict
+```
+
+### Rename the Column Names for the Bridge data frame.
+
+```{r}
+colnames(mushrooms) <- mushroomsdict$Attribute
+head(mushrooms)
+```
+
+
+
+```{r, echo=FALSE, include=FALSE}
+# Setup for automatic transformation for classes columns for mclass
+
+mclassesdict <- mushroomsdict$Information[1]
+mclassesdict  <- strsplit(as.character(mclassesdict),',',fixed=TRUE)
+mclassesdict <- data.frame(mclassesdict)
+colnames(mclassesdict) <- mushroomsdict$Attribute[1]
+mclassesdict <- data.frame(do.call('rbind', strsplit(as.character(mclassesdict$class),'=',fixed=TRUE)))
+colnames(mclassesdict) <- c(mushroomsdict$Attribute[1], "Values")
+mclassesdict
+
+# Had to stop since I could not figure how to transform data in a cloumn based on other vector.
+```
+
+### Data transformation for the __class__ column
+```{r}
+# Data transformation for the class column
+mushroomsdict$Information[1]
+mushrooms$class[mushrooms$class == 'e'] <- 'edible'
+mushrooms$class[mushrooms$class == 'p'] <- 'poisonous'
+head(mushrooms)
+table(mushrooms$class)
+```
+
+### Data transformation for the __cap-surface__ column
+```{r}
+# Data transformation for the cap-surface column
+
+mushroomsdict$Information[3]
+mushrooms$`cap-surface`[mushrooms$`cap-surface` == 'f'] <- 'fibrous'
+mushrooms$`cap-surface`[mushrooms$`cap-surface` == 'g'] <- 'grooves'
+mushrooms$`cap-surface`[mushrooms$`cap-surface` == 'y'] <- 'scaly'
+mushrooms$`cap-surface`[mushrooms$`cap-surface` == 's'] <- 'smooth'
+head(mushrooms)
+table(mushrooms$`cap-surface`)
+```
+
+### Data transformation for the __bruises?__ column
+```{r}
+# Data transformation for the bruises? column
+
+mushroomsdict$Information[5]
+mushrooms$`bruises?`[mushrooms$`bruises?` == 't'] <- 'bruises'
+mushrooms$`bruises?`[mushrooms$`bruises?` == 'f'] <- 'no'
+head(mushrooms)
+table(mushrooms$`bruises?`)
+```
+
+### Data transformation for the __gill-size__ column
+```{r}
+# Data transformation for the gill-size column
+
+mushroomsdict$Information[9]
+mushrooms$`gill-size`[mushrooms$`gill-size` == 'b'] <- 'broad'
+mushrooms$`gill-size`[mushrooms$`gill-size` == 'n'] <- 'narrow'
+head(mushrooms)
+table(mushrooms$`gill-size`)
+```
+
+### Presenting the four columns only
+
+```{r cleanup, warning=FALSE}
+mush <- mushrooms[, c(1, 3, 5, 9)]
+tail(mush)
+```
+
