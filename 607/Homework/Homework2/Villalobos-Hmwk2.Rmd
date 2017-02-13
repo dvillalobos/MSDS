@@ -1,0 +1,123 @@
+---
+title: "Homework Week 2"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "February 12, 2017"
+output:
+  html_document: default
+  pdf_document: default
+subtitle: CUNY MSDA DATA 607
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(htmlTable)
+library(RMySQL)
+library(sqldf)
+```
+
+Assignment - SQL a nd R  
+
+Choose six recent popular movies.  Ask at least five people that you know (friends,  family,  classmates, imaginary friends) to rate each of these movie that they have seen on a scale of 1 to 5.  Take the results (observations) and store them in a SQL   database.  Load the information into an R dataframe. Your deliverables should include your SQL   scripts and your R Markdown code,  posted to GitHub. This is by design a very open ended assignment.  A variety of reasonable approaches are acceptable.  You can (and should) blank out your SQL   password if your solution requires it; otherwise,  full credit requires that your code is "reproducible,"  with the assumption that I have the same database server and R software. You may work in a small group.   
+
+
+## Solution
+
+### Need to type Local MySQL Root password
+```{r}
+# Need to type root password for the local database
+myLocalPassword <- 'pswrd'
+```
+
+### Connect to database
+```{r}
+# Connect to database
+my.database = dbConnect(MySQL(), user='root', password = myLocalPassword, dbname='villalobos-movies', host='localhost')
+dbListTables(my.database)
+```
+
+### Display Users Table
+```{r}
+# -- ----------------------------------------------
+# -- Table `users`
+# -- ----------------------------------------------
+my.users <- dbSendQuery(my.database, "SELECT * FROM tblUsers;")
+dbFetch(my.users)
+```
+
+### Display Movies Table
+```{r}
+# -- ----------------------------------------------
+# -- Table `movies`
+# -- ----------------------------------------------
+my.movies <- dbSendQuery(my.database, "SELECT * FROM tblmovies;")
+dbFetch(my.movies)
+```
+
+
+### Display Reviews Table Raw info
+```{r}
+# -- ----------------------------------------------
+# -- Table `reviewss`
+# -- ----------------------------------------------
+my.reviews <- dbSendQuery(my.database, "SELECT * FROM tblreviews;")
+dbFetch(my.reviews)
+```
+
+
+### Read data from MySQL all tables combined into one query
+```{r}
+movie.data = dbSendQuery(my.database, "SELECT 
+M.title As 'Title',
+M.lenght AS 'Lenght',
+U.fname As 'User',
+R.rating As 'Rating',
+R.review AS 'Review'
+FROM tblMovies AS M
+JOIN tblReviews AS R
+ON M.movie_id = R.movie_id
+JOIN tblUsers AS U
+ON U.user_id = R.user_id;")
+dbFetch(movie.data)
+```
+
+### Only one user who gave reviews
+```{r}
+movie.dataSingleUser = dbSendQuery(my.database, "SELECT 
+M.title As 'Title',
+M.lenght AS 'Lenght',
+U.fname As 'User',
+R.rating As 'Rating',
+R.review AS 'Review'
+FROM tblMovies AS M
+JOIN tblReviews AS R
+ON M.movie_id = R.movie_id
+JOIN tblUsers AS U
+ON U.user_id = R.user_id
+WHERE U.user_id = 1;")
+dbFetch(movie.dataSingleUser)
+```
+
+### Only one Rating score
+```{r}
+movie.dataRating = dbSendQuery(my.database, "SELECT 
+M.title As 'Title',
+M.lenght AS 'Lenght',
+U.fname As 'User',
+R.rating As 'Rating',
+R.review AS 'Review'
+FROM tblMovies AS M
+JOIN tblReviews AS R
+ON M.movie_id = R.movie_id
+JOIN tblUsers AS U
+ON U.user_id = R.user_id
+WHERE R.rating = 5;")
+dbFetch(movie.dataRating)
+```
+
+### Database disconnect
+```{r}
+### Disconnect
+#dbGetQuery(my.database, "show processlist")
+#dbGetQuery(my.database, "kill 14")
+```
+
