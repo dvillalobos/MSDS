@@ -10,6 +10,8 @@ subtitle: CUNY MSDA - IS606 - Homework 2
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+# install.packages('VennDiagram')
+library(VennDiagram)
 ```
 
 
@@ -22,210 +24,417 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### 2.6 Dice rolls.
 
-Based on a probability distribution table; we have as follows:
+#### (a) getting a sum of 1?
+
+Let's build a probability table
 
 ```{r}
-dice_2_sum <- c(2,3,4,5,6,7,8,9,10,11,12)
-diece_prb <- c(1/36,2/36,3/36,4/36,5/36,6/36,5/36,4/36,3/36,2/36,1/36)
-prob <- data.frame(dice_2_sum,diece_prb)
-prob
+# Dice 1 Sample space
+dice1 <- c(1,2,3,4,5,6)
+Pdice1 <- c(1/6,1/6,1/6,1/6,1/6,1/6)
+# Dice 2 sample space
+dice2 <- c(1,2,3,4,5,6)
+Pdice2 <- c(1/6,1/6,1/6,1/6,1/6,1/6)
+# Possible outcomes sums
+dsums <- c(2,3,4,5,6,7,8,9,10,11,12)
+# Let's calculate the probabilities for each sum
+P <- c(1/36, 2/36, 3/36, 4/36, 5/36, 6/36, 5/36, 4/36, 3/36, 2/36, 1/36)
+# Let's build the table
+dicef <- data.frame(dsums, P)
+names(dicef) <- c("Sums", "Probability")
+dicef
 ```
 
+Based on the possibilities, there's no possible way to obtain a sum of 1, since none of the faces on the dice has a value of zero.
 
-If you roll a pair of fair dice, what is the probability of
+Hence: P(X+Y =0) = 0.
 
-##### (a) getting a sum of 1?
+#### (b) getting a sum of 5?
 
-P(X=0) = 0
+For this, we have different possibilities:
 
-The probability of having a sum of 5 is 0%.
+Let's say X represent the first die and Y the second die.
 
-##### (b) getting a sum of 5?
+The possible outcomes will be as follows:
 
-P(X=5) = 4/36.
+Outcome 1 = P(X=1) \* P(Y=4) = 1/6 \* 1/6 = 1/36
 
-The probability of having a sum of 5 is 11.11%.
+Outcome 2 = P(X=2) \* P(Y=3) = 1/6 \* 1/6 = 1/36
 
-##### (c) getting a sum of 12?
+Outcome 3 = P(X=3) \* P(Y=2) = 1/6 \* 1/6 = 1/36
 
-P(X=12) = 1/36
+Outcome 4 = P(X=4) \* P(Y=1) = 1/6 \* 1/6 = 1/36
 
-The probability of having a sum of 5 is 2.78%.
+There are 4 possible ways to obtain a sum of 5.
+
+P(X+Y = 5) = Outcome 1 + Outcome 2 + Outcome 3 + Outcome 4
+
+P(X+Y = 5) = 1/36 +  1/36 +  1/36 +  1/36
+
+P(X+Y = 5) = 4/36
+
+#### (c) getting a sum of 12?
+
+For this, we have different possibilities:
+
+Let's say X represent the first die and Y the second die.
+
+The possible outcomes will be as follows:
+
+Outcome 1 = P(X=6) \* P(Y=6) = 1/6 \* 1/6 = 1/36
+
+P(X+Y = 1) = 1/36
+
 
 ### 2.8 Poverty and language.
 
-##### (a) Are living below the poverty line and speaking a foreign language at home disjoint?
+Let's define as follows:
 
-No. They are not disjoint.
+A: Americans living below the poverty line.
 
-##### (b) Draw a Venn diagram summarizing the variables and their associated probabilities.
+F: Speak a language other than English (foreign language) at home.
 
-```{r, warning=FALSE, echo=FALSE}
-# install.packages('VennDiagram')
-library(VennDiagram)
+P(A) = 14.6% = 0.146
+
+P(F) = 20.7% = 0.207
+
+P(A and F) = 4.2% = 0.042
+
+#### (a) Are living below the poverty line and speaking a foreign language at home disjoint?
+
+No, they are not disjoint since both are happening mutually.
+
+#### (b) Draw a Venn diagram summarizing the variables and their associated probabilities.
+
+```{r, warning=FALSE, echo=FALSE, error=FALSE}
 grid.newpage()
-draw.pairwise.venn(14.6, 20.7, 4.2, category = c("Americans live below
-the poverty line", "Speak a language other than English"), lty = rep("blank", 
+draw.pairwise.venn(20.7, 14.6, 4.2, category = c("Speak a language other than English (foreign language) at home.", "Americans living below the poverty line."), lty = rep("blank", 
     2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 
     0), cat.dist = rep(0.025, 2))
 ```
 
-##### (c) What percent of Americans live below the poverty line and only speak English at home?
+#### (c) What percent of Americans live below the poverty line and only speak English at home?
 
-P(A live poverty | Only English at home) = P(A live poverty) - P(Speak other Language and A live poverty)
+P(A and Speak English at Home) = P(A) - P(A and F)
 
-P(A live poverty | Only English at home) = 14.6 - 4.2
+P(A and Speak English at Home) = 0.146 - 0.042
 
-P(A live poverty | Only English at home) = 10.4
+P(A and Speak English at Home) = 0.104
 
-Answer: 10.4% of Americans live below the poverty line and only speak English at home.
+Answer: The percent of Americans live below the poverty line and only speak English at home is 10.4%
 
-###### (d) What percent of Americans live below the poverty line or speak a foreign language at home?
+#### (d) What percent of Americans live below the poverty line or speak a foreign language at home?
 
-P(A live poverty OR foreign at home) = P(A live poverty) + P(Speak other Language) - P(A live poverty and speak other language)
+P(A or F) = P(A) + P(F) - P(A and F)
 
-P(A live poverty | or foreign at home) = 14.6 + 20.7 - 4.2
+P(A or F) = 0.146 +  0.207 - 0.042
 
-P(A live poverty |  or foreign at home) = 31.1
+P(A or F) = 0.311
 
-Answer: 31.1% of Americans live below the poverty line or speak a foreign language at home.
+Answer: The percent of Americans live below the poverty line or speak a foreign language at home is 31.1%
 
-##### (e) What percent of Americans live above the poverty line and only speak English at home?
+#### (e) What percent of Americans live above the poverty line and only speak English at home?
 
-P(Above poverty line) = 1 - (P(Speak other language) + P(A live poverty) - P(intersection))
+AC: Complement of A
 
-```{r}
-100 - (20.7 + 14.6 - 4.2)
-```
+FC: Complement of C
 
-Answer: 68.9% of Americans live above the poverty line and only speak English at home.
+P(AC and FC) = 1 - (P(A) + P(F) - P(A and F))
 
-##### (f) Is the event that someone lives below the poverty line independent of the event that the person speaks a foreign language at home?
+P(AC and FC) = 1 - 0.311
 
-Not independent.
+P(AC and FC) = 0.689
 
-P(A live poverty and Speak other language) $\neq$ P(A live poverty and Speak) x P(Speak other language)
+Answer: The percent of Americans live above the poverty line and only speak English at home is 68.9%
+
+#### (f) Is the event that someone lives below the poverty line independent of the event that the person speaks a foreign language at home?
+
+Let's build our independence condition:
+
+P(A and F) = P(A) \* P(F)
+
+0.042 = 0.146 \* 0.207
+
+Since $0.042 \ne 0.030$
+
+We conclude that these events a not independent, since the independency multiplication rule is not satisfied.
 
 ### 2.20 Assortative mating.
 
-##### (a) What is the probability that a randomly chosen male respondent or his partner has blue eyes?
+#### (a) What is the probability that a randomly chosen male respondent or his partner has blue eyes?
 
-F = Female Blue, M = Male Blue
+By applying the general addition rule:
 
-P (F) = 108 / 204 = 0.5294
+P(M_Blue or F_Blue) = P(M_Blue) + P(F_Blue) - P(M_Blue and F_Blue)
 
-P (M) = 114 / 204 = 0.5588
+P(M_Blue or F_Blue) = 108/204 + 114/204 - 78/204
 
-P (M $\cap$ F) = 78/204 = 0.38235
+P(M_Blue or F_Blue) = 0.7059
 
-P (M $\cup$ F) = P (M) + P (F) - P (M $\cap$ F) = 108/204 + 114/204 - 78/ 204 = 144/204 = 0.7059
+Answer: The probability that a randomly chosen male respondent or his partner has blue eyes is 70.59%.
 
-Answer: The probability will be 70.59%
+#### (b) What is the probability that a randomly chosen male respondent with blue eyes has a partner with blue eyes?
 
-##### (b) What is the probability that a randomly chosen male respondent with blue eyes has a partner with blue eyes?
+P(F_Blue | M_Blue) = P(F_Blue and M_Blue) / P(M_Blue)
 
- P (F|M) = P (F $\cap$ M) / P (M) = (78 / 204) / (114 / 204) = 0.6842
+P(F_Blue | M_Blue) = (78/204) / (114 / 204)
 
-Answer: the probability that a randomly chosen male respondent with blue eyes has a partner with blue eyes is 68.42%.
+P(F_Blue | M_Blue) = 0.6842
 
-##### (c) What is the probability that a randomly chosen male respondent with brown eyes has a partner with blue eyes? What about the probability of a randomly chosen male respondent with green eyes having a partner with blue eyes?
+Answer: The probability that a randomly chosen male respondent with blue eyes has a partner with blue eyes is 68.42%
 
-P (Female Blue Eyes | Male Brown Eyes) = $\frac{19}{54} = 0.3519$
-P (Female Blue Eyes | Male Green Eyes) = $\frac{11}{36} = 0.3056$
+#### (c) What is the probability that a randomly chosen male respondent with brown eyes has a partner with blue eyes? What about the probability of a randomly chosen male respondent with green eyes having a partner with blue eyes?
 
-##### (d) Does it appear that the eye colors of male respondents and their partners are independent? Explain your reasoning.
+P(F_Blue | M_Brown) = P(F_Blue and M_Brown) / P(M_Brown)
 
-The events are not independent because the probabilities are not the same.
+P(F_Blue | M_Brown) = (23/204) / (54/204)
 
-If we analize as follows: P (Female Blue | Male Blue) 78 / 114 does not equal P (Female Blue) 108 / 204.
+P(F_Blue | M_Brown) = 0.4259
 
-We can conclude that Probability of blue male and female eyes are not equal to female blue eyes, hense are not independent.
+Answer: The probability that a randomly chosen male respondent with brown eyes has a partner with blue eye is 42.59%
 
-### 2.30 Books on a bookshelf
+P(F_Blue | M_Green) = P(F_Blue and M_Green) / P(M_Green)
 
-##### (a) Find the probability of drawing a hardcover book first then a paperback fiction book second when drawing without replacement.
+P(F_Blue | M_Green) = (13/204) / (36/204)
 
-Lets define:
+P(F_Blue | M_Green) = 0.3611
 
-H: Hardcover
+Answer: The probability of a randomly chosen male respondent with green eyes having a partner with blue eyes is 36.11%
 
-P: Paperback
+#### (d) Does it appear that the eye colors of male respondents and their partners are independent? Explain your reasoning.
 
-Probability for Hardcover = $\frac{28}{95}$
+Let's build our independence condition:
 
-Probability for Paperback (w/o replacement) = $\frac{59}{94}$
+P(M_Blue and F_Blue) = P(M_Blue) \* P(F_Blue)
 
-P = P(H) * P(P)
+(78/204) = (114/204) \* (108/204)
 
-```{r}
-round(28/95 * 59/94,4)
-```
+Since $0.3824 \ne 0.2958$
 
-Answer: the probability of drawing a hardcover book first then a paperback fiction book second when drawing without replacement is 18.50%
+We conclude that these events a not independent, since the independency multiplication rule is not satisfied.
 
-##### (b) Determine the probability of drawing a fiction book first and then a hardcover book second, when drawing without replacement.
+### 2.30 Books on a bookshelf.
 
-Probability for Fiction = $\frac{72}{95}$
+#### (a) Find the probability of drawing a hardcover book first then a paperback fiction book second when drawing without replacement.
 
-Probability of hardcover fiction (w/o replacement) = $\frac{28}{94}$
+P(First H and Second being P_fiction) = P(First H) \* P(Second being P_fiction) 
 
-```{r}
-round(72/95 * 28/94,4)
-```
+P(First H and Second being P_fiction) = (28/95) \* (59/94)
 
-Answer: The probability of drawing a fiction book first and then a hardcover book second, when drawing without replacement is 22.58%
+P(First H and Second being P_fiction) = = 0.185
 
-##### (c) Calculate the probability of the scenario in part (b), except this time complete the calculations under the scenario where the first book is placed back on the bookcase before randomly drawing the second book.
+Answer: The probability of drawing a hardcover book first then a paperback fiction book second when drawing without replacement is 18.5%
 
-Probability for Fiction = $\frac{72}{95}$
+#### (b) Determine the probability of drawing a fiction book first and then a hardcover book second, when drawing without replacement.
 
-Probability of hardcover fiction with replacement:
+P(Fiction and second being H) = P(Fiction) \* P(second being H)
 
-P(Hardcover) = $\frac{28}{95}$
+P(Fiction and second being H) = (72/95) \* (28/94)
 
-```{r}
-round(72/95 * 28/95,4)
-```
+P(Fiction and second being H) = 0.2258
 
-Answer: 22.34% with replacement.
+Answer: The the probability of drawing a fiction book first and then a hardcover book second, when drawing without replacement is 22.58%
 
-(d) The final answers to parts (b) and (c) are very similar. Explain why this is the case.
+#### (c) Calculate the probability of the scenario in part (b), except this time complete the calculations  under the scenario where the first book is placed back on the bookcase before randomly drawing the second book.
 
-The answers are very similar due the "high" number of books, one book does not make a big difference when we replace it or not.
+P(Fiction and second being H) = P(Fiction) \* P(second being H)
+
+P(Fiction and second being H) = (72/95) \* (28/95)
+
+P(Fiction and second being H) = 0.2234
+
+Answer: The probability of drawing a fiction book first and then a hardcover book second, when drawing with replacement is 22.34%
+
+#### (d) The final answers to parts (b) and (c) are very similar. Explain why this is the case.
+
+Answer: In this case the answers are very similar, this is because when the possible events are considerable large, the outcome will not be affected by much when there's no replacement in random drawings.
 
 ### 2.38 Baggage fees.
 
-##### (a) Build a probability model, compute the average revenue per passenger, and compute the corresponding standard deviation.
+#### (a) Build a probability model, compute the average revenue per passenger, and compute the corresponding standard deviation.
+
+```{r}
+# Number of bags
+bags <- c(0, 1, 2)
+# Fees charges for o pieces of luggage in dollars
+Luggage_0 <- 0
+# Fees charges for 1st luggage in dollars
+Luggage_1 <- 25
+# Fees charges for 2nd luggage in dollars
+Luggage_2 <- Luggage_1 + 35
+
+# Baggage fees table
+baggage_fees <- c(Luggage_0,Luggage_1,Luggage_2)
+
+# Percentage of passangers that check baggage in decimal form
+baggage_percent_per_pax <- c(0.54, 0.34, 0.12)
+
+# Find Expected value for each x_i
+E_revenue <- baggage_fees * baggage_percent_per_pax
+
+# Find the overall Expected value AKA mu
+Ex <- sum(E_revenue)
+
+# Expected Revenue per passenger
+Ex
+
+# Create mu collumn
+mu <- c(Ex, Ex, Ex)
+
+# Create data frame
+baggage <- data.frame(bags, baggage_fees, baggage_percent_per_pax)
+
+# Find  The variance_i of x_i and mu
+baggage_variance <- baggage_fees - Ex
+
+# Calculate the Variance^2 and P(X=x_i)
+baggage_EVariance <- baggage_variance^2 * baggage_percent_per_pax
+
+# Create visual representation of the table
+baggage <- cbind(baggage, E_revenue, mu, baggage_variance, baggage_variance^2,  baggage_EVariance)
+
+# Name columns for the baggage data frame
+names(baggage) <- c("bags", "x_i", "P(X=x_i)", "E(X_i)", "mu", "Variance", "Variance^2", "Variance^2*P(X=x_i)")
+
+# View Table
+baggage
+
+# Find the overall value for the Variance^2
+Variance2 <- sum(baggage_EVariance)
+
+# Print the overall Variance
+# Variance2
+
+# Find the standard deviation by calculating the square root of the variance
+sd <- Variance2^(1/2)
+
+# Prinr the standard deviation
+sd
+```
+
+#### (b) About how much revenue should the airline expect for a flight of 120 passengers? With what standard deviation? Note any assumptions you make and if you think they are justified.
 
 
 ```{r}
-prob <- c(0.54, 0.34, 0.12)
+# Number of bags
 bags <- c(0, 1, 2)
-fees <- c(0, 25, 25 + 35)
-my.data  <- data.frame(bags, fees, prob)
+# Fees charges for o pieces of luggage in dollars
+Luggage_0 <- 0
+# Fees charges for 1st luggage in dollars
+Luggage_1 <- 25
+# Fees charges for 2nd luggage in dollars
+Luggage_2 <- Luggage_1 + 35
 
-# Run a calculation for the revenue
-my.data$Rev <-my.data$prob * my.data$fees
-my.data 
+# Baggage fees table
+baggage_fees <- c(Luggage_0,Luggage_1,Luggage_2)
 
-# Find the average revenue per passenger
-avgRevPerPax <- sum(my.data$Rev)
-avgRevPerPax
+# Percentage of passangers that check baggage in decimal form
+baggage_percent_per_pax <- c(0.54, 0.34, 0.12)
 
+# Number of passengers
+pax <- 120
 
-# Find the Variance
-my.data$DiffMean <- my.data$Rev - avgRevPerPax
-my.data$DiffMeanSqrd <- my.data$DiffMean ^ 2
-my.data$DiffMeanSqrdTimesProb <- my.data$DiffMeanSqrd * my.data$prob
-my.data
+# Find Expected value for each x_i
+E_revenue <- baggage_fees * baggage_percent_per_pax * pax
 
+# Find the overall Expected value AKA mu
+Ex <- sum(E_revenue)
 
-# Find the standard deviation
-varRevPerPax <- sum(my.data$DiffMeanSqrdTimesProb)
-sdRevPerPax <- sqrt(varRevPerPax)
-sdRevPerPax
+#Expected revenue
+Ex
+
+# Create mu collumn
+mu <- c(Ex, Ex, Ex)
+
+# Create data frame
+baggage <- data.frame(bags, baggage_fees, baggage_percent_per_pax)
+
+# Find  The variance_i of x_i and mu
+baggage_variance <- baggage_fees - Ex
+
+# Calculate the Variance^2 and P(X=x_i)
+baggage_EVariance <- baggage_variance^2 * baggage_percent_per_pax
+
+# Create visual representation of the table
+baggage <- cbind(baggage, E_revenue, mu, baggage_variance, baggage_variance^2,  baggage_EVariance)
+
+# Name columns for the baggage data frame
+names(baggage) <- c("bags", "x_i", "P(X=x_i)", "E(X_i)", "mu", "Variance", "Variance^2", "Variance^2*P(X=x_i)")
+
+# View Table
+baggage
+
+# Find the overall value for the Variance^2
+Variance2 <- sum(baggage_EVariance)
+
+# Print the overall Variance
+#Variance2
+
+# Find the standard deviation by calculating the square root of the variance
+sd <- Variance2^(1/2)
+
+# Prinr the standard deviation
+sd
 ```
 
-##### (b) About how much revenue should the airline expect for a flight of 120 passengers? With what standard deviation? Note any assumptions you make and if you think they are justified.
+Answer: The expected revenue for the 120 passengers is \$1884.00. The standard deviation will be \$1868.41.
+
+### 2.44 Income and gender.
+
+#### (a) Describe the distribution of total personal income.
+
+This is a smooth continuous distribution with what seems to be a multi modal shape.
+
+```{r}
+income <- c("$1 to $9,999","$10,000 to $14,999","$15,000 to $24,999","$25,000 to $34,999","$35,000 to $49,999","$50,000 to $64,999","$65,000 to $74,999","$75,000 to $99,999","$100,000 or more")
+
+total <- c(2.2,4.7,15.8,18.3,21.2,13.9,5.8,8.4,9.7)
+
+dist <- data.frame(income, total)
+dist
+
+barplot(dist$total, names.arg=income)
+```
+
+#### (b) What is the probability that a randomly chosen US resident makes less than $50,000 per year?
+
+P(Resident < \$50000) = P(\$1 to \$9,999) + P(\$10,000 to \$14,999) + P(\$15,000 to \$24,999) +P(\$25,000 to \$34,999) + P(\$35,000 to \$49,999)
+
+P(Resident < \$50000) = 0.022  + 0.047 + 0.158 + 0.183  + 0.212
+
+P(Resident < \$50000) = 0.622
+
+```{r}
+sum(dist[1:5,2])
+```
+
+#### (c) What is the probability that a randomly chosen US resident makes less than $50,000 per year and is female? Note any assumptions you make.
+
+This sample is comprised of 59% males and 41% females.
+
+Assumption:
+
+Since we don't know the relationship between the probability of an income of less than $50,000 and being female.
+
+I will be assuming that they are independent events then P(A and B) = P(A) x P(B).
+
+P(Resident < \$50000 and F) = P(Resident < \$50000) \* P(F)
+
+P(Resident < \$50000 and F) = 0.622 * 0.41
+
+P(Resident < \$50000 and F) = 0.2550
+
+Answer: The probability that a randomly chosen US resident makes less than $50,000 per year and is female is 25.50%.
+
+#### (d) The same data source indicates that 71.8% of females make less than $50,000 per year. Use this value to determine whether or not the assumption you made in part (c) is valid.
+
+P(Resident < \$50000 and F) = P(Resident < \$50000) \* P(F)
+
+0.718 = 0.622 \* 0.41
+
+Since 0.718 $\ne$ 0.2550
+
+We conclude that these events are not independent, since the independency multiplication rule is not satisfied.
+
 
 
