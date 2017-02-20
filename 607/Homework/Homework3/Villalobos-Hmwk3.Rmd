@@ -1,0 +1,158 @@
+---
+title: "Homework Week 3"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "February 19, 2017"
+output:
+  pdf_document: default
+  html_document: default
+subtitle: CUNY MSDA DATA 607
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Please deliver links to an R Markdown file (in GitHub and rpubs.com) with solutions to problems 3 and 4 from chapter 8 of Automated Data Collection in R.  Problem 9 is extra credit.
+
+
+# Library definition
+```{r library_setups, warning=FALSE, error=FALSE, cache=FALSE}
+# Need to employ stringr for Regular Expressions
+library(stringr)
+```
+
+# Problems
+
+## 3. Copy the introductory example. The vector name stores the extracted names.
+
+### Original Example
+```{r}
+raw.data <- "555-1239Moe Szyslak(636) 555-0113Burns, C. Montgomery555-6542Rev. Timothy Lovejoy555 8904Ned Flanders636-555-3226Simpson, Homer5553642Dr. Julius Hibbert"
+```
+
+### Extracting the vector name
+```{r}
+name <- unlist(str_extract_all(raw.data, "[[:alpha:]., ]{2,}"))
+name
+```
+
+#### (a) Use the tools of this chapter to rearrange the vector so that all elements conform to the standard first_name last_name.
+
+```{r, warning=FALSE}
+# Original Name vector obtained by using Regular Expressions
+name
+# Split name for those names that have the last name first separated by a comma
+split_name <- str_split(name, ",")
+split_name
+
+# Create a data frame to work from there
+split_name <- data.frame(split_name)
+# Display the new data frame, in order to vizualice the two rows, from here we can observe the difference in between rows when the last name was separated by a comma.
+split_name
+
+# Assing the "Last Names" Row
+ln <- data.frame(split_name[1,])
+# Assing the "First Names" Row
+fn <- data.frame(split_name[2,])
+
+# Compare rows and proceed to create the desired "Firt Name then Last name" output by employing rbind
+split_name <- ifelse(fn == ln, ln , rbind(fn, ln))
+split_name
+```
+
+### (b) Construct a logical vector indicating whether a character has a title (i.e.,Rev. and Dr.).
+
+```{r}
+# Defining Tiles Vector
+title <- c("Rev.","Dr.")
+
+# Find out if the title is part of the name
+names_wtitle <- ifelse(str_detect(name,title) == TRUE, "YES", "NO")
+
+# Creating a data frame to represent if title is part of the name
+names_wtitle <- data.frame (name=name, title=names_wtitle)
+names_wtitle
+
+```
+
+### (c) Construct a logical vector indicating whether a character has a second name.
+
+```{r}
+# Identify if the name has a Middle name. The Regular expressions are generally and initial followed by a period.
+middle_name <- ifelse(str_detect(name,"[A-Z]\\.") == TRUE, "YES", "NO")
+middle_name
+# Report next to a name in a data frame.
+names_wmname <- data.frame (name, middle=middle_name)
+names_wmname
+```
+
+## 4. Describe the types of strings that conform to the following regular expressions and construct an example that is matched by the regular expression.
+
+### (a) [0-9]+\\$
+
+This one represent a one digit from [0-9] repeating multiple times to the right at the end of a expression with a dollar ($) sign at the end of the number.
+
+```{r}
+raw.vector <- c("This is my example where 1234567890$ is represented at the end of the vector; it will report [1234567890$] two times with a dollar sign at the end", "Another good example is 123$ but not $123")
+unlist(str_extract_all(raw.vector, "[0-9]+\\$"))
+```
+
+### (b) \\b[a-z]{1,4}\\b
+
+In this example it will display all the words that are surrounded by edges \\b on both sides and composed of four letters or less but with LOWER CASE only.
+
+```{r}
+raw.vector <- c("In this example it will display all the words that are surrounded by edges \\b on both sides and composed of four letters or less but with LOWER CASE only.")
+unlist(str_extract_all(raw.vector, "\\b[a-z]{1,4}\\b"))
+```
+
+### (c) .*?\\.txt$
+
+In this example it will display all the sentences that are composed of a period . followed by a word that has the asterisk or star that could be optional and then followed by the extension.txt, for example:
+
+```{r}
+raw.vector <- c("In this example it will display all the sentences that are composed of a period . followed by a word that has the asterisk or star that could be optional and then followed by the extension.txt, for example:", "this is good my.homework.txt", "my.homew*rk.txt is a very good example not included because is not at the end of the sentence.", "but this one is great my.homew*rk.txt")
+unlist(str_extract_all(raw.vector, ".*?\\.txt$"))
+```
+
+### (d) \\d{2}/\\d{2}/\\d{4}
+
+This is for dates composed of up to two digit month, two digit day and four digit year separated with the slash symbol.
+
+```{r}
+raw.vector <- c("in this example we will extract 02/04/2016 and 08/09/1977","Also we will not be able to obtain 4/15/1879 since it doest nt match the two digit month, neither 02/19/17")
+unlist(str_extract_all(raw.vector, "\\d{2}/\\d{2}/\\d{4}"))
+```
+
+### (e) <(.+?)>.+?</\\1>
+
+After doing some research, this represents the Vector containing strings with any type of HTML tag.
+The back reference removes the outer HTML tags.
+
+The \\1 is doing a recall of <(.+?)> at the end of the regular expression.
+
+```{r}
+raw.vector <- c("<!DOCTYPE html><html><body>Hello World</body></html></html>")
+unlist(str_extract_all(raw.vector, "<(.+?)>.+?</\\1>"))
+```
+
+## 9. The following code hides a secret message. Crack it with R and regular expressions. Hint: Some of the characters are more revealing than others! The code snippet is also available in the materials at www.r-datacollection.com.
+
+clcopCow1zmstc0d87wnkig7OvdicpNuggvhryn92Gjuwczi8hqrfpRxs5Aj5dwpn0Tanwo
+Uwisdij7Lj8kpf03AT5Idr3coc0bt7yczjatOaootj55t3Nj3ne6c4Sfek.r1w1YwwojigO
+d6vrfUrbz2.2bkAnbhzgv4R9i05zEcrop.wAgnb.SqoU65fPa1otfb7wEm24k6t3sR9zqe5
+fy89n6Nd5t9kc4fE905gmc4Rgxo5nhDk!gr
+
+```{r}
+# Raw vector
+raw.vector <- "clcopCow1zmstc0d87wnkig7OvdicpNuggvhryn92Gjuwczi8hqrfpRxs5Aj5dwpn0TanwoUwisdij7Lj8kpf03AT5Idr3coc0bt7yczjatOaootj55t3Nj3ne6c4Sfek.r1w1YwwojigOd6vrfUrbz2.2bkAnbhzgv4R9i05zEcrop.wAgnb.SqoU65fPa1otfb7wEm24k6t3sR9zqe5fy89n6Nd5t9kc4fE905gmc4Rgxo5nhDk!gr"
+# I noticed there are some upper case letters and some periods in between, so I run the code for Alphanumeric of lenght 1 with an optional period.
+hidden_message <- unlist(str_extract_all(raw.vector, "[[:upper:].?]{1,}"))
+hidden_message
+# Since the periods work as a separator, we can replace them for blank spaces and also we can put all toguether in one sentence.
+hidden_message <- str_replace_all(paste(hidden_message, collapse = ''), "[.]", " ")
+# Final message
+hidden_message
+```
+
