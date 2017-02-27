@@ -1,0 +1,172 @@
+---
+title: "Project 1"
+author: "Duubar Villalobos Jimenez mydvtech@gmail.com"
+date: "February 26, 2017"
+output:
+  pdf_document: default
+  html_document: null
+  prettydoc::html_pretty: default
+  theme: cayman
+subtitle: CUNY MSDA - DATA607
+---
+
+
+```{r, library-setup, warning=FALSE, echo=FALSE, error=FALSE, include=FALSE}
+# Need to employ kable
+library(knitr)
+# Need to employ stringr for Regular Expressions
+library(stringr)
+library(tidyr)
+```
+
+## Instructions
+
+In this project, you're given a text file with chess tournament results where the information has some structure.  Your  job is to create an R Markdown file that generates a .CSV file (that could for example be imported into a SQL database) with the following information  for all of the players: Player's Name, Player's State, Total Number of Points, Player's Pre-Rating, and Average Pre Chess Rating of Opponents For the first player, the information would be: Gary Hua, ON, 6.0, 1794, 1605 1605 was calculated by using the pre-tournament opponents' ratings of 1436, 1563, 1600, 1610, 1649, 1663, 1716, and dividing by the total number of games played. 
+
+If you have questions about the meaning of the data or the results, please post them on the discussion forum. Data science, like chess, is a game of back and forth...
+
+The chess rating system (invented by a Minnesota statistician named Arpad Elo) has been used in many other contexts, including assessing relative strength of employment candidates by human resource departments.
+
+You may substitute another text file (or set of text files, or data scraped from web pages) of similar or greater complexity, and create your own assignment and solution.  You may work in a small team.  All of your code should be in an R markdown file (and published to rpubs.com); with your data accessible for the person running the script.
+
+### Read data from URL file by using "read.delim" function.
+
+I experienced problems using "read.table" function hense I used the "read.delim" function.
+
+```{r read_url, warning=FALSE}
+url <- 'https://raw.githubusercontent.com/dvillalobos/MSDA/master/607/Projects/Project1/tournamentinfo.txt'
+my.data <- read.delim(url, header=FALSE, stringsAsFactors =FALSE )
+head(my.data)
+```
+
+### Clean line dividers
+
+```{r}
+# Cleaning extra lines and eliminating Empty lines in between
+head(my.data)
+split_data <- data.frame(str_replace_all(my.data$V1,"-----------------------------------------------------------------------------------------",""))
+head(split_data)
+# Deleting empty lines
+split_data <- data.frame(split_data[!apply(split_data == "", 1, all),])
+```
+
+### Combining two consecutive rows into one column
+
+```{r}
+# Need to define an empty new_dataframe
+new_table <- data.frame(c())
+# Combining two consecutive rows into one column
+for (i in 1:dim(split_data)[1]){
+  if (i %% 2 == 1) {
+    Part1 <- rbind(new_table$Part1, as.character(split_data[i,1]))
+    Part2 <- as.character(split_data[i+1,1])
+    Combined <- data.frame(paste0(Part1, Part2))
+    names(Combined) <- "Combined"
+    new_table <- rbind(new_table, Combined)
+  } 
+}
+head(new_table)
+```
+
+### Spliting one more column for "|" separator 
+
+```{r}
+# Creating headers
+Headers <- c("Pair","Player Name","Total","Round 1","Round 2","Round 3", "Round 4","Round 5","Round 6","Round 7","State","USCF ID / Rtg (Pre->Post)","Pts","1","2","3","4","5","6","7","Ave Pre Rating")
+# Separating into columns
+newer_table <- separate(data = new_table, col = Combined, into = Headers, sep = "\\|")
+# Need to clear row containing all columns names
+newer_table <- newer_table[-c(1), ]
+
+head(newer_table)
+```
+
+#### Spliting extra columns that were not splitted
+
+```{r}
+# Extracting numerical values from "USCF ID / Rtg (Pre->Post)" unsplitted column
+temp <- str_extract_all(newer_table$`USCF ID / Rtg (Pre->Post)`,"\\b\\d{1,}")
+temp <- data.frame(as.character(temp))
+# Separating the data frame from one couln to three different columns
+temp <- separate(data = temp, col = as.character.temp., into = c("col1","col2","col3"), sep = ",")
+kable(head(temp))
+
+# Temporary column vectors
+col1 <- str_extract_all(temp$col1,"[[:digit:]]{1,}")
+col2 <- str_extract_all(temp$col2,"[[:digit:]]{1,}")
+col3 <- str_extract_all(temp$col3,"[[:digit:]]{1,}")
+
+newer_table$`USCF ID` <- as.character(col1)
+newer_table$`Pre Rating` <- as.character(col2)
+newer_table$`Post Rating` <- as.character(col3)
+head(newer_table)
+```
+
+
+### Separating needed columns to include in .csv file
+
+```{r}
+csv.table <- subset(newer_table, select = c(1,2,11,3,22,23,24,21))
+kable(head(csv.table))
+```
+
+### Calculating Ave Pre Rating
+
+
+```{r}
+# Creating the opponent values from the unsplitted data frame
+opponent1 <- data.frame(as.numeric(str_extract_all(newer_table$`Round 1`,"[[:digit:]]{1,}")))
+opponent2 <- data.frame(as.numeric(str_extract_all(newer_table$`Round 2`,"[[:digit:]]{1,}")))
+opponent3 <- data.frame(as.numeric(str_extract_all(newer_table$`Round 3`,"[[:digit:]]{1,}")))
+opponent4 <- data.frame(as.numeric(str_extract_all(newer_table$`Round 4`,"[[:digit:]]{1,}")))
+opponent5 <- data.frame(as.numeric(str_extract_all(newer_table$`Round 5`,"[[:digit:]]{1,}")))
+opponent6 <- data.frame(as.numeric(str_extract_all(newer_table$`Round 6`,"[[:digit:]]{1,}")))
+opponent7 <- data.frame(as.numeric(str_extract_all(newer_table$`Round 7`,"[[:digit:]]{1,}")))
+
+# Creeating Opponents data frame.
+opponents <- cbind(opponent1, opponent2, opponent3, opponent4, opponent5, opponent6, opponent7)
+names(opponents) <- c("Opp 1","Opp 2","Opp 3","Opp 4","Opp 5","Opp 6","Opp 7")
+
+# Finding number of games played
+for(i in 1:dim(opponents)[1]){
+    opponents$playedGames[i] <- 7- (as.numeric(sum((is.na(opponents[i,])))))
+}
+
+# Reporting  table to view the opponents table
+kable(opponents)
+
+# Eliminating NA Cases in order to continue with our calculations, NA replaced by 0.
+opponents[is.na(opponents)] <- as.numeric(0)
+csv.table[is.na(csv.table$Pair)] <- as.numeric(-1)
+
+# Need to assign zero values in order to add accordingly and to avoid errors.
+csv.table$`Ave Pre Rating` <- as.numeric(0)
+
+# Procedure to calculate Average Pre-Rating for each player
+for (k in 1:7){
+  for (j in 1:dim(csv.table)[1]){
+    for (i in 1:dim(csv.table)[1]){
+      if (as.numeric(opponents[i,k]) == as.numeric(csv.table$Pair[j])){
+        csv.table$`Ave Pre Rating`[j] <- as.numeric(csv.table$`Ave Pre Rating`[j]) + as.numeric(csv.table$`Pre Rating`[i])
+      }
+    }
+  }
+}
+
+# Final Procedure to find each player's average based on the number of played games
+csv.table$`Ave Pre Rating`  <- round(as.numeric(csv.table$`Ave Pre Rating`) / opponents$playedGames,0)
+```
+
+# Finalized table ready to export
+
+```{r}
+kable(csv.table, row.names = FALSE)
+```
+
+### Export csc file
+
+```{r}
+#write.csv(csv.table, file = "Villalobos-tournamentInfo.csv")
+write.table(csv.table, file = "Villalobos-tournamentInfo.csv",row.names=FALSE, na="",col.names=TRUE, sep=",")
+```
+
