@@ -1,0 +1,333 @@
+---
+title: "Airlines across five destinations"
+author: 'Completed by: Duubar Villalobos Jimenez   mydvtech@gmail.com'
+date: "March 5, 2017"
+output:
+  pdf_document: default
+  html_document: default
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+subtitle: CUNY MSDA - DATA607 - Homework 5
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+![](C:/Users/mydvtech/Documents/GitHub/MSDA/Spring-2017/607/Homework/Homework5/airlinesCapture.png)
+
+The chart above describes arrival delays for two airlines across five destinations.  Your task is to:
+
+(1) Create a **.CSV** file (or optionally, a **MySQL** database!) that includes all of the information above.  
+You're encouraged to use a "wide" structure similar to how the information appears above, so
+that you can practice tidying and transformations as described below.
+
+(2) Read the information from your **.CSV** file into **R**, and use **tidyr** and **dplyr** as needed to tidy 
+and transform your data.
+
+(3) Perform analysis to compare the arrival delays for the two airlines.
+
+(4) Your code should be in an R Markdown file, posted to rpubs.com, and should include narrative 
+descriptions of your data cleanup work, analysis, and conclusions. Please include in your 
+homework submission:
+
+The URL to the **.Rmd** file in your GitHub repository and The URL for your **rpubs.com** web page.
+
+# PROCEDURE
+
+## Library definition
+
+```{r library_setups, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+# Need to employ kable
+library(knitr)
+# Need to employ stringr for Regular Expressions
+library(stringr)
+# Need to employ to use tidy data functions
+library(tidyr)
+library(dplyr)
+```
+
+
+## (1) Create **.CSV** file
+
+I have created a .CSV file named: "Villalobos-airlines.csv"
+
+![Villalobos-airlines.csv](C:/Users/mydvtech/Documents/GitHub/MSDA/Spring-2017/607/Homework/Homework5/Villalobos-airlines.png)
+
+## (2) Read information from **.CSV** file into R.
+
+For simplicity and reproducibility reasons, I have posted this file on my GitHub repository as follows:
+
+### GitHub URL
+
+```{r}
+url <- "https://raw.githubusercontent.com/dvillalobos/MSDA/master/607/Homework/Homework5/Villalobos-airlines.csv"
+```
+
+### Read .csv from url by employing read.csv()
+
+```{r}
+my.data <- read.csv(url, header=FALSE, sep=",", stringsAsFactors=FALSE)
+my.data <- data.frame(my.data)
+```
+
+### Imported file display
+
+```{r, echo=FALSE}
+my.data
+```
+
+### Data transformation
+
+#### Renaming Column headers
+
+```{r}
+# Adding "Missing" titles from original file onto the Row #1
+my.data$V1[1] <- "Airline"
+my.data$V2[1] <- "Status"
+
+# Assigning all the values from the row #1 as the Column Headers
+names(my.data) <- my.data[1,]
+
+# Need to eliminate Row #1 in order to keep data consistency.
+my.data <- my.data[-c(1), ]
+```
+
+Table  displaying correct column titles.
+
+```{r, echo=FALSE}
+kable(my.data)
+```
+
+#### Eliminating Empty rows with **"NA"** values by employing **drop_na()** from the **tidy** library.
+
+For this, I have to transform our data as follows:
+
+```{r, echo=FALSE}
+# Preview of data composition before transformation
+str(my.data)
+```
+
+Procedure to transform values into integers
+
+```{r}
+for (i in 3:dim(my.data)[2]){
+  my.data[,i] <- as.integer(my.data[,i])
+}
+```
+
+Preview of data after transformation
+
+```{r, echo=FALSE}
+# Preview of data composition before transformation
+str(my.data)
+```
+
+Procedure to eliminate all the **NA** lines from our original file by employing **drop_na()**
+
+```{r}
+my.data <- my.data %>% drop_na()
+```
+
+```{r, echo=FALSE}
+kable(my.data)
+```
+
+#### Adding missing Airline name to "delayed" row
+
+```{r}
+for (i in 1:dim(my.data)[1]){
+  if (i %% 2 == 0){
+      my.data$Airline[i] <-  my.data$Airline[i-1]
+  }
+}
+```
+
+Final completed table in order to start employing **tidy** transformations for further analysis.
+
+```{r, echo=FALSE}
+kable(my.data)
+```
+
+## (3) Analysis
+
+**First:** we need to transform our table by employing **gather()** from **tidyr** library.
+
+```{r}
+# Tidy table by having 4 variables (Airline, Status, City, number of flights)
+my.tidy.data <- my.data %>% gather("City","n flights", 3:7)
+```
+
+```{r, echo=FALSE}
+kable(head(my.tidy.data))
+```
+
+**Second:** Now, I will separate the values **"on time"** and **"delayed"** from the **Status** column into two different columns by employing the **spread()** function from **tidyr** library.
+
+Please note that these values can be considered as two different variables.
+
+```{r}
+my.tidy.data <-  my.tidy.data %>%
+                 spread(Status, `n flights`)
+```
+
+## Final Tidy Table
+
+```{r, echo=FALSE}
+kable(my.tidy.data)
+```
+
+### a) Total of flights sorted ascending.
+
+```{r, echo=FALSE}
+my.tidy.data.totals <- my.tidy.data
+# Finding total flights
+my.tidy.data.totals$Total <- my.tidy.data.totals$delayed + my.tidy.data.totals$`on time`
+my.tidy.data.totals <- my.tidy.data.totals %>% arrange(Total)
+kable(my.tidy.data.totals)
+```
+
+### b) Ratio of **"delayed"** flights vs **"on time"** flights sorted ascending.
+
+```{r, echo=FALSE}
+# Finding ratio
+my.tidy.data.totals$ratio <- my.tidy.data.totals$delayed / my.tidy.data.totals$`on time`
+
+# Sorting ratio
+my.tidy.data.totals <- my.tidy.data.totals %>% arrange(ratio)
+
+kable(my.tidy.data.totals)
+```
+
+Noticed how the order changed!
+
+### c) Total of flights by Airline sorted ascending.
+
+```{r, echo=FALSE}
+my.summary.data.totals <-  my.tidy.data.totals %>%
+                        group_by(Airline) %>%
+                        summarise(delayed = sum(delayed), `on time` = sum(`on time`), Total = sum(Total)) %>%
+                        arrange(Total)
+# Table
+kable(my.summary.data.totals)
+# Barplot (With extra espace to place labels on top of bars)
+my.plot <- barplot(my.summary.data.totals$Total, main="Flights by Airline", xlab="Airline", names.arg=my.summary.data.totals$Airline, axes=FALSE, ylim = c(0, max(my.summary.data.totals$Total)+1000))
+# Placing values on top of bars
+text(my.plot, my.summary.data.totals$Total, labels = my.summary.data.totals$Total, pos = 3)
+```
+
+### d) Total of flights by City sorted ascending.
+
+```{r, echo=FALSE}
+my.summary.data.totals <-  my.tidy.data.totals %>%
+                        group_by(City) %>%
+                        summarise(delayed = sum(delayed), `on time` = sum(`on time`), Total = sum(Total)) %>%
+                        arrange(Total)
+# Table
+kable(my.summary.data.totals)
+# Barplot (With extra espace to place labels on top of bars)
+my.plot <- barplot(my.summary.data.totals$Total, main="Flights by City", xlab="City", names.arg=my.summary.data.totals$City, axes=FALSE, ylim = c(0, max(my.summary.data.totals$Total)+500))
+# Placing values on top of bars
+text(my.plot, my.summary.data.totals$Total, labels = my.summary.data.totals$Total, pos = 3)
+```
+
+## Some Horizontal Probabilities
+
+From the previous **"Final Tidy Table"** we can find some horizontal probabilities, those can be found as follows:
+
+```{r, echo=FALSE}
+my.tidy.data.totals <- my.tidy.data
+# Finding total flights
+my.tidy.data.totals$Total <- my.tidy.data.totals$delayed + my.tidy.data.totals$`on time`
+my.tidy.data.totals <- my.tidy.data.totals %>% arrange(Total)
+kable(my.tidy.data.totals)
+```
+
+### a) Horizontal probabilities for **"delayed"** and **"on time"** flights by **Airline** and **City**.
+
+```{r, echo=FALSE}
+my.main.probability.data.totals <-  my.tidy.data.totals
+my.main.probability.data.totals$`P(delayed)` <- my.main.probability.data.totals$delayed / my.main.probability.data.totals$Total
+my.main.probability.data.totals$`P(on time)` <- my.main.probability.data.totals$`on time` / my.main.probability.data.totals$Total
+
+# Table
+kable(my.main.probability.data.totals)
+```
+
+### b) Horizintal probabilities for **"delayed"** and **"on time"** flights by **Airline** only.
+
+```{r, echo=FALSE}
+my.airline.probability.data.totals <-   my.tidy.data.totals %>%
+                                        group_by(Airline) %>%
+                                        summarise(delayed = sum(delayed), `on time` = sum(`on time`), Total = sum(Total)) %>%
+                                        arrange(Total)
+# Table
+kable(my.airline.probability.data.totals)
+```
+
+```{r, echo=FALSE}
+my.airline.probability.data.totals$`P(A delayed)` <- my.airline.probability.data.totals$delayed / my.airline.probability.data.totals$Total
+my.airline.probability.data.totals$`P(A on time)` <- my.airline.probability.data.totals$`on time` / my.airline.probability.data.totals$Total
+
+# Table
+kable(my.airline.probability.data.totals)
+```
+
+### c) Horizontal probability for **"delayed"** and **"on time"** flights by **City** only.
+
+```{r, echo=FALSE}
+my.city.probability.data.totals <-   my.tidy.data.totals %>%
+                                        group_by(City) %>%
+                                        summarise(delayed = sum(delayed), `on time` = sum(`on time`), Total = sum(Total)) %>%
+                                        arrange(Total)
+# Table
+kable(my.city.probability.data.totals)
+```
+
+```{r, echo=FALSE}
+my.city.probability.data.totals$`P(C delayed)` <- my.city.probability.data.totals$delayed / my.city.probability.data.totals$Total
+my.city.probability.data.totals$`P(C on time)` <- my.city.probability.data.totals$`on time` / my.city.probability.data.totals$Total
+
+# Table
+kable(my.city.probability.data.totals)
+```
+
+## Joining tables with horizontal probabilities
+
+For this, I will join the **Final Tidy Table** with the respective probabilities tables in order to create a **Final Horizontal Probability Table** by employing **inner_join()** from the **dplyr** library.
+
+```{r, echo=FALSE}
+main.probability.table <- my.tidy.data %>%
+                          subset(select=c(Airline, City))
+
+airline.probability.table <-  my.airline.probability.data.totals %>%
+                              subset(select=c(Airline, `P(A delayed)`, `P(A on time)`))
+
+city.probability.table <-  my.city.probability.data.totals %>%
+                              subset(select=c(City, `P(C delayed)`, `P(C on time)`))
+
+main.probability.table <-  main.probability.table %>%
+                      inner_join(airline.probability.table, by="Airline" )
+
+main.probability.table <-  main.probability.table %>%
+                      inner_join(city.probability.table, by="City" )
+```
+
+Resulting Horizontal Probability table:
+
+```{r, echo=FALSE}
+kable(main.probability.table)
+```
+
+
+By comparing with the below table, we noticed that the values are different. That is that so far I have calculated only horizontal probabilities and further analysis can be performed.
+
+```{r, echo=FALSE}
+kable(my.main.probability.data.totals)
+```
+
+
+## Other probabilities
+
+Other probabilities that can be found will be **Vertical Probabilities** or/and **Total Probabilities** by taking into consideration the total flights ("delayed" + "on time").
