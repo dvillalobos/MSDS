@@ -255,7 +255,7 @@ my.main.probability.data.totals$`P(on time)` <- my.main.probability.data.totals$
 kable(my.main.probability.data.totals)
 ```
 
-### b) Horizintal probabilities for **"delayed"** and **"on time"** flights by **Airline** only.
+### b) Horizontal probabilities for **"delayed"** and **"on time"** flights by **Airline** only.
 
 ```{r, echo=FALSE}
 my.airline.probability.data.totals <-   my.tidy.data.totals %>%
