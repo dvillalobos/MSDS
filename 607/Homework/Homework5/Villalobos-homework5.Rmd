@@ -3,11 +3,11 @@ title: "Airlines across five destinations"
 author: 'Completed by: Duubar Villalobos Jimenez   mydvtech@gmail.com'
 date: "March 5, 2017"
 output:
-  pdf_document: default
-  html_document: default
   prettydoc::html_pretty:
     highlight: github
     theme: leonids
+  pdf_document: default
+  html_document: default
 subtitle: CUNY MSDA - DATA607 - Homework 5
 ---
 
@@ -331,3 +331,11 @@ kable(my.main.probability.data.totals)
 ## Other probabilities
 
 Other probabilities that can be found will be **Vertical Probabilities** or/and **Total Probabilities** by taking into consideration the total flights ("delayed" + "on time").
+
+Once those probabilities are found we can then start answering questions like:
+
+a) What's the probability that a randonmly selected flight will be delayed?
+
+b) What's the probability that a randonly selected flight will be from Alaska Airlines and it's destination will be Seatle?
+
+c) What's the probability that out of 5 randonmly selected flights will be 2 delayed and 3 on time?
