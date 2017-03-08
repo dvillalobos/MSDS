@@ -1,0 +1,281 @@
+---
+title: "Annual Arts in School Report 2013-2014"
+author: 'Completed by: Duubar Villalobos Jimenez   mydvtech@gmail.com'
+date: "March 12, 2017"
+output:
+  pdf_document: default
+  html_document: default
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+subtitle: CUNY MSDA - DATA607 - Project 2_a
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+![](C:/Users/mydvtech/Documents/GitHub/MSDA/Spring-2017/607/Projects/Project2/arts.png)
+
+The goal of this assignment is to give you practice in preparing different datasets for downstream analysis work.
+
+Your task is to:
+
+(1) Choose any **three** of the **"wide" datasets** identified in the Week 5 Discussion items. (You may use your own dataset; please don't use my Sample Post dataset, since that was used in your Week 5 assignment!)
+
+For each of the three chosen datasets:
+
+  + Create a **.CSV** file (or optionally, a **MySQL** database!) that includes all of the information included in the dataset.  You're encouraged to use a "wide" structure similar to how the information appears in the discussion item, so that you can practice tidying and transformations as described below.
+
+  + Read the information from your **.CSV** file into **R**, and use **tidyr** and **dplyr** as needed to tidy and transform your data.  [Most of your grade will be based on this step!]
+
+  + Perform the analysis requested in the discussion item.
+
+  + Your code should be in an R Markdown file, posted to rpubs.com, and should include narrative descriptions of your data cleanup work, analysis, and conclusions.
+
+(2) Please include in your homework submission, for each of the three chosen datasets:
+
+The **URL** to the **.Rmd** file in your **GitHub** repository, and The URL for your **rpubs.com** web page.
+
+# PROCEDURE
+
+## Library definitions
+
+```{r library_setups, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+# Need to employ kable table reporting functionality
+library(knitr)
+# Need to employ stringr for Regular Expressions
+library(stringr)
+# Need to employ to use tidy data functions
+library(tidyr)
+library(dplyr)
+```
+
+## Annual Arts in School Report Data 2013 - 2014.
+
+**Dataset url location:** https://data.cityofnewyork.us/Education/Annual-Arts-in-School-Reports-Raw-Data/vdgp-ddvg
+
+The Annual Arts in Schools Report includes data about arts teachers, arts budgeting, space for the arts, partnerships with arts and cultural organizations, and parent involvement for elementary, middle, and high schools. These reports help school administrators, parents, and students understand how their schools are progressing towards offering universal arts education to all students.
+
+## Last Updated:
+
+September 1, 2015
+
+## Data Provided by:
+
+Department of Education (DOE)
+
+## Dataset Owner:
+   
+NYC OpenData
+
+## Dictionary
+
+This dataset does not seem to have a dictionary. The download link is for a **.zip** file containing three **.csv** files as follows:
+
+  + *Arts Survey Data_ 2011-2012_ODP.csv*
+
+  + *Arts Survey Data_ 2012-2013_ODP.csv*
+
+  + *Arts Survey Data_ 2013-2014_ODP.csv*
+
+For simplicity reasons, I will read the raw data directly from the source.
+
+## URL Raw data location:
+
+```{r}
+url <- "https://data.cityofnewyork.us/api/file_data/bXGEFYYP6F8SYozNljEvaG4BmTKdDtilNHRWeDEyEY4?filename=Arts_Survey_Data.zip"
+```
+
+## (1) Read information from **.CSV** file into R.
+
+From the above file, I will choose **"Arts Survey Data_ 2013-2014_ODP.csv"** for the latest information contained on that .zip file, I am just keeping in mind that the other two files can be worked and compared in a yearly fashion since each file represents the information for a single school year.
+
+### Read .csv from url by employing read.csv()
+
+For this project I will try something new. I will load the data directly from the original location from a zip file. For this, I will be reading such url for the **.zip** file into **R** without unzipping the file from the web in advance; then I will unzip the file that I want to work with and read it into a data frame.
+
+```{r download_zip, warning=FALSE, error=TRUE, cache=FALSE, results='hide', message=FALSE}
+# Procedure to download .zip file containing various files including the one I want to work with.
+temp <- tempfile()
+download.file(url, temp)
+my.file <- unz(temp, "Arts Survey Data_ 2013-2014_ODP.csv")
+my.data <- read.csv(my.file, header=TRUE, sep=",", stringsAsFactors=FALSE)
+
+# Deleting downloaded file
+unlink(temp)
+```
+
+
+```{r, echo=FALSE}
+# ** GOOD TO DELETE
+# temp <- "Arts_Survey_Data.zip"
+# my.file <- unz(temp, "Arts Survey Data_ 2013-2014_ODP.csv")
+# my.data <- read.csv(my.file, header=TRUE, sep=",", stringsAsFactors=FALSE)
+# ** UNTIL HERE
+```
+
+### Imported file structure display
+
+```{r, echo=FALSE}
+str(my.data)
+```
+
+In summary, this data frame contains 1416 independent observations of  1659 recognizable possible values.
+
+### Data transformation
+
+Now that I have the data frame I will **subset** a small portion (first 20 columns) in order to create some possible outcomes from the given information.
+
+```{r}
+# New subset of the main data (first 20 columns) from School.Year to TwelfthGr
+my.new.data <-  my.data %>% subset(select=(School.Year:TwelfthGr))
+```
+
+**New subset table.**
+
+```{r, echo=FALSE}
+kable(head(my.new.data))
+```
+
+
+## Creating a Tidy Table
+
+From the given table, we can modify it by taking the grade as one variable, that is from **PreK** to **TwelfthGr** will be put into a column named **Grade**. This table transformation will done by employing the **gather()** function from the **tidyr** library.
+
+```{r}
+my.tidy.data <- my.new.data %>% gather("Grade","n.Students", PreK:TwelfthGr)
+```
+
+**Short tidy table example after transformation.**
+
+```{r, echo=FALSE}
+kable(head(my.tidy.data))
+```
+
+From the above table we can explore a few things as follows:
+
+### Total number of art students:
+
+```{r, echo=FALSE}
+# Defining top limit for reporting
+top <- 5
+# NA values substituted fot 0 value
+my.tidy.data$n.Students[is.na(my.tidy.data$n.Students)] <- 0
+
+TotalStudents <- my.tidy.data$n.Students %>% sum()
+```
+
+The grand total of art students for all districts, school levels and grades is `r format(TotalStudents,scientific=FALSE)` art students.
+
+### Top 5 districts with higest art student population and percentages.
+
+```{r, echo=FALSE}
+# Procedure to Find Group Values for the districts
+my.district.data <- my.tidy.data %>%
+                    group_by(District) %>%
+                    summarise(`Total Students` = sum(n.Students), Percentage=paste(round((`Total Students`/TotalStudents)*100,2),"%")) %>%
+                    arrange(desc(`Total Students`))
+```
+
+```{r, echo=FALSE}
+kable(head(my.district.data,top))
+```
+
+### Bottom 5 districts with lowest art student population and percentages.
+
+```{r, echo=FALSE}
+kable(tail(my.district.data,top))
+```
+
+**Bar plot:** Total of art students in a district sorted by district.
+
+```{r, echo=FALSE}
+my.district.data <- my.district.data %>% arrange(District)
+# Barplot (With extra espace to place labels on top of bars)
+my.plot <- barplot(my.district.data$`Total Students`, main="Total students by district", xlab="District", col = rainbow(2), names.arg=my.district.data$District, axes=FALSE, ylim = c(0, max(my.district.data$`Total Students`)+5000))
+# Placing values on top of bars
+text(my.plot, my.district.data$`Total Students`, labels = my.district.data$`Total Students`, pos = 3)
+```
+
+**Bar plot:** Total of art students in a district sorted by the number of art students in a district.
+
+```{r, echo=FALSE}
+my.district.data <- my.district.data %>% arrange(`Total Students`)
+# Barplot (With extra espace to place labels on top of bars)
+my.plot <- barplot(my.district.data$`Total Students`, main="Total students by district", xlab="District", col = rainbow(40), names.arg=my.district.data$District, axes=FALSE, ylim = c(0, max(my.district.data$`Total Students`)+5000))
+```
+
+### School level: art student population and percentages.
+
+```{r, echo=FALSE}
+# Procedure to Find Group Values for the School Level
+my.school_level.data <- my.tidy.data %>%
+                    group_by(School_Level) %>%
+                    summarise(`Total Students` = sum(n.Students), Percentage=paste(round((`Total Students`/TotalStudents)*100,2),"%")) %>%
+                    arrange(desc(`Total Students`))
+```
+
+```{r, echo=FALSE}
+kable(my.school_level.data)
+```
+
+**Bar plot:** Total of art students by school level sorted by the number art of students.
+
+```{r, echo=FALSE}
+my.school_level.data <- my.school_level.data %>% arrange(`Total Students`)
+# Barplot (With extra espace to place labels on top of bars)
+my.plot <- barplot(my.school_level.data$`Total Students`, main="Total students by School Level", xlab="School Level", col = rainbow(40), names.arg=my.school_level.data$School_Level, axes=FALSE, ylim = c(0, max(my.school_level.data$`Total Students`)+35000))
+# Placing values on top of bars
+text(my.plot, my.school_level.data$`Total Students`, labels = my.school_level.data$`Total Students`, pos = 3)
+```
+
+### School Grades: art student population and percentages.
+
+```{r, echo=FALSE, warning=FALSE}
+# Procedure to Find Group Values for the School Level
+my.grade.data <- my.tidy.data %>%
+                    group_by(Grade) %>%
+                    summarise(`Total Students` = sum(n.Students), Percentage=paste(round((`Total Students`/TotalStudents)*100,2),"%"))
+
+Grade <- unique(my.tidy.data$Grade)
+Grade <- data.frame(Grade)
+
+my.grade.data <-  Grade %>%
+                      inner_join(my.grade.data, by="Grade" )
+```
+
+```{r, echo=FALSE}
+kable(my.grade.data)
+```
+
+**Bar plot:** Total of art students in a grade sorted by grade.
+
+```{r, echo=FALSE}
+# Barplot (With extra espace to place labels on top of bars)
+my.plot <- barplot(my.grade.data$`Total Students`, main="Total students by Grade", xlab="Grade", col = rainbow(40), names.arg=my.grade.data$Grade, axes=FALSE, ylim = c(0, max(my.grade.data$`Total Students`)))
+```
+
+## Conclusions
+
+### Districts:
+
+```{r, echo=FALSE}
+max <- my.district.data$`Total Students` %>% max()
+min <- my.district.data$`Total Students` %>% min()
+diff <- max - min
+```
+
+Based on data analysis, we can appreciate major art student population differences in between the top 5 districts and bottom 5 districts with as much as `r format(diff,scientific=FALSE)` art students. This will represent a good starting point to find out the multiple reasons that could affect as much; could it be population density playing a role on this?
+
+### School level:
+
+Based on simple observation, we can observe how higher school levels tend to have more students enrolled in art classes while basic school levels tend to have less students enrolled. This, I think is an excellent topic to discuss in regards of early child development and communication trough art expression.
+
+### Grade:
+
+If we look at the chart and results, we noticed that over all the NYC department of education in the 2013-2014 school year, presented very similar populations of all grade levels taking art classes, once again on this comparison comes to show how early aged students tend to have less populations taking art classes.
+
+### Final conclucion:
+
+Since there's more data available, it will be interesting to perform school year to year comparisons in regards of the enrolled art students; this, to find out if some programs have been put in place in order to increase or decrease student participation in art classes. Also, it will be interesting to see how the populations transform or behave from year to year.
