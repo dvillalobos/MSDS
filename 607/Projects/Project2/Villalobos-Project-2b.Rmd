@@ -1,0 +1,455 @@
+---
+title: "Physician Supplement Payments for all CMS Program Years"
+author: 'Completed by: Duubar Villalobos Jimenez   mydvtech@gmail.com'
+date: "March 12, 2017"
+output:
+  pdf_document: default
+  html_document: default
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+subtitle: CUNY MSDA - DATA607 - Project 2_b
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+![](C:/Users/mydvtech/Documents/GitHub/MSDA/Spring-2017/607/Projects/Project2/cms.png)
+
+The goal of this assignment is to give you practice in preparing different datasets for downstream analysis work.
+
+Your task is to:
+
+(1) Choose any **three** of the **"wide" datasets** identified in the Week 5 Discussion items. (You may use your own dataset; please don't use my Sample Post dataset, since that was used in your Week 5 assignment!)
+
+For each of the three chosen datasets:
+
+  + Create a **.CSV** file (or optionally, a **MySQL** database!) that includes all of the information included in the dataset.  You're encouraged to use a "wide" structure similar to how the information appears in the discussion item, so that you can practice tidying and transformations as described below.
+
+  + Read the information from your **.CSV** file into **R**, and use **tidyr** and **dplyr** as needed to tidy and transform your data.  [Most of your grade will be based on this step!]
+
+  + Perform the analysis requested in the discussion item.
+
+  + Your code should be in an R Markdown file, posted to rpubs.com, and should include narrative descriptions of your data cleanup work, analysis, and conclusions.
+
+(2) Please include in your homework submission, for each of the three chosen datasets:
+
+The **URL** to the **.Rmd** file in your **GitHub** repository, and The URL for your **rpubs.com** web page.
+
+# PROCEDURE
+
+## Library definitions
+
+```{r library_setups, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+library(knitr)
+library(stringr)
+library(tidyr)
+library(dplyr)
+library(RMySQL)
+```
+
+## Centers for Medicare & Medicaid Services Open Payment Data.
+
+**Dataset url location:** https://openpaymentsdata.cms.gov/
+
+I will be exploring the Physician Supplement File for all Program Years.
+
+This is a supplementary file that displays a list of physicians indicated as recipients of payments reported in Open Payments. Each record includes the physicians demographic information, specialties, and license information, as well as a unique identification number (Physician Profile ID) that can be used to search for a specific physician in the general, research, and physician ownership files.
+
+This is a complete Open Payments Dataset from the program from The Centers for Medicare & Medicaid Services Open Payment Data Report site that includes data about a federal government website managed by the Centers for Medicare & Medicaid Services.
+
+## Last Updated:
+
+This is a complete set of all data from the Program.
+
+Version: 1.0
+
+Date: January 2017.
+
+## Data Provided by:
+
+Centers for Medicare & Medicaid Services (CMS).
+
+## Dataset Owner:
+   
+Centers for Medicare & Medicaid Services (CMS) and the Government of the United States of America.
+
+## Dictionary
+
+This dataset does not seem to have a dictionary. The download link is for a **.zip** file containing the desired data. However in the zip file there's a **.txt** file describing the following:
+
+**Filename:** OP_PH_PRFL_SPLMTL_README_P01172017.txt
+
+#### 1. Physician Profile Supplement File
+
+The Physician Profile Supplement file contains information about physicians who were indicated as recipients of payments, other transfers of value, or ownership and investment interest in payment records as well as physicians identified as principal investigators associated with research payment records published by Open Payments. 
+
+However, this file contains only physicians who are included in at least one published payment record. The criteria used by the Centers for Medicare and Medicaid Services (CMS) to determine which payment records are eligible for publication is available in the Open Payments Data Dictionary and Methodology document. This document can be found on the Resources page of the Open Payments website (https://www.cms.gov/OpenPayments/About/Resources.html). The Data Dictionary and Methodology document also includes information on the data collection and reporting methodology, data fields included in the files, and any notes or special considerations that users should be aware of. 
+
+#### 2. Considerations for using the CSV File
+
+Microsoft Excel removes leading zeroes from data fields in comma-separated values (CSV) files. Certain fields in this data set may have leading zeroes. These zeroes will be missing when viewing the information within Microsoft Excel. 
+
+Additionally, the latest versions of Microsoft Excel cannot display data sets with more than 1,048,576 rows. This CSV file may exceed that limit. Displaying the data in its entirety may require the use of a spreadsheet program capable of handling very large numbers of records.
+
+#### 3. Details about the OP_PH_PRFL_SPLMTL_P01172017.zip File
+
+This compressed (.zip) file contains one (1) comma-separated values (.csv) format file that uses commas as delimiters and one (1) README.txt file. A description of the CSV file is provided below.
+
+  + *OP_PH_PRFL_SPLMTL_P01172017.csv:*
+
+This supplementary file displays information on all of the physicians indicated as covered recipients of payments and/or physician principal investigators associated with payments in records published by Open Payments. Each record includes the physician's demographic information, specialties, and license state, as well as the unique identification number (Physician Profile ID) assigned by Open Payments for each physician. The Physician Profile ID can be used to search Open Payments data to find payments made to or associated with that specific physician.
+
+The physician profile information included in the data sets is submitted by the reporting entity. In contrast, the physician information included in the supplementary file can be derived from different sources including the National Plan and Provider Enumeration System (NPPES) and the Provider Enrollment, Chain and Ownership System (PECOS). As a result, the data in these sources may differ slightly. When searching for physicians using the Open Payments search tool on https://openpaymentsdata.cms.gov, use the physician profile information as listed in the supplementary file.
+
+For simplicity reasons, I will read the raw data directly from the source.
+
+## URL Raw data name and location:
+
+```{r}
+zipfile <- "PHPRFL_P011717.ZIP"
+url <- "http://download.cms.gov/openpayments/"
+```
+
+## (1) Read information from **.CSV** file into R.
+
+From the above **.zip** file, I will choose **"OP_PH_PRFL_SPLMTL_P01172017.csv"** which includes the latest information recorded, I am just keeping in mind that this file contains all the records for all the physicians that received payments from CMS.
+
+### Read .csv from url by employing read.csv()
+
+For this project I will experiment a few things as follows:
+
+I will do a combined data management procedure by employing **MySQL**; that is:
+
+a) I will create a procedure that will create a connection to **MySQL**.
+
+b) Once the connection is **"ON"**, I will check to see if a database named **cms_OpenPaymentData** exist.
+
+  + If the database exist, do nothing.
+  
+  + If the database does NOT exist, create one.
+  
+c) Once the previous step is performed, I will check to see if a table named **OpenPaymentData** exist.
+
+  + If the table exist, read the information from it.
+  
+  + If the table does NOT exist, then do as follows:
+  
+    - Download the **.zip** file from url in a **temp** file.
+    
+    - Extract the **"OP_PH_PRFL_SPLMTL_P01172017.csv"** file containing the required information.
+    
+    - Write all the information contained in the **.csv** file into the **OpenPaymentData** table from the **cms_OpenPaymentData** MySQL scheme.
+    
+    - Delete the temp **.zip** file.
+
+
+After that I will import all the data into a data frame.
+
+This might take some time since the file contains a large number of records, but in a second or multiple iterations will save a ton of time. Also another advantage is that the information will stay local and it will be straight forward to update if needed.
+
+**Function to download .zip file, unzip and extract information**
+
+```{r download_zip, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE, error=FALSE}
+downloadZip <- function(){
+  temp <- tempfile()
+  url <- paste(url,zipfile, sep="")
+  download.file(url, temp)
+  my.file <- unzip(zipfile, files = "OP_PH_PRFL_SPLMTL_P01172017.csv")
+  my.data <- read.csv(my.file, header=TRUE, sep=",", stringsAsFactors=FALSE)
+# Deleting downloaded file
+unlink(temp)
+# Returning data
+  return(my.data)
+}
+```
+
+**Procedure to Read and/or Write into MySQL**
+
+```{r importData, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE, error=FALSE}
+# Need to type root password for the local database
+myLocalPassword <- 'pswrd'
+mySQLSchemaName <- 'cms_OpenPaymentData'
+myTableName <- 'OpenPaymentData'
+# Establish connection
+mydbconnection <- dbConnect(MySQL(), 
+                  user='root',
+                  password = myLocalPassword,
+                  host='localhost')
+# creating a database if it doesn't exist using RMySQL in R
+SQLcode <- paste0("CREATE SCHEMA IF NOT EXISTS ",mySQLSchemaName,";", sep="")
+dbSendQuery(mydbconnection, SQLcode)
+
+# Table exists?
+mydbconnection <- dbConnect(MySQL(), 
+                  user='root',
+                  password = myLocalPassword,
+                  host='localhost',
+                  dbname = mySQLSchemaName)
+# Check to see if table data exist.
+myTableName <- tolower(myTableName)
+if (dbExistsTable(mydbconnection, name=myTableName)  == FALSE){
+# If the table does not exist, download .zip file and write it to MySQL
+my.data <- downloadZip()
+# Then Write the table in MySQL
+dbWriteTable(mydbconnection, name= myTableName , value = my.data)
+} else {
+# Read the data from the local table
+ my.data <- dbReadTable(mydbconnection, name= myTableName)
+}
+
+# Closing connection with data base
+dbDisconnect(mydbconnection)
+```
+
+### Imported file structure display
+
+```{r, echo=FALSE}
+str(my.data)
+```
+
+In summary, this data frame contains 814447 independent observations with  27 recognizable variables.
+
+### Data transformation
+
+Now that I have the data frame I will transform it in order to create some possible outcomes from the given information; for this, I will **subset** by excluding small portion of it.
+
+#### Excluding Information:
+
+**Excluding Alternate Name information:**
+
+This procedure will exclude the repeating of the alternate information columns for the physician's name by performing a subset with the required exclusion.
+
+```{r}
+my.new.data <-  my.data %>% subset(select=-(Physician_Profile_Alternate_First_Name:Physician_Profile_Alternate_Suffix ))
+```
+
+```{r, echo=FALSE}
+kable(head(my.new.data))
+```
+
+**Excluding Street Address information:**
+
+This procedure will exclude the street address information columns **Physician_Profile_Address_Line_1** and **Physician_Profile_Address_Line_2** for the physician's name by performing a subset with the required exclusion.
+
+```{r}
+my.new.data <-  my.new.data %>% subset(select=-(Physician_Profile_Address_Line_1:Physician_Profile_Address_Line_2))
+```
+
+```{r, echo=FALSE}
+kable(head(my.new.data))
+```
+
+**Working physician's name:** For this, I will be combining the columns related to the physician's name information into one single column by employing the function **unite()** from the **tidyr** library.
+
+This procedure will exclude the repeating of the alternate information columns for the physician's name.
+
+```{r}
+my.new.data <-  my.new.data %>%
+                unite(Physician, c(Physician_Profile_First_Name, Physician_Profile_Middle_Name, Physician_Profile_Last_Name, Physician_Profile_Suffix), remove=TRUE, sep=" ")
+```
+
+```{r, echo=FALSE}
+kable(head(my.new.data))
+```
+
+**Working Zip Codes:** For this, I will be transforming the diverse representations for the zip codes into a 5 digit length zip code by employing regular expressions.
+
+```{r}
+my.new.data$Physician_Profile_Zipcode <-my.new.data$Physician_Profile_Zipcode %>%
+                                        str_extract_all("[:digit:]{5}") %>% 
+                                        as.character()
+```
+
+```{r, echo=FALSE}
+kable(head(my.new.data))
+```
+
+**Specialties:** For this I tried splitting the rows y employing **separate_rows()** from the **tidyr** library but the limited resources on my computer returned the following Error: *"Error: cannot allocate vector of size 332.9 Mb"*; hence I have to skip it and go look for more power.
+
+```{r}
+# my.new.data$Physician_Profile_Primary_Specialty <- my.new.data %>%
+#                                                    separate_rows(Physician_Profile_Primary_Specialty,sep="|", convert = FALSE)
+#View(my.new.data)
+```
+
+**Taxonomies** For this I will group all the Taxonomies under one **Taxonomy** Variable by employing the **unite()** function from the **tidyr** library.
+
+```{r}
+my.new.data <-  my.new.data %>%
+                unite(Taxonomy, c(Physician_Profile_OPS_Taxonomy_1, Physician_Profile_OPS_Taxonomy_2, Physician_Profile_OPS_Taxonomy_3, Physician_Profile_OPS_Taxonomy_4, Physician_Profile_OPS_Taxonomy_5), remove=TRUE, sep=" ")
+```
+
+```{r, echo=FALSE}
+kable(head(my.new.data))
+```
+
+**License:** For this I will group all the Licenses under one **License** Variable by employing the **unite()** function from the **tidyr** library.
+
+```{r}
+my.new.data <-  my.new.data %>%
+                unite(License, c(Physician_Profile_License_State_Code_1, Physician_Profile_License_State_Code_2, Physician_Profile_License_State_Code_3, Physician_Profile_License_State_Code_4, Physician_Profile_License_State_Code_5), remove=TRUE, sep=" ")
+```
+
+```{r, echo=FALSE}
+kable(head(my.new.data))
+```
+
+
+**Renaming Columns:** I will provide friendly names for all remaining columns.
+
+Original Structure:
+
+```{r, echo=FALSE}
+str(my.new.data)
+```
+
+```{r}
+names(my.new.data) <- c("ID","Physician", "City", "State", "Zipcode", "Country", "Province", "Specialty", "Taxonomy", "License")
+```
+
+Structure after renaming columns:
+
+```{r, echo=FALSE}
+str(my.new.data)
+```
+
+### Final Tidy Table
+
+```{r, echo=FALSE}
+kable(head(my.new.data))
+```
+
+# Data Exploration
+
+From the above table we can explore a few things as follows:
+
+## Total number of physicians:
+
+```{r, echo=FALSE}
+# Defining top limit for reporting
+top <- 5
+# Total physicians
+TotalPhysicians <- dim(my.new.data)[1]
+```
+
+The grand total of physicians listed in this database is `r format(TotalPhysicians,scientific=FALSE)` physicians.
+
+## Total number of physicians by Country:
+
+```{r, echo=FALSE}
+# Need to eliminate Countries with blank spaces by assigning a NULL value.
+my.new.data$Country[my.new.data$Country==""] <- "NULL"
+my.new.Country.data <- my.new.data %>% count(Country, sort = TRUE)
+names(my.new.Country.data) <- c("Country", "n Physicians")
+my.new.Country.data$Percentage <- paste(round((my.new.Country.data$`n Physicians`/TotalPhysicians)*100,2),"%")
+```
+
+Country list with respective number of physicians and matching percentages.
+
+```{r, echo=FALSE}
+kable(my.new.Country.data)
+```
+
+Interesting is to observe how CMS provided payment to physicians around the world, I was not expecting to see those indicators.
+
+## Total number of physicians by state:
+
+```{r, echo=FALSE}
+# Need to eliminate States with blank spaces
+my.new.data$State[my.new.data$State==""] <- "NULL"
+my.new.state.data <- my.new.data %>% count(State, sort = TRUE)
+names(my.new.state.data) <- c("State", "n Physicians")
+my.new.state.data$Percentage <- paste(round((my.new.state.data$`n Physicians`/TotalPhysicians)*100,2),"%")
+```
+
+Top `r format(top,scientific=FALSE)` states with highest number of physicians and respective percentages.
+
+```{r, echo=FALSE}
+kable(head(my.new.state.data, top))
+```
+
+Bottom `r format(2 * top,scientific=FALSE)` states with lowest number of physicians and respective percentages.
+
+```{r, echo=FALSE}
+kable(tail(my.new.state.data, 2 * top))
+```
+
+**Bar plot:** Total of physicians by state sorted by the number of physicians.
+
+```{r, echo=FALSE}
+# Barplot (With extra espace to place labels on top of bars)
+my.plot <- barplot(my.new.state.data$`n Physicians`, main="Number of Physicians by State", xlab="State", col = rainbow(40), names.arg=my.new.state.data$State, axes=FALSE, ylim = c(0, max(my.new.state.data$`n Physicians`)))
+```
+
+
+Something very interesting is that the last row shows **MH** as a state when in reality this entry should be updated since the correct entry is **MD**. See the below table for the filtered entry from the original table. Once, an address verification with the corresponding zip code, we find out that this entry should be **MD** and not **MH**.
+
+```{r, echo=FALSE}
+kable(filter(my.data,Physician_Profile_State =="MH"))
+```
+
+Similar analysis can be performed for **KO** where it stands for an APO.
+
+```{r, echo=FALSE}
+kable(filter(my.data,Physician_Profile_State =="KO"))
+```
+
+Similar analysis can be performed for **PW** where it stands for different typos like **PA** or **PR** for example.
+
+```{r, echo=FALSE}
+kable(filter(my.data,Physician_Profile_State =="PW"))
+```
+
+Continuing with the data exploration I find out that some data sanitation should be performed before any further state exploration and I should not take this data as 100% accurate as it is. If it is true the numbers so far are small these are not significant enough to create dramatic changes in our reports.
+
+## Total number of physicians by Zipcode:
+
+```{r, echo=FALSE}
+# Need to eliminate States with blank spaces
+my.new.data$Zipcode[my.new.data$Zipcode==""] <- "00000"
+my.new.zipcode.data <- my.new.data %>% count(Zipcode, sort = TRUE)
+names(my.new.zipcode.data) <- c("Zipcode", "n Physicians")
+my.new.zipcode.data$Percentage <- paste(round((my.new.zipcode.data$`n Physicians`/TotalPhysicians)*100,2),"%")
+```
+
+Top `r format(top,scientific=FALSE)` Zipcodes with highest number of physicians and respective percentages.
+
+```{r, echo=FALSE}
+kable(head(my.new.zipcode.data, top))
+```
+
+Bottom `r format(2 * top,scientific=FALSE)` Zipcodes with lowest number of physicians and respective percentages.
+
+```{r, echo=FALSE}
+kable(tail(my.new.zipcode.data, 2 * top))
+```
+
+**Bar plot:** Total of physicians by zipcode sorted by the number of physicians.
+
+```{r, echo=FALSE}
+# Barplot (With extra espace to place labels on top of bars)
+my.plot <- barplot(my.new.zipcode.data$`n Physicians`, main="Number of Physicians by Zipcode", xlab="Zipcode", col = rainbow(40), names.arg=my.new.zipcode.data$Zipcode, axes=FALSE, ylim = c(0, max(my.new.zipcode.data$`n Physicians`)))
+```
+
+
+## Conclusions
+
+
+### Country:
+
+Based on simple observation, we can observe how certain states tend to have more physicians enrolled with CMS while APOS tend to have less physicians enrolled. This, I think is an excellent topic to discuss in regards of how many physicians are optimal for the development and communication of healthcare.
+
+### State:
+
+If we look at the chart and results, we noticed that over all California and New York, presented the highest physician populations. This, I believe is correlated due to major concentration of humans in those states, once again in this comparison comes to show how less populated areas tend to have less physician populations.
+
+### Zipcode:
+
+This is an interesting analysis and I believe it can play a great role in local discoveries related to quality of health care and competition, since it covers immediate surrounding areas.
+
+
+### Final conclusion:
+
+Since there's more data available, it will be interesting to perform more comparisons in regards of the specialties, number of licenses or number of taxonomies that physicians have; this, to find out if some physicians are "better" prepared to deal with proper treatment for all the patients in the surrounding areas, the above conclusion is by assuming that patients tend to visit local health care practitioners in any given emergency situation.
