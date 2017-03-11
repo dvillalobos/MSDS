@@ -47,6 +47,8 @@ library(stringr)
 library(tidyr)
 library(dplyr)
 library(RMySQL)
+library(zipcode)
+library(ggplot2)
 ```
 
 ## Centers for Medicare & Medicaid Services Open Payment Data.
@@ -105,16 +107,28 @@ The physician profile information included in the data sets is submitted by the 
 
 For simplicity reasons, I will read the raw data directly from the source.
 
-## URL Raw data name and location:
+## URL and Raw data name and location definitions:
 
-```{r}
-zipfile <- "PHPRFL_P011717.ZIP"
+```{r URL_Zip}
 url <- "http://download.cms.gov/openpayments/"
+zipfile <- "PHPRFL_P011717.ZIP"
+csvfile <- "OP_PH_PRFL_SPLMTL_P01172017.csv"
+```
+
+## Local MySQL definitions:
+
+```{r Local_MySQL_definitions}
+# Need to change to correct local root password for the local database
+myLocalPassword <- 'pswrd'
+myLocalUser <- 'root'
+myLocalHost <- 'localhost'
+myLocalMySQLSchema <- 'cms_OpenPaymentData'
+myLocalTableName <- 'tbl_OpenPaymentData'
 ```
 
 ## (1) Read information from **.CSV** file into R.
 
-From the above **.zip** file, I will choose **"OP_PH_PRFL_SPLMTL_P01172017.csv"** which includes the latest information recorded, I am just keeping in mind that this file contains all the records for all the physicians that received payments from CMS.
+From the above **.zip** file, I will choose **`r csvfile`** which includes the latest information recorded, I am just keeping in mind that this file contains all the records for all the physicians that received payments from CMS.
 
 ### Read .csv from url by employing read.csv()
 
@@ -124,13 +138,13 @@ I will do a combined data management procedure by employing **MySQL**; that is:
 
 a) I will create a procedure that will create a connection to **MySQL**.
 
-b) Once the connection is **"ON"**, I will check to see if a database named **cms_OpenPaymentData** exist.
+b) Once the connection is **"ON"**, I will check to see if a database named **`r myLocalMySQLSchema`** exist.
 
   + If the database exist, do nothing.
   
   + If the database does NOT exist, create one.
   
-c) Once the previous step is performed, I will check to see if a table named **OpenPaymentData** exist.
+c) Once the previous step is performed, I will check to see if a table named **`r myLocalTableName`** exist.
 
   + If the table exist, read the information from it.
   
@@ -138,9 +152,9 @@ c) Once the previous step is performed, I will check to see if a table named **O
   
     - Download the **.zip** file from url in a **temp** file.
     
-    - Extract the **"OP_PH_PRFL_SPLMTL_P01172017.csv"** file containing the required information.
+    - Extract the **`r csvfile`** file containing the required information.
     
-    - Write all the information contained in the **.csv** file into the **OpenPaymentData** table from the **cms_OpenPaymentData** MySQL scheme.
+    - Write all the information contained in the **.csv** file into the **`r myLocalTableName`** table from the **`r myLocalMySQLSchema`** MySQL scheme.
     
     - Delete the temp **.zip** file.
 
@@ -149,14 +163,14 @@ After that I will import all the data into a data frame.
 
 This might take some time since the file contains a large number of records, but in a second or multiple iterations will save a ton of time. Also another advantage is that the information will stay local and it will be straight forward to update if needed.
 
-**Function to download .zip file, unzip and extract information**
+**Function to download .zip file, unzip and extract information from .csv**
 
 ```{r download_zip, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE, error=FALSE}
-downloadZip <- function(){
+downloadZip <- function(myurl, myzipfile, mycsvfile){
   temp <- tempfile()
-  url <- paste(url,zipfile, sep="")
+  url <- paste(myurl, myzipfile, sep="")
   download.file(url, temp)
-  my.file <- unzip(zipfile, files = "OP_PH_PRFL_SPLMTL_P01172017.csv")
+  my.file <- unzip(myzipfile, files = mycsvfile)
   my.data <- read.csv(my.file, header=TRUE, sep=",", stringsAsFactors=FALSE)
 # Deleting downloaded file
 unlink(temp)
@@ -165,41 +179,37 @@ unlink(temp)
 }
 ```
 
-**Procedure to Read and/or Write into MySQL**
+**MySQL Procedure to Read or Write tables**
 
-```{r importData, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE, error=FALSE}
-# Need to type root password for the local database
-myLocalPassword <- 'pswrd'
-mySQLSchemaName <- 'cms_OpenPaymentData'
-myTableName <- 'OpenPaymentData'
-# Establish connection
+```{r MySQL_Connection, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE, error=FALSE}
+# Establish MySQLconnection
 mydbconnection <- dbConnect(MySQL(), 
-                  user='root',
+                  user = myLocalUser,
                   password = myLocalPassword,
-                  host='localhost')
-# creating a database if it doesn't exist using RMySQL in R
-SQLcode <- paste0("CREATE SCHEMA IF NOT EXISTS ",mySQLSchemaName,";", sep="")
-dbSendQuery(mydbconnection, SQLcode)
+                  host = myLocalHost)
+# creating a database if it doesn't exist by employing RMySQL() in R
+MySQLcode <- paste0("CREATE SCHEMA IF NOT EXISTS ",myLocalMySQLSchema,";", sep="")
+dbSendQuery(mydbconnection, MySQLcode)
 
 # Table exists?
 mydbconnection <- dbConnect(MySQL(), 
-                  user='root',
+                  user = myLocalUser,
                   password = myLocalPassword,
-                  host='localhost',
-                  dbname = mySQLSchemaName)
+                  host = myLocalHost,
+                  dbname = myLocalMySQLSchema)
 # Check to see if table data exist.
-myTableName <- tolower(myTableName)
-if (dbExistsTable(mydbconnection, name=myTableName)  == FALSE){
-# If the table does not exist, download .zip file and write it to MySQL
-my.data <- downloadZip()
+myLocalTableName <- tolower(myLocalTableName)
+if (dbExistsTable(mydbconnection, name = myLocalTableName)  == FALSE){
+# If the table does not exist, download .zip and write .csv file into MySQL
+my.data <- downloadZip(myurl= url, myzipfile= zipfile,  mycsvfile= csvfile)
 # Then Write the table in MySQL
-dbWriteTable(mydbconnection, name= myTableName , value = my.data)
+dbWriteTable(mydbconnection, name= myLocalTableName , value= my.data)
 } else {
 # Read the data from the local table
- my.data <- dbReadTable(mydbconnection, name= myTableName)
+ my.data <- dbReadTable(mydbconnection, name = myLocalTableName)
 }
 
-# Closing connection with data base
+# Closing connection with local Schema
 dbDisconnect(mydbconnection)
 ```
 
@@ -213,7 +223,7 @@ In summary, this data frame contains 814447 independent observations with  27 re
 
 ### Data transformation
 
-Now that I have the data frame I will transform it in order to create some possible outcomes from the given information; for this, I will **subset** by excluding small portion of it.
+Now that I have the data frame I will transform it in order to create some possible outcomes from the given information; for this, I will **subset()** by excluding small portion of it.
 
 #### Excluding Information:
 
@@ -241,7 +251,9 @@ my.new.data <-  my.new.data %>% subset(select=-(Physician_Profile_Address_Line_1
 kable(head(my.new.data))
 ```
 
-**Working physician's name:** For this, I will be combining the columns related to the physician's name information into one single column by employing the function **unite()** from the **tidyr** library.
+**Working physician's name:** 
+
+For this, I will be combining the columns related to the physician's name information into one single column by employing the function **unite()** from the **tidyr** library.
 
 This procedure will exclude the repeating of the alternate information columns for the physician's name.
 
@@ -254,19 +266,21 @@ my.new.data <-  my.new.data %>%
 kable(head(my.new.data))
 ```
 
-**Working Zip Codes:** For this, I will be transforming the diverse representations for the zip codes into a 5 digit length zip code by employing regular expressions.
+**Zip Codes:**
+
+For this, I will be transforming the diverse representations for the zip codes into a 5 digit length zip code by employing **clean.zipcodes()** from the **zipcodes** library. That is, I will attempts to detect and clean up suspected ZIP codes. Will strip "ZIP+4" suffixes to match format of zipcode data.frame. Restores leading zeros, converts invalid entries to NAs, and returns character vector. Note that this function does not attempt to find a matching ZIP code in the database, but rather examines formatting alone.
 
 ```{r}
-my.new.data$Physician_Profile_Zipcode <-my.new.data$Physician_Profile_Zipcode %>%
-                                        str_extract_all("[:digit:]{5}") %>% 
-                                        as.character()
+my.new.data$Physician_Profile_Zipcode <-clean.zipcodes(my.new.data$Physician_Profile_Zipcode)
 ```
 
 ```{r, echo=FALSE}
 kable(head(my.new.data))
 ```
 
-**Specialties:** For this I tried splitting the rows y employing **separate_rows()** from the **tidyr** library but the limited resources on my computer returned the following Error: *"Error: cannot allocate vector of size 332.9 Mb"*; hence I have to skip it and go look for more power.
+**Specialties:**
+
+For this I tried splitting the rows y employing **separate_rows()** from the **tidyr** library but the limited resources on my computer returned the following Error: *"Error: cannot allocate vector of size 332.9 Mb"*; hence I have to skip it and go look for more power.
 
 ```{r}
 # my.new.data$Physician_Profile_Primary_Specialty <- my.new.data %>%
@@ -274,7 +288,9 @@ kable(head(my.new.data))
 #View(my.new.data)
 ```
 
-**Taxonomies** For this I will group all the Taxonomies under one **Taxonomy** Variable by employing the **unite()** function from the **tidyr** library.
+**Taxonomies:**
+
+For this I will group all the Taxonomies under one **Taxonomy** Variable by employing the **unite()** function from the **tidyr** library.
 
 ```{r}
 my.new.data <-  my.new.data %>%
@@ -384,7 +400,7 @@ my.plot <- barplot(my.new.state.data$`n Physicians`, main="Number of Physicians 
 ```
 
 
-Something very interesting is that the last row shows **MH** as a state when in reality this entry should be updated since the correct entry is **MD**. See the below table for the filtered entry from the original table. Once, an address verification with the corresponding zip code, we find out that this entry should be **MD** and not **MH**.
+Something very interesting is that from the above table and the bar-plot we can spot a record that shows **MH** as a state when in reality this entry should be updated since the correct entry is **MD**. See the below table for the filtered entry from the original table. Once, an address verification is performed with the corresponding zip code, I found out that this entry should be **MD** and not **MH**.
 
 ```{r, echo=FALSE}
 kable(filter(my.data,Physician_Profile_State =="MH"))
@@ -402,16 +418,29 @@ Similar analysis can be performed for **PW** where it stands for different typos
 kable(filter(my.data,Physician_Profile_State =="PW"))
 ```
 
-Continuing with the data exploration I find out that some data sanitation should be performed before any further state exploration and I should not take this data as 100% accurate as it is. If it is true the numbers so far are small these are not significant enough to create dramatic changes in our reports.
+The above typos can be analyzed by comparing them to our **zipcodes** library, and further analysis could be performed in order to find out how reliable is the raw data before some cleanup is performed for the physician's location.
+
+Continuing with the data exploration I fond out that some data sanitation should be performed before any further state exploration and I should not take this data as 100% accurate as it is. If it is true the numbers so far are small these are not significant enough to create dramatic changes in our reports.
 
 ## Total number of physicians by Zipcode:
 
 ```{r, echo=FALSE}
-# Need to eliminate States with blank spaces
-my.new.data$Zipcode[my.new.data$Zipcode==""] <- "00000"
+# Finding counts
 my.new.zipcode.data <- my.new.data %>% count(Zipcode, sort = TRUE)
 names(my.new.zipcode.data) <- c("Zipcode", "n Physicians")
+
+# Merging tables with zipcode library
+data(zipcode)
+my.new.zipcode.data <- merge(my.new.zipcode.data, zipcode, by.x='Zipcode', by.y='zip')
+
+# Subsetting tables
+my.new.zipcode.data <- my.new.zipcode.data %>% subset(select= c(city, state, Zipcode, `n Physicians`))
+
+# Calculating percentages
 my.new.zipcode.data$Percentage <- paste(round((my.new.zipcode.data$`n Physicians`/TotalPhysicians)*100,2),"%")
+my.new.zipcode.data <- my.new.zipcode.data %>% arrange(desc(`n Physicians`))
+
+names(my.new.zipcode.data) <- c("City","State","Zipcode", "n Physicians","Percentage")
 ```
 
 Top `r format(top,scientific=FALSE)` Zipcodes with highest number of physicians and respective percentages.
@@ -426,11 +455,26 @@ Bottom `r format(2 * top,scientific=FALSE)` Zipcodes with lowest number of physi
 kable(tail(my.new.zipcode.data, 2 * top))
 ```
 
-**Bar plot:** Total of physicians by zipcode sorted by the number of physicians.
+**Distribution by Region:**
 
-```{r, echo=FALSE}
-# Barplot (With extra espace to place labels on top of bars)
-my.plot <- barplot(my.new.zipcode.data$`n Physicians`, main="Number of Physicians by Zipcode", xlab="Zipcode", col = rainbow(40), names.arg=my.new.zipcode.data$Zipcode, axes=FALSE, ylim = c(0, max(my.new.zipcode.data$`n Physicians`)))
+Distribution of physicians by the first digit of the zipcode (Region).
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE}
+# First I will subset the data for all the Zipcodes within "United States"
+USzipCodes <- my.new.data %>% subset(Country == "UNITED STATES", select=c(Country, State, Zipcode))
+# First I will Create a Region with the first value from the ZipCode.
+USzipCodes$region = substr(USzipCodes$Zipcode, 1, 1)
+# Merge Zipcodes with the zipcode library
+data(zipcode)
+USzipCodes <- merge(USzipCodes, zipcode, by.x='Zipcode', by.y='zip')
+
+# Creating ggplot of matches ZipCodes
+g <- ggplot(data=USzipCodes) + geom_point(aes(x=longitude, y=latitude, colour=region))
+
+# simplify display and limit to the "lower 48"
+g <- g + theme_bw() + scale_x_continuous(limits = c(-125,-66), breaks = NULL)
+g <- g + scale_y_continuous(limits = c(25,50), breaks = NULL)
+g
 ```
 
 
@@ -439,15 +483,17 @@ my.plot <- barplot(my.new.zipcode.data$`n Physicians`, main="Number of Physician
 
 ### Country:
 
-Based on simple observation, we can observe how certain states tend to have more physicians enrolled with CMS while APOS tend to have less physicians enrolled. This, I think is an excellent topic to discuss in regards of how many physicians are optimal for the development and communication of healthcare.
+Based on simple observation, is easy to spot how CMS has made payments to physicians from out of this country, this is something I was not expecting to find and it definitely caught my attention since I was under the impression that those kind of payments for services were performed in the US territories.
 
 ### State:
 
-If we look at the chart and results, we noticed that over all California and New York, presented the highest physician populations. This, I believe is correlated due to major concentration of humans in those states, once again in this comparison comes to show how less populated areas tend to have less physician populations.
+If we look at the chart and results, we noticed that over all California and New York, presented the highest physician populations. This, I believe is correlated due to major concentration of humans in those states, once again in this comparison comes to show how less populated areas tend to have less physician populations registered with the open payment data from CMS.
 
 ### Zipcode:
 
 This is an interesting analysis and I believe it can play a great role in local discoveries related to quality of health care and competition, since it covers immediate surrounding areas.
+
+For example, from the **Region** distribution we can visualize how the distribution is over the country having a lot of empty spaces on the mid west. Also, something interesting is to observe that the top 3 Zip codes present on the Zip code table, belong to Houston, Chicago and Philadelphia; this is remarkable since these states did not figured as the top states, yet these zip codes have a concentrated number of physicians.
 
 
 ### Final conclusion:
