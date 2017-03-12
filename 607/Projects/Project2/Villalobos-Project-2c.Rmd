@@ -1,0 +1,289 @@
+---
+title: 'Social Security Administration: OASDI Beneficiaries by State and ZIP Code,
+  2015'
+author: 'Completed by: Duubar Villalobos Jimenez   mydvtech@gmail.com'
+date: "March 12, 2017"
+output:
+  pdf_document: default
+  html_document: default
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+subtitle: CUNY MSDA - DATA607 - Project 2_c
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+![](C:/Users/mydvtech/Documents/GitHub/MSDA/Spring-2017/607/Projects/Project2/Project-2c/SSA-logo.png)
+
+The goal of this assignment is to give you practice in preparing different datasets for downstream analysis work.
+
+Your task is to:
+
+(1) Choose any **three** of the **"wide" datasets** identified in the Week 5 Discussion items. (You may use your own dataset; please don't use my Sample Post dataset, since that was used in your Week 5 assignment!)
+
+For each of the three chosen datasets:
+
+  + Create a **.CSV** file (or optionally, a **MySQL** database!) that includes all of the information included in the dataset.  You're encouraged to use a "wide" structure similar to how the information appears in the discussion item, so that you can practice tidying and transformations as described below.
+
+  + Read the information from your **.CSV** file into **R**, and use **tidyr** and **dplyr** as needed to tidy and transform your data.  [Most of your grade will be based on this step!]
+
+  + Perform the analysis requested in the discussion item.
+
+  + Your code should be in an R Markdown file, posted to rpubs.com, and should include narrative descriptions of your data cleanup work, analysis, and conclusions.
+
+(2) Please include in your homework submission, for each of the three chosen datasets:
+
+The **URL** to the **.Rmd** file in your **GitHub** repository, and The URL for your **rpubs.com** web page.
+
+# PROCEDURE
+
+## Library definitions
+
+```{r library_setups, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+library(knitr)
+library(gdata)
+library(stringr)
+library(tidyr)
+library(dplyr)
+library(zipcode)
+library(ggplot2)
+```
+
+# OASDI NY State Only.
+
+## Dataset url location:
+
+**url:** https://www.ssa.gov/policy/docs/statcomps/
+
+I will be exploring the OASDI Beneficiaries by State and ZIP Code, 2015.
+
+This annual publication focuses on the Social Security beneficiary population at the ZIP Code level. It presents basic program data on the number and type of beneficiaries and the amount of benefits paid in each state, Social Security Administration field office, and ZIP Code. It also shows the number of beneficiaries aged 65 or older.
+
+This annual publication focuses on the Social Security beneficiary population-people receiving Old-Age, Survivors, and Disability Insurance (OASDI) benefits-at the ZIP Code level. It presents basic program data on the number and type of beneficiaries and 
+the amount of benefits paid in each state, Social Security Administration field office, and ZIP Code. It also shows the number of men and women aged 65 or older receiving benefits. The data include only persons whose benefits are currently payable. Those whose 
+benefits were withheld are excluded.
+
+Cherice Jefferies in the Office of Statistical Analysis and Support programmed and compiled the data for this report. Staff of the Office of Information Resources edited the report and prepared it for web publication.
+
+This is a complete Dataset from the federal government website managed by the Social Security Administration.
+
+## Last Updated:
+
+This is a complete set of all data for 2015.
+
+Date: October 2016.
+
+## Data Provided by:
+
+Office of Retirement and Disability Policy.
+Office of Research, Evaluation, and Statistics.
+
+## Dataset Owner:
+   
+Social Security Administration (SSA) and the Government of the United States of America.
+
+## Dictionary
+
+This dataset does not seem to have a dictionary. The download link is for a **.xlsx** file containing the desired data. However there's a **.pdf** file describing the data.
+
+**Filename:** oasdi_zip15.xlsx
+
+For simplicity reasons, I will read the raw data directly from the source.
+
+## URL and Raw data name and location definitions:
+
+```{r URL}
+url <- "https://www.ssa.gov/policy/docs/statcomps/oasdi_zip/2015/"
+xlsxfile <- "oasdi_zip15.xlsx"
+rm(xlsxfile)
+```
+
+I tried loading the data from the original location as raw as possible from the **.XLSX** file but found several problems trying to read it. I ended up unmerging the cells by opening the excel file for the State of **New York** sheet and saving as a **.csv** file.
+
+For reproducibility purposes I have uploaded the untoched **.csv** file onto my **GitHub** repository.
+
+```{r}
+url <- "https://raw.githubusercontent.com/dvillalobos/MSDA/master/607/Projects/Project2/"
+csvfile <- "oasdi_zip15.csv"
+```
+
+**Function to download .csv file, and extract information from it**
+
+```{r download_CSV, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE, error=FALSE}
+downloadCSV <- function(myurl, mycsvfile){
+  myurl <- paste(myurl,mycsvfile, sep="")
+  my.data <- read.csv(myurl, header=FALSE, stringsAsFactors =FALSE )
+  head(my.data)
+  return(my.data)
+}
+```
+
+### Imported file structure display
+
+```{r}
+my.data <- downloadCSV(myurl= url, mycsvfile= csvfile)
+```
+
+
+```{r}
+kable(head(my.data))
+```
+
+
+In summary, this data needs to be cleaned up.
+
+# Data transformation
+
+Now that I have the data frame I will transform it in order to create some possible outcomes from the given information; for this, I will start by excluding small portion of it.
+
+## Excluding Information:
+
+**Excluding top and bottom unwanted Rows:**
+
+This procedure will exclude the unwanted information contained in the first six rows, then I will exclude the information contained in at the bottom of the file 1995 to 2002 becoming from 1990 to the end in the new data frame.
+
+```{r}
+my.new.data <- my.data[-c(1:6), ]
+my.new.data <-my.new.data[-c(1989:3003), ]
+```
+
+```{r, echo=FALSE}
+kable(head(my.new.data))
+```
+
+**Exclude unwanted V3 column:**
+
+```{r}
+str(my.new.data)
+my.new.data <- my.new.data %>% subset(select=-c(V3))
+str(my.new.data)
+```
+
+```{r, echo=FALSE}
+kable(head(my.new.data))
+```
+
+
+**Renaming Columns**
+
+```{r}
+names(my.new.data) <- c("County","Zipcode","n Total", "n Retired", "n Disabled", "n Widow & Parents", "n Spouses", "n Children", "$ All Beneficiaries", "$ Retired", "$ Widow & Parents", "n OASDI 65 & older")
+```
+
+```{r, echo=FALSE}
+kable(head(my.new.data))
+```
+
+
+**Need to split data into 2 data frames**
+
+a) Zip Code Table which is going to include:
+
++ Data for Numbers
+
++ Data for Monthly Benefits
+
+b) County Table which is going to include:
+
++ Data for Numbers
+
++ Data for Monthly Benefits
+
+**Separate results:**
+
+First I will separate County Summary data from zip code data.
+
+```{r}
+# Creating a County Data Frame
+my.new.data$County <- str_replace_all(my.new.data$County," ","")
+my.county.data <- my.new.data %>% subset(County != "")
+rownames(my.county.data) <- NULL
+```
+
+County Summary Table.
+
+```{r, echo=FALSE}
+kable(my.county.data)
+```
+
+Zip Code Table by employing **anti_join()** from **dplyr** function.
+
+```{r}
+my.zipcode.data <- anti_join(my.new.data, my.county.data, by="County")
+my.zipcode.data <- my.zipcode.data %>% subset(select=-c(County))
+```
+
+Zip Code table.
+
+```{r, echo=FALSE}
+kable(head(my.zipcode.data))
+```
+
+
+# Data Exploration
+
+From the above table we can explore a few things as follows:
+
+##Geographical distribution:
+
+**Distribution by Region:**
+
+Distribution of OASDI Beneficiaries during 2015 by the zipcode (Region).
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE}
+# Merge Zipcodes with the zipcode library
+USzipCodes <- my.zipcode.data
+USzipCodes$Zipcode <- clean.zipcodes(USzipCodes$Zipcode)
+data(zipcode)
+USzipCodes <- merge(USzipCodes, zipcode, by.x='Zipcode', by.y='zip')
+
+# Creating ggplot of matches ZipCodes
+g <- ggplot(data=USzipCodes) + geom_point(aes(x=longitude, y=latitude, colour=1))
+
+# simplify display and limit to the "lower 48"
+g <- g + theme_bw() + scale_x_continuous(limits = c(-80,-72), breaks = NULL)
+g <- g + scale_y_continuous(limits = c(40,45), breaks = NULL)
+g <- g + theme(legend.position="none")
+g
+```
+
+
+## Zip codes in which children have not received benefits.
+
+```{r, echo=FALSE}
+USzipCodesChild <- USzipCodes %>% subset(USzipCodes$`n Children` == 0)
+rownames(USzipCodesChild) <- NULL
+USzipCodesChild <- USzipCodesChild %>% subset(select=c(Zipcode, city, state, latitude, longitude))
+kable(head(USzipCodesChild))
+```
+
+
+Geographical distribution.
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE}
+
+
+# Creating ggplot of matches ZipCodes
+g <- ggplot(data=USzipCodesChild) + geom_point(aes(x=longitude, y=latitude, colour=3))
+
+# simplify display and limit to the "lower 48"
+g <- g + theme_bw() + scale_x_continuous(limits = c(-80,-72), breaks = NULL)
+g <- g + scale_y_continuous(limits = c(40,45), breaks = NULL)
+g <- g + theme(legend.position="none")
+g
+```
+
+## Conclusions
+
+
+This is an interesting analysis and I believe it can play a great role in local discoveries related to OASDI Beneficiaries since it covers immediate surrounding areas.
+
+For example, from the **Region** distribution we can visualize how the distribution is over the respective zipcodes having a better perspective on how respective populations are distributed.
+
+
+### Final conclusion:
+
+Since there's more data available, it will be interesting to perform more comparisons in regards of the years and states and any other "correlation" that we could find related to other entities as well.
