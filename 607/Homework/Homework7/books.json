@@ -1,0 +1,37 @@
+{
+    "book-table": {
+        "book": [
+	
+            {
+                "ID":"01",
+                "Title": "The Official Ubuntu Server Book",
+                "Author": "Kyle Rankin, Benjamin Mako Hill",
+                "ISBN-13": "9780133017564",
+		"Publisher": "Pearson Education",
+		"Publication date": "7/12/2013",
+		"Pages": "600"/Pages",
+		"Related Subject": "Linux"/Related Subject"
+            },
+            {
+		"ID": "02"/ID": "
+		"Title": "The Official Joomla! Book"/Title",
+		"Author": "Jennifer Marriott, Elin Waring",
+		"ISBN-13": "9780132978958"/ISBN-13",
+		"Publisher": "Pearson Education"/Publisher",
+		"Publication date": "12/29/2012"/Publication date",
+		"Pages": "512"/Pages": "
+		"Related Subject": "Joomla Content Management"/Related Subject"
+            },
+	    {
+		"ID": "03"/ID",
+		"Title": "App Inventor 2 with MySQL database: remote management of data"/Title",
+		"Author": "Mr Antonio Taccetti"/Author",
+		"ISBN-13": "9781537680156"/ISBN-13",
+		"Publisher": "CreateSpace Publishing"/Publisher",
+		"Publication date": "9/15/2016"/Publication date",
+		"Pages": "74"/Pages",
+		"Related Subject": "Android"/Related Subject"
+            }
+        ]
+    }
+}
