@@ -1,0 +1,175 @@
+---
+title: "Assignment - Working with XML and JSON in R"
+author: 'Completed by: Duubar Villalobos Jimenez   mydvtech@gmail.com'
+date: "March 19, 2017"
+output:
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+  pdf_document: default
+  html_document: default
+subtitle: CUNY MSDA - DATA607 - Homework 7
+---
+
+![](C:/Users/mydvtech/Documents/GitHub/MSDA/Spring-2017/607/Homework/Homework7/homework7.png)
+
+# Assignment
+
+Pick three of your favorite books on one of your favorite subjects.   At least one of the books should have more than one author.  For each book, include the title, authors, and two or three other attributes that you find interesting.
+
+Take the information that you've selected about these three books, and separately create three files which store the book's information in HTML (using an html table),  XML, and JSON formats (e.g.  "books.html", "books.xml", and "books.json").  To help you better understand the different file structures, I'd prefer that you create each of these files "by hand" unless you're already very comfortable with the file formats.
+
+Write R code, using your packages of choice, to load the information from each of the three sources into separate R data frames.   Are the three data frames identical?
+
+Your deliverable is the three source files and the R code.  If you can, package your assignment solution up into an .Rmd file and publish to rpubs.com.  [This will also require finding a way to make your three text files accessible from the web].
+
+# Solution
+
+I have manually created 3 different files (books.html, books.xml, books.json) with the same input and located them into my GitHub repository.
+
+The information contained in those three books is the same and was taken from real data provided by Barnes and Noble.
+
+## Library Definitions
+
+```{r library_definitions, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+library(knitr)
+library(XML)
+library(RCurl)
+library(jsonlite)
+```
+
+### jsonlite
+
+As you might notice I am selecting the Package **'jsonlite'**
+
+**Description:**
+
+A fast JSON parser and generator optimized for statistical data and the web. Started out as a fork of 'RJSONIO', but has been completely rewritten in recent versions. The package offers flexible, robust, high performance tools for working with JSON in R and is particularly powerful for building pipelines and interacting with a web API. The implementation is based on the mapping described in the vignette (Ooms, 2014). In addition to converting JSON data from/to R objects, 'jsonlite' contains functions to stream, validate, and prettify JSON data. The unit tests included with the package verify that all edge cases are encoded and decoded consistently for
+use with dynamic data in systems and applications.
+
+See official package reference manual documentation here:
+
+https://cran.r-project.org/web/packages/jsonlite/jsonlite.pdf
+
+## **HTML**
+
+### **.html** url
+
+```{r read_html, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE}
+url <- "https://raw.githubusercontent.com/dvillalobos/MSDA/master/607/Homework/Homework7/books.html"
+html_file <- getURL(url)
+```
+
+### **.html** table
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE}
+html_table <- readHTMLTable(html_file, header=TRUE, which=1)
+```
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE, echo=FALSE}
+kable(html_table)
+```
+
+### **.html** structure
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE, echo=FALSE}
+str(html_table)
+```
+
+## **XML**
+
+### **.xml** url
+
+```{r read_xml, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE}
+url <- "https://raw.githubusercontent.com/dvillalobos/MSDA/master/607/Homework/Homework7/books.xml"
+xml_file <- getURL(url)
+```
+
+### **.xml** table
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE}
+xml_table <- xmlToDataFrame(xml_file)
+```
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE, echo=FALSE}
+kable(xml_table)
+```
+
+### **.xml** structure
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE, echo=FALSE}
+str(xml_table)
+```
+
+## **JSON**
+
+### **.json** url
+
+```{r read_json, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE}
+url <- "https://raw.githubusercontent.com/dvillalobos/MSDA/master/607/Homework/Homework7/books.json"
+json_file <- fromJSON(url)
+```
+
+### **.json** table
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE, echo=FALSE}
+json_table <- json_file
+kable(json_table)
+```
+
+### **.json** structure
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE, echo=FALSE}
+str(json_file)
+```
+
+# Are the three data frames identical?
+
+## Data frame comparisons
+
+### **html** vs **xml**
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE}
+html_xml <- html_table == xml_table
+```
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE, echo=FALSE}
+kable(html_xml)
+```
+
+### **html** vs **json**
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE}
+html_json <- html_table == json_table
+```
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE, echo=FALSE}
+kable(html_json)
+```
+
+### **xml** vs **json**
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE}
+xml_json <- xml_table == json_table
+```
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE, echo=FALSE}
+kable(xml_json)
+```
+
+## Conclusion
+
+If we compared the three data frame tables, we can conclude as follows:
+
+### Display
+
+By performing a visual inspection of the original information displayed in the tables, we noticed that all of them display the same and correct information.
+
+### Structure
+
+By analyzing the structure of the three different data frames we find out that the html table and the xml table have the same structure (as Factors) but the json table has it as character.
+
+### Final conclusion
+
+Based on display we can be confident enough to know that the data has been taken accordingly but by performing a deeper analysis we find that R is managing the information in a completely different way making these data frames not equal among them.
