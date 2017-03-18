@@ -13,7 +13,7 @@
 		"Related Subject": "Linux"
             },
             {
-		"ID": "02"/ID": "
+		"ID": "02",
 		"Title": "The Official Joomla! Book",
 		"Author": "Jennifer Marriott, Elin Waring",
 		"ISBN-13": "9780132978958",
@@ -23,7 +23,7 @@
 		"Related Subject": "Joomla Content Management"
             },
 	    {
-		"ID": "03"/ID",
+		"ID": "03",
 		"Title": "App Inventor 2 with MySQL database: remote management of data",
 		"Author": "Mr Antonio Taccetti",
 		"ISBN-13": "9781537680156",
