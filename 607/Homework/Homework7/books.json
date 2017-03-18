@@ -9,18 +9,18 @@
                 "ISBN-13": "9780133017564",
 		"Publisher": "Pearson Education",
 		"Publication date": "7/12/2013",
-		"Pages": "600"/Pages",
-		"Related Subject": "Linux"/Related Subject"
+		"Pages": "600",
+		"Related Subject": "Linux"
             },
             {
 		"ID": "02"/ID": "
-		"Title": "The Official Joomla! Book"/Title",
+		"Title": "The Official Joomla! Book",
 		"Author": "Jennifer Marriott, Elin Waring",
-		"ISBN-13": "9780132978958"/ISBN-13",
-		"Publisher": "Pearson Education"/Publisher",
-		"Publication date": "12/29/2012"/Publication date",
-		"Pages": "512"/Pages": "
-		"Related Subject": "Joomla Content Management"/Related Subject"
+		"ISBN-13": "9780132978958",
+		"Publisher": "Pearson Education",
+		"Publication date": "12/29/2012",
+		"Pages": "512",
+		"Related Subject": "Joomla Content Management"
             },
 	    {
 		"ID": "03"/ID",
