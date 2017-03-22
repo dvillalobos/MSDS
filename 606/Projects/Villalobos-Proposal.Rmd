@@ -1,0 +1,184 @@
+---
+title: "Data Project Proposal"
+author: "Duubar Villalobos Jimenez"
+date: "March 19, 2017"
+output:
+  pdf_document: default
+  html_document:
+    toc: yes
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+subtitle: CUNY MSDA DATA 606
+---
+
+### Data Preparation
+
+
+```{r library_definitions, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Create vector with all needed libraries
+load_packages <- c("knitr", "RMySQL","tidyverse", "htmlTable", "stringr", "prettydoc", "janitor")
+
+# Check to see if wee need a library in order to to install it
+new.pkg <- load_packages[!(load_packages %in% installed.packages()[, "Package"])]
+if (length(new.pkg)) install.packages(new.pkg, dependencies = TRUE, warn.conflicts = FALSE)
+
+# Library
+sapply(load_packages, library, character.only = TRUE, quietly = TRUE)
+#CODE SOURCE DOCUMENTATION: https://gist.github.com/stevenworthington/3178163
+```
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+# Read password and user name from remote location in order to establish connection to MySQL
+url <- "http://mydvtech.com/libraries/mysql.csv"
+MySQLConnect <- read.csv(url, header = FALSE, sep = ",", stringsAsFactors=FALSE)
+
+# Remote access definitions
+myLocalPassword <- MySQLConnect$V1
+myLocalUser <- MySQLConnect$V2
+myLocalHost <- 'mydvtech.com'
+myLocalMySQLSchema <- 'mydvtech_cuny'
+myLocalTableName <- 'tbl_tidypaysatxt'
+```
+
+```{r Duubar_MySQL_Read, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+# Reading our normalized data by employing RMySQL() in R
+mydbconnection <- dbConnect(MySQL(), 
+                  user = myLocalUser,
+                  password = myLocalPassword,
+                  host = myLocalHost,
+                  dbname = myLocalMySQLSchema)
+
+# Check to see if our table exists? and read our dataset.
+myLocalTableName <- tolower(myLocalTableName)
+if (dbExistsTable(mydbconnection, name = myLocalTableName)  == TRUE){
+  my.data <- dbReadTable(mydbconnection, name = myLocalTableName)
+} else {
+  print("Error, the table does not exist")
+}
+
+# Closing connection with local Schema
+dbDisconnect(mydbconnection)
+
+#To close all open connections
+lapply( dbListConnections( dbDriver( drv = "MySQL")), dbDisconnect)
+```
+
+
+
+### Research question 
+
+Are Data Science skills predictive of salary?
+
+
+
+### Cases 
+
+Each case represents a job posting in the united states. There are `r length(unique(my.data$ID))` observations in the given data set.
+
+
+
+
+### Data collection 
+
+Data is collected by Paysa as part of the Integrated job posting website. Data is submitted by employers daily.
+
+
+
+
+### Type of study 
+
+This is an observational study.
+
+
+
+
+### Data Source 
+
+Data is collected by Paysa and is available online here: http://paysa.com For this project, data was extracted by copying and pasting a job search of "Data Science" on March 16, 2017 into a text file uploaded into a table in a remote MySQL server.
+
+
+
+### Response 
+
+The response variable is salary and is numerical.
+
+
+
+
+### Explanatory 
+
+The explanatory variable is Data Science skills and is categorical.
+
+
+
+### Relevant summary statistics 
+
+```{r,  echo=FALSE, warning=FALSE, error=FALSE, message=FALSE }
+# Procedure to Find Group Values for the skills
+group_skills <- my.data %>% count(Skills)
+group_skills$n <- group_skills$n / 4
+total_n_skills <- sum(group_skills$n)
+group_skills$Percent <- paste(round((group_skills$n / total_n_skills)*100,2),"%")
+group_skills <- group_skills %>% arrange(desc(n))
+group_skills$Rank <- round(rank(-group_skills$n),0)
+names(group_skills) <- c("Skills","Count", "Percentage", "Rank")
+```
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+kable(group_skills, rnames=FALSE)
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+# Procedure to Find Group Values for the skills
+my.data$Salary <- as.numeric(my.data$Salary)
+my.data$Salary[is.na(my.data$Salary)] <- 0
+group_salary_skills <- my.data %>%
+                       group_by(Skills, Type) %>%
+                       summarise(Average = mean(Salary), Median = median(Salary), Max = max(Salary), Min= min(Salary)) %>%
+                       arrange(desc(Median))
+
+type_salary_skills <- my.data %>%
+                       group_by(Type) %>%
+                       summarise(Average = mean(Salary), Median = median(Salary), Max = max(Salary), Min= min(Salary)) %>%
+                       arrange(desc(Median))
+
+ind_salary_skills <- my.data %>%
+                       group_by(Skills) %>%
+                       summarise(Average = mean(Salary), Median = median(Salary), Max = max(Salary), Min= min(Salary)) %>%
+                       arrange(desc(Median))
+```
+
+## Top 10 paid Skills
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+kable(head(group_salary_skills,10))
+```
+
+## Salary Frequency
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE }
+# Procedure to Find Group Values for the skills
+
+xlimits <- range(ind_salary_skills$Median)
+
+hist(ind_salary_skills$Median, main="Median Salary Frequency", xlab="Median Expected Salary", breaks = 20, xlim = xlimits)
+
+```
+
+```{r}
+qqnorm(ind_salary_skills$Median)
+qqline(ind_salary_skills$Median, col = 2)
+```
+
+
+
+## Salary Type
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+kable(type_salary_skills)
+```
