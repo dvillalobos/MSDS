@@ -1,0 +1,531 @@
+---
+title: "Project 4 - Document Classification"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "April 16, 2017"
+output:
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+  pdf_document: default
+  html_document: default
+subtitle: CUNY MSDA DATA 607
+---
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+![](C:/Users/mydvtech/Documents/GitHub/MSDA/Spring-2017/607/Projects/Project4/span-vs-ham.png)
+
+# PROJECT 4: Document Classification
+
+It can be useful to be able to classify new "test" documents using already classified "training" documents.  A common example is using a corpus of labeled spam and ham (non-spam) e-mails to predict whether or not a new document is spam.  
+
+For this project, you can start with a spam/ham dataset, then predict the class of new documents (either withheld from the training dataset or from another source such as your own spam folder).   One example corpus:  https://spamassassin.apache.org/publiccorpus/
+
+## Workspace preparation
+
+Create vector with all needed libraries.
+
+```{r library_definitions, echo=TRUE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+ load_packages <- c(
+                    "knitr",
+                    "R.utils",
+                    "tm",
+                    "wordcloud",
+                    "topicmodels",
+                    "SnowballC",
+                    "e1071",
+                    "data.table",
+                    "RMySQL",
+                    "tidyverse",
+                    "tidyr",
+                    "dplyr",
+                    "stringr",
+                    "stats"
+                  )
+
+```
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+# Check to see if we need a library in order to to install it
+# new.pkg <- load_packages[!(load_packages %in% installed.packages()[, "Package"])]
+# if (length(new.pkg)) install.packages(new.pkg, dependencies = TRUE, warn.conflicts = FALSE)
+
+# Library
+sapply(load_packages, library, character.only = TRUE, quietly = TRUE)
+# CODE SOURCE DOCUMENTATION: https://gist.github.com/stevenworthington/3178163
+
+```
+
+
+## Selected datasets
+
+The selected datasets selected are as follows:
+
+```{r, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+url.spam <- "http://spamassassin.apache.org/old/publiccorpus/"
+file.spam <- "20050311_spam_2.tar.bz2"
+
+url.ham <- "http://spamassassin.apache.org/old/publiccorpus/"
+file.ham <- "20030228_easy_ham.tar.bz2"
+
+```
+
+
+## Preparing datasets
+
+### Download
+
+**Function to download the desired files**
+
+```{r download_tar, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE, error=FALSE}
+
+downloadTAR <- function(filetype=NULL, myurl=NULL, myrootfile=NULL){
+
+  destfile <- paste(filetype,".tar", sep="")
+  
+  if(!file.exists(destfile)){
+      myfile <- paste(myurl,myrootfile,sep="")
+      destfile <- paste(filetype,".tar.bz2", sep="")
+
+      download.file(myfile, destfile= destfile)
+
+      bunzip2(destfile)
+      # untar(destfile)
+  }
+  
+  mycompresedfilenames <- untar(destfile, list = TRUE)
+  return(mycompresedfilenames)
+}
+
+spamFileNames <- downloadTAR("Spam", url.spam, file.spam)
+hamFileNames <- downloadTAR("Ham", url.ham, file.ham)
+
+```
+
+### Obtaining file names
+
+```{r file_names, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE, error=FALSE}
+
+spamfiles <- str_trim(str_replace_all(spamFileNames, "spam_2/", ""))  
+hamFiles <- str_trim(str_replace_all(hamFileNames, "easy_ham/", ""))
+
+spamfiles <- subset(spamfiles, nchar(spamfiles) == 38)
+hamfiles <- subset(hamFiles , nchar(hamFiles) == 38)
+```
+
+
+### Read contents
+
+```{r read_files, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE, error=FALSE}
+
+readFileContents <- function(importtype=NULL, filenames=NULL){
+  
+  if (importtype == "Spam") {
+    globalcon <- paste("C:/Users/mydvtech/Documents/GitHub/MSDA/Spring-2017/607/Projects/Project4/spam_2/",filenames, sep = "")
+  }
+  if (importtype == "Ham") {
+    globalcon <- paste("C:/Users/mydvtech/Documents/GitHub/MSDA/Spring-2017/607/Projects/Project4/easy_ham/",filenames, sep = "")
+  }
+  temp <- data.frame(stringsAsFactors = FALSE)
+
+  mydata <- matrix()
+
+  for(i in 1:length(filenames)){
+    con <- file(globalcon[i], "r", blocking = FALSE)
+     temp <- readLines(con)
+    close(con)    
+    temp <- str_c(temp, collapse = "")
+    temp <- as.data.frame(temp, stringsAsFactors = FALSE)
+    names(temp) <- "Content"
+    mydata[[i]] <- temp
+  }
+  
+  return(mydata)
+}
+
+spams <- readFileContents("Spam", spamfiles)
+hams <- readFileContents("Ham", hamfiles)
+
+```
+
+
+```{r Create_SingleVector, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+# Create Character Vector from Dataframe
+temp <- as.character()
+for (i in 1:length(spams)){
+    temp[i]<- as.character(spams[[i]])
+}
+finalspams <- temp
+rm(temp)
+
+temp1<-as.character()
+
+for (i in 1:length(hams)){
+    temp1[i]<- as.character(hams[[i]])
+}
+finalhams <- temp1
+rm(temp1)
+
+
+spams_df <- data.frame(finalspams, stringsAsFactors = FALSE)
+hams_df <- data.frame(finalhams, stringsAsFactors = FALSE)
+
+spams_df$type <- "Spams"
+hams_df$type <- "Hams"
+
+spams_df$file <- spamfiles
+hams_df$file <- hamfiles
+
+#reorder by column index
+spams_df <- spams_df[c(2,3,1)]
+hams_df <- hams_df[c(2,3,1)]
+
+names(spams_df) <- c("type","file","Content")
+names(hams_df) <- c("type","file","Content")
+
+```
+
+```{r TotalEmails, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+
+# Combining the two dataframes into one
+
+emails_df <- bind_rows(spams_df, hams_df)
+
+# Create Character Vector from Dataframe
+
+finalspamsTotalEmails <- dim(spams_df)[1]
+
+finalhamsTotalEmails <- dim(hams_df)[1]
+
+```
+
+### Some results
+
+The total number of known spams are: `r finalspamsTotalEmails`.
+
+The total number of known hams are: `r finalhamsTotalEmails`.
+
+Grand total of Emails: `r finalspamsTotalEmails + finalhamsTotalEmails`.
+
+### Sample emails
+
+**Spam**
+
+![](C:/Users/mydvtech/Documents/GitHub/MSDA/Spring-2017/607/Projects/Project4//Spam_Sample.png)
+
+**Ham**
+
+![](C:/Users/mydvtech/Documents/GitHub/MSDA/Spring-2017/607/Projects/Project4/Ham_Sample.png)
+
+## Analysis
+
+### Lenght of Email
+
+
+```{r LenghtofEmails, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+
+spamsLength <- nchar(spams_df$Content)
+hamsLength <- nchar(hams_df$Content)
+
+```
+
+**Spams Statistics**
+
+Summary
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+summary(spamsLength)
+
+```
+
+Distribution
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+hist(spamsLength, main="Spams Length Frequency", xlab="Length of Emails", breaks = 100)
+
+```
+
+**Hams Summary Statistics**
+
+Summary
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+summary(hamsLength)
+
+```
+
+Distribution
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+hist(hamsLength, main="Hams Length Frequency", xlab="Length of Emails", breaks = 100)
+
+```
+
+### Median Length
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+spamsMedian <- median(spamsLength)
+hamsMedian <- median(hamsLength)
+
+medianDiff <- spamsMedian - hamsMedian
+medianPercentile <- round(((spamsMedian / hamsMedian) - 1) * 100,2)
+
+```
+
+By running this analysis we can find out that in our pool of known ham spam emails; the Spam emails tend to have a longer Median length compared to Ham emails; that is as follows:
+
+Median Length of Spams: `r spamsMedian`.
+
+Median Length of Hams: `r hamsMedian`.
+
+Difference of medians: `r medianDiff`.
+
+Percentage difference: `r medianPercentile`%.
+
+### @ Analysis
+
+```{r CountPaterns, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+strCount <- function(x, pattern, split){
+ 
+unlist(lapply(
+    strsplit(x, split),
+       function(z) na.omit(length(grep(pattern, z)))
+   ))
+ 
+}
+
+```
+
+```{r C, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+# Count how many "@" are on each email ("@" is associated with emails)
+atSpams <- strCount(spams_df$Content, "@", " ")
+atHams <- strCount(hams_df$Content, "@", " ")
+
+```
+
+**@ Spams**
+
+Summary
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+summary(atSpams)
+
+```
+
+Distribution
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+hist(atSpams, main="`@` Spams Frequency", xlab="`@` in Emails", breaks = 100)
+
+```
+
+**@ Hams**
+
+Summary
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+summary(atHams)
+
+```
+
+Distribution
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+hist(atHams, main="`@` Hams Frequency", xlab="`@` in Emails", breaks = 100)
+
+```
+
+@ Median analysis
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+AtspamsMedian <- median(atSpams)
+AthamsMedian <- median(atHams)
+
+AtmedianDiff <- AtspamsMedian - AthamsMedian
+AtmedianPercentile <- round(((AtspamsMedian / AthamsMedian) - 1) * 100,2)
+
+```
+
+By running this analysis we can find out that in our pool of known ham spam emails; the Spam emails tend to have a lower Median count of "@" compared to Ham emails; that is as follows:
+
+Median Length of Spams: `r AtspamsMedian`.
+
+Median Length of Hams: `r AthamsMedian`.
+
+Difference of medians: `r AtmedianDiff`.
+
+Percentage difference: `r AtmedianPercentile`%.
+
+This can be probably concluded as accurate since work and personal emails tend to cc a lot of people while spams are targeted to small audiences in the beginning.
+
+
+```{r Corpus, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+sms_corpus <- Corpus(VectorSource(emails_df$Content))
+
+#translate all letters to lower case
+clean_corpus<- tm_map(sms_corpus, content_transformer(tolower))
+
+# remove numbers
+clean_corpus <- tm_map(clean_corpus, removeNumbers)
+
+#inspect(clean_corpus[1:3])
+
+# remove punctuation
+clean_corpus <- tm_map(clean_corpus, removePunctuation)
+
+# remove stop words
+clean_corpus <- tm_map(clean_corpus, removeWords, stopwords())
+
+# remove extra white spaces
+clean_corpus <- tm_map(clean_corpus, stripWhitespace)
+
+
+# Stem
+release_corpus <- tm_map(clean_corpus, content_transformer(stemDocument))
+
+# Indices
+spam_indices <- which(emails_df$type == "Spams")
+ham_indices <- which(emails_df$type == "Hams")
+
+```
+
+### Wordclouds
+
+**Spam**
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+# Word Cloud
+wordcloud(clean_corpus[spam_indices], min.freq=250)
+
+```
+
+**Ham**
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+# Word Cloud
+wordcloud(clean_corpus[ham_indices], min.freq=250)
+
+```
+
+## Training data
+
+Divide corpus into training and test data
+
+Use 75% training and 25% test.
+
+
+
+```{r, warning=FALSE, error=FALSE, message=FALSE}
+
+# Randomize emails order
+random_emails <- emails_df[sample(nrow(emails_df)),]
+NEmailsQ <- dim(random_emails)[1]/4*3
+NEmails <- dim(random_emails)[1]
+
+random_emails_train <- random_emails[1:NEmailsQ,]
+random_emails_test <- random_emails[NEmailsQ+1:NEmails,]
+
+# Document-term matrix and clean corpus
+emails_corpus_train <- clean_corpus[1:NEmailsQ]
+emails_corpus_test <- clean_corpus[NEmailsQ+1:NEmails]
+
+
+# Text to Matrix in order to Tokenize the corpus
+emails_dtm_train <- DocumentTermMatrix(emails_corpus_train)
+emails_dtm_train <- removeSparseTerms(emails_dtm_train, 1-(10/length(release_corpus)))
+
+emails_dtm_test <- DocumentTermMatrix(emails_corpus_test)
+emails_dtm_test <- removeSparseTerms(emails_dtm_test, 1-(10/length(release_corpus)))
+
+
+emails_tdm_train <- TermDocumentMatrix(emails_corpus_train)
+emails_tdm_train <- removeSparseTerms(emails_tdm_train, 1-(10/length(release_corpus)))
+
+emails_tdm_test <- TermDocumentMatrix(emails_corpus_test)
+emails_tdm_test <- removeSparseTerms(emails_tdm_test, 1-(10/length(release_corpus)))
+
+
+
+five_times_words <- findFreqTerms(emails_dtm_train, 5)
+
+```
+
+Create document-term matrices using frequent words
+
+```{r, warning=FALSE, error=FALSE, message=FALSE}
+
+emails_train <- DocumentTermMatrix(emails_corpus_train, control=list(dictionary = five_times_words))
+emails_test <- DocumentTermMatrix(emails_corpus_test, control=list(dictionary = five_times_words))
+
+```
+
+Convert count information to "Yes", "No"
+
+Naive Bayes classification needs present or absent info on each word in a message. We have counts of occurrences. Convert the document-term matrices.
+
+```{r, warning=FALSE, error=FALSE, message=FALSE}
+
+convert_count <- function(x) {
+  y <- ifelse(x > 0, 1,0)
+  y <- factor(y, levels=c(0,1), labels=c("No", "Yes"))
+  y
+}
+
+```
+
+```{r, warning=FALSE, error=FALSE, message=FALSE}
+
+emails_train <- apply(emails_train, 2, convert_count)
+emails_test <- apply(emails_test, 2, convert_count)
+
+```
+
+The Naive Bayes function
+
+We'll use a Naive Bayes classifier provided in the package e1071.
+
+```{r, warning=FALSE, error=FALSE, message=FALSE}
+
+emails_classifier <- naiveBayes(emails_train, factor(random_emails_train$type))
+class(emails_classifier)
+
+```
+
+
+```{r, warning=FALSE, error=FALSE, message=FALSE}
+
+# emails_test_pred <- predict(emails_classifier, newdata=emails_test)
+
+```
+
+
+Unfortunatelly this requires a lot of resources from my PC and ran out of memory; hense I can't present the final reults.
+
+
+
+
+
+
+
