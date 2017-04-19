@@ -239,6 +239,11 @@ A downside is that some of the models they present are provided temporarily for 
 
 I hope, that they can can enable a dynamic way to provide some of their services in a more affordable way for some of the specialized services, research or discoveries they do.
 
+# Discussion thread
+
+By following this link you can leave your thoughts or comments.
+
+https://github.com/dvillalobos/MSDA/issues/1
 
 # References:
 
