@@ -1,0 +1,224 @@
+---
+title: "Homework 7"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "April 23, 2017"
+output:
+  pdf_document: default
+  html_document: default
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+subtitle: CUNY MSDA DATA 606
+---
+
+#Chapter 7 - Introduction to Linear Regression
+
+    Practice: 7.23, 7.25, 7.29, 7.39
+    Graded: 7.24, 7.26, 7.30, 7.40
+
+
+## 7.24 Nutrition at Starbucks
+
+The scatterplot below shows the relationship between the number of calories and amount of carbohydrates (in grams) Starbucks food menu items con-tain. 21 Since Starbucks only lists the number of calories on the display items, we are interested in predicting the amount of carbs a menu item has based on its calorie content.
+
+![](/home/rstudio/Documents/GitHub/MSDA/Spring-2017/606/Homeworks/Homework7/724.png)
+
+### Answer:
+
+**(a) Describe the relationship between number of calories and amount of carbohydrates (in grams) that Starbucks food menu items contain.**
+
+Then number of calories and the amount of carbohydrates seems to have a positive relationship. As calories increase, carbohydrates do.
+
+**(b) In this scenario, what are the explanatory and response variables?**
+
+Explanatory variable: *Calories* on the $x$ axis.
+
+Response variable: *Carbohydrates* on the $y$ axis.
+
+**(c) Why might we want to fit a regression line to these data?**
+
+We are interested in predicting the amount of carbs a menu item has based on its calorie content.
+
+**(d) Do these data meet the conditions required for fitting a least squares line?**
+
+`Linearity:` The data is disperse, but there does appear to follow an increasing trend. It appears to follow a linear pattern.
+
+`Nearly normal residuals:` The residuals distribution appears nearly normal.
+
+`Constant variability:` If we look at the chart in the middle, we noticed that the residuals tend to linger around zero, so I would say that it satisfies this condition.
+
+`Independent observations:` I will assume that each menu item is presumably independent of the next; I will keep in mind that overall these menu items belong to one single company as pososed to different vendors.
+
+In conclusion, this data is tricky and might have a 50/50 chances of meeting the conditions required for fitting a least squares line. Hense I will reject the conditions and take it as not met.
+
+## 7.26 Body measurements
+
+Exercise 7.15 introduces data on shoulder girth and height of a group of individuals. The mean shoulder girth is 107.20 cm with a standard deviation of 10.37 cm. The mean height is 171.14 cm with a standard deviation of 9.41 cm. The correlation between height and shoulder girth is 0.67.
+
+### Answer:
+
+**(a) Write the equation of the regression line for predicting height.**
+
+Since $y = \beta_0 + \beta_1 \cdot x$
+
+and $\beta_1 = \frac{S_y}{S_x}R$
+
+By Finding our betas we have as follows:
+
+```{r}
+Sx <- 10.37
+Sy <- 9.41
+
+R <- 0.67
+
+b1 <- (Sy / Sx) * R
+
+xhat <- 107.2
+yhat <- 171.14
+
+b0 <- yhat - b1 * xhat
+```
+
+The equation for the regression line for predicting height will be:
+
+y = `r b0` + `r b1` * x
+
+**(b) Interpret the slope and the intercept in this context.**
+
+`Slope:` Represents the number of centimeters increase in height for each increase in shoulder girth.
+
+`Intercept:` Represent the height in centimeters at girth of 0 cm. 
+
+**(c) Calculate R 2 of the regression line for predicting height from shoulder girth, and interpret it in the context of the application.**
+
+By using the correlation value, we have as follows:
+
+```{r}
+R2 <- R^2
+```
+
+This means that this linear model explains `r round(R2,4)*100`% of the variation of the height data.
+
+**(d) A randomly selected student from your class has a shoulder girth of 100 cm. Predict the height of this student using the model.**
+
+By substituting in our previously found linear regresion function, we have as follows:
+
+```{r}
+x <- 100
+
+y = b0 + b1 * x
+```
+
+The height predicted for this student will be: `r round(y,2)` cms.
+
+**(e) The student from part (d) is 160 cm tall. Calculate the residual, and explain what this residual means.**
+
+The residual is the difference of the observed response and the response we would predict based on the model fit.
+
+From this example we have as follows: $e_i = y_i - \bar{y}_i$
+
+```{r}
+i = 100 # from  part d
+yi <- 160
+
+ei <- yi - y
+```
+
+The residual for this observation is: `r ei`.
+
+Since the residual is negative, this means that the actual data point is below the linear regression line and that the model is overestimating the value. 
+
+**(f) A one year old has a shoulder girth of 56 cm. Would it be appropriate to use this linear model to predict the height of this child?**
+
+![](/home/rstudio/Documents/GitHub/MSDA/Spring-2017/606/Homeworks/Homework7/715.png)
+
+As we can see, the original data set had a response variable values between 85 and 135 cm. A measure of 56 is outside the sample and we would require extrapolation and would not be appropriate to predict height for children.
+
+## 7.30 Cats
+
+The following regression output is for predicting the heart weight (in g) of cats from their body weight (in kg). The coefficients are estimated using a dataset of 144 domestic cats.
+
+![](/home/rstudio/Documents/GitHub/MSDA/Spring-2017/606/Homeworks/Homework7/730.png)
+
+### Answer:
+
+**(a) Write out the linear model.**
+
+Since we are given a regression output, the value for $\beta_0$ and $\beta_1$ are provided by the first column titled “Estimate” respectively.
+
+$\bar{y} = - 0.357 + 4.034 \cdot x$
+
+**(b) Interpret the intercept.**
+
+The intercept will be at -0.357. This value tells us that this model will predict a negative heart weight when the cat's body weight is 0. 
+
+Please note that this is not realistic since the heart is part of the body, therefore this value is not meaningful when x = 0.
+
+**(c) Interpret the slope.**
+
+In this case, the slope of 4.034 tells us that the heart weight increases by 4.034 grams for each 1kg of body weight increase.
+
+**(d) Interpret R 2 .**
+
+For this particular case, the $R^2=64.66$% tells us that the linear model describes 64.66% of the variation in the heart weight.
+
+(e) Calculate the correlation coefficient.
+
+Since we know our $R^2$.
+
+```{r}
+R2 <- 0.6466
+
+R <- sqrt(R2)
+```
+
+The correlation coefficient is `r R`.
+
+## 7.40 Rate my professor
+
+Many college courses conclude by giving students the opportunity to evaluate the course and the instructor anonymously. However, the use of these student evaluations as an indicator of course quality and teaching e↵ectiveness is often criticized because these measures may reflect the influence of non-teaching related characteristics, such as the physical appearance of the instructor. Researchers at University of Texas, Austin collected data on teaching evaluation score (higher score means better) and standardized beauty score (a score of 0 means average, negative score means below average, and a positive score means above average) for a sample of 463 professors. The scatterplot below shows the relationship between these variables, and also provided is a regression output for predicting teaching evaluation score from beauty score.
+
+![](/home/rstudio/Documents/GitHub/MSDA/Spring-2017/606/Homeworks/Homework7/740.png)
+
+### Answer:
+
+**(a) Given that the average standardized beauty score is -0.0883 and average teaching evaluation score is 3.9983, calculate the slope. Alternatively, the slope may be computed using just the information provided in the model summary table.**
+
+Since $y = \beta_0 + \beta_1 \cdot x$
+
+
+
+We can do as follows:
+
+```{r}
+b0 <- 4.010
+
+x <- -0.0883
+y <- 3.9983
+
+b1 <- (y - b0) / x
+
+```
+
+The slope for this specific case is: `r b1`.
+
+**(b) Do these data provide convincing evidence that the slope of the relationship between teaching evaluation and beauty is positive? Explain your reasoning.**
+
+In order for the slope to be positive needs to be $\beta_1 >0$. From the data we can do as follows $\beta_1 = \frac{S_y}{S_x}R$
+
+Since $S_y>0$ and $S_x>0$ We conclude that this data offers convincing evidence of the slope being positive since this product will never be negative with the information provided.
+
+**(c) List the conditions required for linear regression and check if each one is satisfied for this model based on the following diagnostic plots.**
+
+![](/home/rstudio/Documents/GitHub/MSDA/Spring-2017/606/Homeworks/Homework7/740-c.png)
+
+`Linearity:` Even though there's a scattered trend in the scatterplot. We are not provided the correlation coefficient nor the $R^2$, therefore we will accept, with concerns, the linearity condition is satisfied.
+
+`Nearly normal residuals:` As shown in the residuals distribution and Q-Q plot, they are in fact nearly normal.
+
+`Constant variability:` The scatterplot of the residuals does appear to have constant variability.
+
+`Independent observations:` Assuming independence due to no clear evidence one way or the other. 463 professors would likely be < 10% of nationwide professors, hense I would take as this condition being satisfied.
+
+
