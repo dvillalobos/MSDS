@@ -1,0 +1,647 @@
+---
+title: "Lab 7 - Introduction to linear regression"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "April 23, 2017"
+output:
+  pdf_document: default
+  html_document: default
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+subtitle: CUNY MSDA DATA 606
+---
+
+## Batter up 
+
+The movie [Moneyball](http://en.wikipedia.org/wiki/Moneyball_(film)) focuses on
+the "quest for the secret of success in baseball". It follows a low-budget team, 
+the Oakland Athletics, who believed that underused statistics, such as a player's 
+ability to get on base, betterpredict the ability to score runs than typical 
+statistics like home runs, RBIs (runs batted in), and batting average. Obtaining 
+players who excelled in these underused statistics turned out to be much more 
+affordable for the team.
+
+In this lab we'll be looking at data from all 30 Major League Baseball teams and
+examining the linear relationship between runs scored in a season and a number 
+of other player statistics. Our aim will be to summarize these relationships 
+both graphically and numerically in order to find which variable, if any, helps 
+us best predict a team's runs scored in a season.
+
+## The data
+
+Let's load up the data for the 2011 season.
+
+```{r load-data, eval=TRUE}
+load("more/mlb11.RData")
+```
+
+In addition to runs scored, there are seven traditionally used variables in the 
+data set: at-bats, hits, home runs, batting average, strikeouts, stolen bases, 
+and wins. There are also three newer variables: on-base percentage, slugging 
+percentage, and on-base plus slugging. For the first portion of the analysis 
+we'll consider the seven traditional variables. At the end of the lab, you'll 
+work with the newer variables on your own.
+
+1.  What type of plot would you use to display the relationship between `runs` 
+    and one of the other numerical variables? Plot this relationship using the 
+    variable `at_bats` as the predictor. Does the relationship look linear? If 
+    you knew a team's `at_bats`, would you be comfortable using a linear model 
+    to predict the number of runs?
+
+ - What type of plot would you use to display the relationship between `runs` and one of the other numerical variables?
+
+**Answer:**
+
+I would use a scatter plot to display the relationship in between the variables.
+
+The below plot displays the relationship in between `at_bats` and `hits`.
+
+```{r}
+
+plot(mlb11$at_bats, mlb11$hits,  # plot the variables 
+    xlab="At Bats",              # x−axis label 
+    ylab="Hits")                 # y−axis label
+
+```
+
+- Does the relationship look linear?
+
+**Answer:** Yes.
+
+- If you knew a team's `at_bats`, would you be comfortable using a linear model to predict the number of runs?
+ 
+ **Answer:** Yes.
+ 
+ 
+
+If the relationship looks linear, we can quantify the strength of the
+relationship with the correlation coefficient.
+
+```{r cor, eval=TRUE}
+cor(mlb11$runs, mlb11$at_bats)
+```
+
+## Sum of squared residuals
+
+Think back to the way that we described the distribution of a single variable. 
+Recall that we discussed characteristics such as center, spread, and shape. It's
+also useful to be able to describe the relationship of two numerical variables, 
+such as `runs` and `at_bats` above.
+
+2.  Looking at your plot from the previous exercise, describe the relationship 
+    between these two variables. Make sure to discuss the form, direction, and 
+    strength of the relationship as well as any unusual observations.
+
+**Answer:**
+
+```{r}
+
+plot(mlb11$at_bats, mlb11$runs,  # plot the variables 
+    xlab="At Bats",              # x−axis label 
+    ylab="Runs")                 # y−axis label
+
+```
+
+
+The relationship seems to be a little sparsed or dispersed, the distribution
+of the points seems to grow in a positive direction with some leverage and the relationship seems to have a positive correlation.
+
+
+Just as we used the mean and standard deviation to summarize a single variable, 
+we can summarize the relationship between these two variables by finding the 
+line that best follows their association. Use the following interactive 
+function to select the line that you think does the best job of going through 
+the cloud of points.
+
+```{r plotss-atbats-runs, eval=TRUE}
+plot_ss(x = mlb11$at_bats, y = mlb11$runs)
+```
+
+After running this command, you'll be prompted to click two points on the plot 
+to define a line. Once you've done that, the line you specified will be shown in
+black and the residuals in blue. Note that there are 30 residuals, one for each 
+of the 30 observations. Recall that the residuals are the difference between the
+observed values and the values predicted by the line:
+
+\[
+  e_i = y_i - \hat{y}_i
+\]
+
+The most common way to do linear regression is to select the line that minimizes
+the sum of squared residuals. To visualize the squared residuals, you can rerun 
+the plot command and add the argument `showSquares = TRUE`.
+
+```{r plotss-atbats-runs-squares, eval=TRUE}
+plot_ss(x = mlb11$at_bats, y = mlb11$runs, showSquares = TRUE)
+```
+
+Note that the output from the `plot_ss` function provides you with the slope and
+intercept of your line as well as the sum of squares.
+
+3.  Using `plot_ss`, choose a line that does a good job of minimizing the sum of
+    squares. Run the function several times. What was the smallest sum of 
+    squares that you got? How does it compare to your neighbors?
+
+**Answer:**
+
+The smallest sum of squares thet I got was 123721.9
+
+
+## The linear model
+
+It is rather cumbersome to try to get the correct least squares line, i.e. the 
+line that minimizes the sum of squared residuals, through trial and error. 
+Instead we can use the `lm` function in R to fit the linear model (a.k.a. 
+regression line).
+
+```{r m1, eval=TRUE}
+m1 <- lm(runs ~ at_bats, data = mlb11)
+```
+
+The first argument in the function `lm` is a formula that takes the form 
+`y ~ x`. Here it can be read that we want to make a linear model of `runs` as a 
+function of `at_bats`. The second argument specifies that R should look in the 
+`mlb11` data frame to find the `runs` and `at_bats` variables.
+
+The output of `lm` is an object that contains all of the information we need 
+about the linear model that was just fit. We can access this information using 
+the summary function.
+
+```{r summary-m1, eval=TRUE}
+summary(m1)
+```
+
+Let's consider this output piece by piece. First, the formula used to describe 
+the model is shown at the top. After the formula you find the five-number 
+summary of the residuals. The "Coefficients" table shown next is key; its first 
+column displays the linear model's y-intercept and the coefficient of `at_bats`.
+With this table, we can write down the least squares regression line for the 
+linear model:
+
+\[
+  \hat{y} = -2789.2429 + 0.6305 * atbats
+\]
+
+One last piece of information we will discuss from the summary output is the 
+Multiple R-squared, or more simply, $R^2$. The $R^2$ value represents the 
+proportion of variability in the response variable that is explained by the 
+explanatory variable. For this model, 37.3% of the variability in runs is 
+explained by at-bats.
+
+4.  Fit a new model that uses `homeruns` to predict `runs`. Using the estimates 
+    from the R output, write the equation of the regression line. What does the 
+    slope tell us in the context of the relationship between success of a team 
+    and its home runs?
+    
+**Answer:**
+
+```{r, eval=TRUE}
+plot_ss(x = mlb11$homeruns, y = mlb11$runs, showSquares = TRUE)
+```
+
+```{r}
+cor(mlb11$runs, mlb11$homeruns)
+```
+
+```{r, eval=TRUE}
+m2 <- lm(runs ~ homeruns, data = mlb11)
+```
+
+```{r}
+summary(m2)
+```
+
+The equation for the regression line is: $runs = 1.8345 \cdot homeruns + 415.2389$
+
+The slope tell us that based on this regression line it will be benefitial for the team since the more homeruns the more runs the team will have, increasing the odds of winning games.
+
+## Prediction and prediction errors
+
+Let's create a scatterplot with the least squares line laid on top.
+
+```{r reg-with-line, eval=TRUE}
+plot(mlb11$runs ~ mlb11$at_bats)
+abline(m1)
+```
+
+The function `abline` plots a line based on its slope and intercept. Here, we 
+used a shortcut by providing the model `m1`, which contains both parameter 
+estimates. This line can be used to predict $y$ at any value of $x$. When 
+predictions are made for values of $x$ that are beyond the range of the observed
+data, it is referred to as *extrapolation* and is not usually recommended. 
+However, predictions made within the range of the data are more reliable. 
+They're also used to compute the residuals.
+
+5.  If a team manager saw the least squares regression line and not the actual 
+    data, how many runs would he or she predict for a team with 5,578 at-bats? 
+    Is this an overestimate or an underestimate, and by how much? In other 
+    words, what is the residual for this prediction?
+    
+**Answer:**
+
+Since the regression line is $y = 0.6305 \cdot x - 2789.2429$
+
+```{r}
+
+runs <- function(x = NULL)
+    {
+        y <- 0.6305 * x - 2789.2429
+        y <- round(y,0)
+        return(y)
+    }
+
+```
+
+Since the manager didn't look at the data by doing these calculations he can get a totals of `r runs(5578)`.
+
+Since the real nearest point from the table is totaled at 713 from Philadelphia Phillies with at bats of 5579, the difference will be of `r runs(5578) - 713`; resulting in an over estimation of `r runs(5578) - 713` runs.
+
+```{r, echo=FALSE}
+library(knitr)
+kable(mlb11)
+```
+
+
+
+## Model diagnostics
+
+To assess whether the linear model is reliable, we need to check for (1) 
+linearity, (2) nearly normal residuals, and (3) constant variability.
+
+*Linearity*: You already checked if the relationship between runs and at-bats
+is linear using a scatterplot. We should also verify this condition with a plot 
+of the residuals vs. at-bats. Recall that any code following a *#* is intended
+to be a comment that helps understand the code but is ignored by R.
+
+```{r residuals, eval=TRUE}
+plot(m1$residuals ~ mlb11$at_bats)
+abline(h = 0, lty = 3)  # adds a horizontal dashed line at y = 0
+```
+
+6.  Is there any apparent pattern in the residuals plot? What does this indicate
+    about the linearity of the relationship between runs and at-bats?
+    
+**Answer:**
+
+Based on the pattern, we can notice that the residuals are positioned around zero, indicating a constant linearity of the relationship between `runs` and `at_bats`.
+
+*Nearly normal residuals*: To check this condition, we can look at a histogram
+
+```{r hist-res, eval=TRUE}
+hist(m1$residuals)
+```
+
+or a normal probability plot of the residuals.
+
+```{r qq-res, eval=TRUE}
+qqnorm(m1$residuals)
+qqline(m1$residuals)  # adds diagonal line to the normal prob plot
+```
+
+7.  Based on the histogram and the normal probability plot, does the nearly 
+    normal residuals condition appear to be met?
+    
+**Answer:**
+
+Based on both graphs the normal residuals condition seems to be met.
+
+*Constant variability*:
+
+8.  Based on the plot in (1), does the constant variability condition appear to 
+    be met?
+
+**Answer:**
+
+Based on the graph (1) the points seem to follow a pattern, making this condition reasonable met. 
+
+
+* * *
+
+## On Your Own
+
+-   Choose another traditional variable from `mlb11` that you think might be a 
+    good predictor of `runs`. Produce a scatterplot of the two variables and fit 
+    a linear model. At a glance, does there seem to be a linear relationship?
+    
+**Answer:**
+
+I will select Hits.
+
+```{r}
+
+m3 <- lm(runs ~ hits, data = mlb11)
+
+plot(mlb11$hits, mlb11$runs,      # plot the variables 
+        xlab="Hits",              # x−axis label 
+        ylab="Runs")              # y−axis label
+abline(m3)
+```
+
+```{r}
+cor(mlb11$runs, mlb11$hits)
+```
+
+At a glance there seems to be a positive relationship.
+
+-   How does this relationship compare to the relationship between `runs` and 
+    `at_bats`? Use the R$^2$ values from the two model summaries to compare. 
+    Does your variable seem to predict `runs` better than `at_bats`? How can you
+    tell?
+
+**Answer:**
+
+```{r, eval=TRUE}
+plot_ss(x = mlb11$hits, y = mlb11$runs, showSquares = TRUE)
+```
+
+```{r, eval=TRUE}
+m4 <- lm(runs ~ hits, data = mlb11)
+```
+
+```{r}
+summary(m4)
+```
+
+For this model, 64.19% of the variability in runs is explained by `Hits`. Looking at the results from the `at_bats` in which only 34.3% was explained by it, we can conclude that this model seem to predict runs better.
+
+-   Now that you can summarize the linear relationship between two variables, 
+    investigate the relationships between `runs` and each of the other five 
+    traditional variables. Which variable best predicts `runs`? Support your 
+    conclusion using the graphical and numerical methods we've discussed (for 
+    the sake of conciseness, only include output for the best variable, not all 
+    five).
+
+**Answer:**
+
+a) runs & homeruns
+
+```{r, eval=TRUE}
+# plot_ss(x = mlb11$homeruns, y = mlb11$runs, showSquares = TRUE)
+```
+
+
+Correlation: `r cor(mlb11$runs, mlb11$homeruns)`
+
+```{r}
+rm1 <- lm(runs ~ homeruns, data = mlb11)
+```
+
+```{r}
+summary(rm1)
+```
+
+```{r}
+r2_1 <- c("0.6266")
+```
+
+b) runs & bat_avg
+
+```{r, eval=TRUE}
+plot_ss(x = mlb11$bat_avg, y = mlb11$runs, showSquares = TRUE)
+```
+
+Correlation: `r cor(mlb11$runs, mlb11$bat_avg)`
+
+
+```{r}
+rm2 <- lm(runs ~ bat_avg, data = mlb11)
+```
+
+```{r}
+summary(rm2)
+```
+
+```{r}
+r2_2 <- c("0.6561")
+```
+
+```{r}
+hist(rm2$residuals)
+```
+
+```{r}
+qqnorm(rm2$residuals)
+qqline(rm2$residuals)
+```
+
+
+c) runs & strikeouts
+
+```{r, eval=TRUE}
+# plot_ss(x = mlb11$strikeouts, y = mlb11$runs, showSquares = TRUE)
+```
+
+
+Correlation: `r cor(mlb11$runs, mlb11$strikeouts)`
+
+```{r}
+rm1 <- lm(runs ~ strikeouts, data = mlb11)
+```
+
+```{r}
+summary(rm1)
+```
+
+```{r}
+r2_3 <- c("0.1694")
+```
+
+d) runs & stolen_bases
+
+```{r, eval=TRUE}
+# plot_ss(x = mlb11$stolen_bases, y = mlb11$runs, showSquares = TRUE)
+```
+
+
+Correlation: `r cor(mlb11$runs, mlb11$stolen_bases)`
+
+```{r}
+rm1 <- lm(runs ~ stolen_bases, data = mlb11)
+```
+
+```{r}
+summary(rm1)
+```
+
+```{r}
+r2_4 <- c("0.002914")
+```
+e) runs & wins
+
+```{r, eval=TRUE}
+# plot_ss(x = mlb11$wins, y = mlb11$runs, showSquares = TRUE)
+```
+
+
+Correlation: `r cor(mlb11$runs, mlb11$wins)`
+
+```{r}
+rm1 <- lm(runs ~ wins, data = mlb11)
+```
+
+```{r}
+summary(rm1)
+```
+
+```{r}
+r2_5 <- c("0.361")
+```
+
+**Best approach:**
+
+```{r}
+r2 <- c(r2_1, r2_2, r2_3, r2_4, r2_5)
+r2 <- data.frame(r2, stringsAsFactors = TRUE)
+```
+
+```{r}
+r2
+```
+
+Based on the above table the best approach is by selecting `bat_avg`.
+
+-   Now examine the three newer variables. These are the statistics used by the 
+    author of *Moneyball* to predict a teams success. In general, are they more 
+    or less effective at predicting runs that the old variables? Explain using 
+    appropriate graphical and numerical evidence. Of all ten variables we've 
+    analyzed, which seems to be the best predictor of `runs`? Using the limited 
+    (or not so limited) information you know about these baseball statistics, 
+    does your result make sense?
+    
+**Answer:**
+
+a) runs & new_onbase
+
+```{r, eval=TRUE}
+plot_ss(x = mlb11$new_onbase, y = mlb11$runs, showSquares = TRUE)
+```
+
+Correlation: `r cor(mlb11$runs, mlb11$new_onbase)`
+
+```{r}
+rm1 <- lm(runs ~ new_onbase, data = mlb11)
+```
+
+```{r}
+summary(rm1)
+```
+
+```{r}
+r2_6 <- c("0.8491")
+```
+
+```{r}
+hist(rm1$residuals)
+```
+
+```{r}
+qqnorm(rm1$residuals)
+qqline(rm1$residuals)
+```
+
+b) runs & new_slug
+
+
+```{r, eval=TRUE}
+plot_ss(x = mlb11$new_slug, y = mlb11$runs, showSquares = TRUE)
+```
+
+Correlation: `r cor(mlb11$runs, mlb11$new_slug)`
+
+```{r}
+rm1 <- lm(runs ~ new_slug, data = mlb11)
+```
+
+```{r}
+summary(rm1)
+```
+
+```{r}
+r2_7 <- c("0.8969")
+```
+
+```{r}
+hist(rm1$residuals)
+```
+
+```{r}
+qqnorm(rm1$residuals)
+qqline(rm1$residuals)
+```
+
+c) runs & new_obs
+
+
+```{r, eval=TRUE}
+plot_ss(x = mlb11$new_obs, y = mlb11$runs, showSquares = TRUE)
+```
+
+Correlation: `r cor(mlb11$runs, mlb11$new_obs)`
+
+```{r}
+rm1 <- lm(runs ~ new_obs, data = mlb11)
+```
+
+```{r}
+summary(rm1)
+```
+
+```{r}
+r2_8 <- c("0.9349")
+```
+
+```{r}
+hist(rm1$residuals)
+```
+
+```{r}
+qqnorm(rm1$residuals)
+qqline(rm1$residuals)
+```
+
+Based on the R$^2$ the best predictor for `runs` will be `new_obs`. Based on my limited beisball knowledge and based on the results, they do make sense.
+
+-   Check the model diagnostics for the regression model with the variable you 
+    decided was the best predictor for runs.
+
+**Answer:**
+
+a) Linearity
+
+```{r}
+rm1 <- lm(runs ~ new_obs, data = mlb11)
+```
+```{r}
+plot(rm1$residuals ~ mlb11$new_obs)
+abline(h = 0, lty = 3)
+```
+
+The relationship looks linear. By looking at the residual plot as the variability of residuals is approximately constant across the distribution but does not indicate any curvatures or any indication of non-normality.
+
+b) Nearly Normal residuals
+
+```{r}
+hist(rm1$residuals)
+```
+
+By looking at the histogram we can observe that the residuals follow some sort of normality in respect to their frequency distribution.
+
+```{r}
+qqnorm(rm1$residuals)
+qqline(rm1$residuals)
+```
+
+An by looking at tht Q-Q Plot, we can observe how the distribution are following around a stright line. hense we can conclude that this model satisfies the nearly normal residuals condition.
+
+c) Constant Variability
+
+Based on the plot the variability of points around the least squares line remains roughly constant so the condition constant variability has been met.
+
+
+<div id="license">
+This is a product of OpenIntro that is released under a [Creative Commons 
+Attribution-ShareAlike 3.0 Unported](http://creativecommons.org/licenses/by-sa/3.0). 
+This lab was adapted for OpenIntro by Andrew Bray and Mine &Ccedil;etinkaya-Rundel 
+from a lab written by the faculty and TAs of UCLA Statistics.
+</div>
