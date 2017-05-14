@@ -1622,7 +1622,7 @@ From table 10, we can quickly observe a few interesting patterns of vehicle type
 
 
 
-# Conclucions
+# Conclusions
 
 Something that caught my interest was something that NYCBikeMaps.com express on their site as follows: "NYCBikeMaps.com makes no guarantees that the bike routes listed will be suitable for all cyclists". I think this is remarkable true due to the high number of accidents already listed in diverse roads and locations.
 
