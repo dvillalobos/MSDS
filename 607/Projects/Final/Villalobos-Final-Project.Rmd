@@ -1,0 +1,1667 @@
+---
+title: 'Final Project: NYC Bike Routes & Accidents Involving Cyclists'
+author: "Duubar Villalobos Jimenez     mydvtech@gmail.com"
+date: "May 14, 2017"
+output:
+  pdf_document: default
+  html_document: default
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+subtitle: CUNY MSDS DATA 607
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraryDefinitions, include=FALSE, warning=FALSE, message=FALSE, results='hide'}
+
+library(knitr)
+library(RCurl)        # https: connector
+library(jsonlite)     # JSON file data parser
+library(XML)          # XML file parser
+library(DBI)          # MariaDB Connector
+library(googleway)    # Accesses Google Maps APIs to Retrieve Data
+library(tidyr)
+library(dplyr)
+library(plyr)
+library(stringr)
+library(plotly)       # Don't make boring graphs: Go Pro
+library(ggmap)        # Maping tool
+library(pastecs)      # Convert time units from "days" to "years" or back
+
+```
+
+```{r plotly_setup, echo=FALSE,  warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+Sys.setenv("plotly_username"="mydvtech")
+Sys.setenv("plotly_api_key"="S44moQLced3nEVflwxv2")
+```
+
+
+![](/home/rstudio/Documents/GitHub/MSDA/Spring-2017/607/Projects/ProjectFinal/cyclist_nyc.png)
+
+# NYC Bike Routes & Accidents Involving Cyclists
+
+## Introduction
+
+As many, I grew up riding bicycles for transportation, as a mean of relaxation or just for exercise. When there's a nice day out I love to take my bike and go for a relaxing ride, discovering places and enjoying what nature has to offer.
+
+We know of the rules for safety (bike paths, helmets, brakes, speed, lights, reflectors, air pressure and so on). NYC has adopted a wise decision to create and mark bicycle routes across the city as a mean to create a safety corridor for cyclists while improving transportation and traffic conditions.
+
+## Study
+
+For this project, I will perform a study analysis for these defined bicycle routes and the NYC accidents database in which a cyclist was involved.
+
+## Goal
+
+The goal is to identify how much safety has increased for cyclists since bicycle friendly routes were implemented and possible causes of why and where bicycle accidents happens the most.
+
+## Datasets
+
+I will be using real data available as follows:
+
+Open Data NYC Project (rich environment of diverse datasets).
+
+Open Data NYC: https://opendata.cityofnewyork.us/
+
+--  Bike Routes: https://data.cityofnewyork.us/Transportation/Bike-Routes/7vsa-caz7
+
+--  NYC Accidents: https://data.cityofnewyork.us/Public-Safety/NYC-accidents-heat-map/ehqi-g294
+
+Since these data sets are getting updated frequently, I will be working with their latest reports.
+
+
+## Overview
+
+For this project first I will start by looking and summarizing the given reports and then stripe them down to possible causes and locations in order to identify patterns and possible causes.
+
+This study will be perform in R Studio and many if not all functions and processes will be hidden; only results will be provided.
+
+# Gathering data
+
+## NYC Bicycle Routes
+
+### Obtaining a Bicycle Map 
+
+In order to obtain a bicycle map, we can visit the NYC DOT and download a friendly NYC bike friendly map.
+
+This map offers valuable information about paths, NYC Biking Laws, Tips for the Ride, CyclEyes, Bikes on Transit
+with Subway Tips, Riding and Locking Tips.
+
+Link to download a bicycle map: http://www.nyc.gov/html/dot/downloads/pdf/bikemap-2017.pdf
+
+Link to download a summary listing of NYC Biking laws: http://www.nyc.gov/html/dot/html/bicyclists/biketips.shtml
+
+For this project I will be using the following links in which electronic data related to bicycle routes are provided.
+
+**Url:** https://data.cityofnewyork.us/Transportation/Bike-Routes/7vsa-caz7
+
+**API:** https://dev.socrata.com/foundry/data.cityofnewyork.us/cc5c-sm6z
+
+
+
+```{r gatherBikeRoutes, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+
+# JSON Raw Url for updated information of NYC Bike Route maps
+downloadBikeRoutes <- function(){
+
+    url_bikeRoutes <- 'https://data.cityofnewyork.us/api/views/cc5c-sm6z/rows.json?accessType=DOWNLOAD'
+
+    # Extract data into JSON data frame
+    bikeRoutes_Raw <- fromJSON(url_bikeRoutes)
+    
+    bikeRoutes_ColHeaders <- bikeRoutes_Raw$meta$view$columns$fieldName
+    bikeRoutes_Table <- bikeRoutes_Raw$data
+
+    # Assigning Column Names
+    colnames(bikeRoutes_Table) <- bikeRoutes_ColHeaders
+
+    # Strings as Factors = FALSE
+    bikeRoutes_Table <- as.data.frame(bikeRoutes_Table, stringsAsFactors = FALSE)
+    
+    # Clean data
+    bikeRoutes_Table <- cleanBikeRoutes(bikeRoutes_Table)
+    
+    # Return extracted data
+    return(bikeRoutes_Table)
+    
+}
+
+
+
+# Procedure that clean extracted data from the NYC Bike Route maps
+cleanBikeRoutes <- function(bikeRoutes_Table = NULL){
+
+    # Clean NA
+    bikeRoutes_Table[is.na(bikeRoutes_Table)] <- "NA"
+    bikeRoutes_Table <- cleanBikeRouteCoords(bikeRoutes_Table)
+    bikeRoutes_Table <- seperateBikeRouteStartEndCoords(bikeRoutes_Table)
+    
+    bikeRoutes_Table <-  separate(bikeRoutes_Table, startBikeRoad, sep = " ", c("roadStart.Long", "roadStart.Lat") )
+    bikeRoutes_Table <-  separate(bikeRoutes_Table, endBikeRoad, sep = " ", c("roadEnd.Long", "roadEnd.Lat") )
+    
+    return(bikeRoutes_Table)
+}
+
+# Clean coordinates
+cleanBikeRouteCoords <- function(bikeRoutes_Table = NULL){
+    the_geom <- as.character(bikeRoutes_Table$the_geom)
+    the_geom <- str_trim(str_replace_all(the_geom, "LINESTRING \\(",""))
+    the_geom <- str_trim(str_replace_all(the_geom, "\\)",""))
+    bikeRoutes_Table$the_geom <- the_geom
+    
+    return(bikeRoutes_Table)
+}
+
+# Separate Coordinates
+seperateBikeRouteStartEndCoords <- function(bikeRoutes_Table = NULL){
+    
+    the_geom <- separate_rows(bikeRoutes_Table, the_geom, sep = ".*?\\, .*?\\, ", convert = FALSE)
+    the_geom <- separate(the_geom, the_geom, sep = ", ", c("startBikeRoad", "endBikeRoad") )
+    
+    return(the_geom)
+    
+}
+
+# Drop incomplete paths due to missing coordinates
+dropMissingBikePathsInfo <- function(bikeRoutes_Table = NULL){
+
+    bikeRoutes_Table$roadStart.Long <- as.numeric(bikeRoutes_Table$roadStart.Long)
+    bikeRoutes_Table$roadStart.Lat <- as.numeric(bikeRoutes_Table$roadStart.Lat)
+    bikeRoutes_Table$roadEnd.Long <- as.numeric(bikeRoutes_Table$roadEnd.Long)
+    bikeRoutes_Table$roadEnd.Lat <- as.numeric(bikeRoutes_Table$roadEnd.Lat)
+
+    bikeRoutes_Table <- drop_na(bikeRoutes_Table)
+
+    bikeRoutes_Table$roadStart.Long <- as.character(bikeRoutes_Table$roadStart.Long)
+    bikeRoutes_Table$roadStart.Lat <- as.character(bikeRoutes_Table$roadStart.Lat)
+    bikeRoutes_Table$roadEnd.Long <- as.character(bikeRoutes_Table$roadEnd.Long)
+    bikeRoutes_Table$roadEnd.Lat <- as.character(bikeRoutes_Table$roadEnd.Lat)
+    
+    return(bikeRoutes_Table)
+}
+```
+
+```{r downloadRoutes, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+# Update bike Routes Table
+bikeRoutes_Table <- downloadBikeRoutes()
+```
+
+
+## NYC Accidents Report
+
+For this section of the project, I will be using details provided by the Motor Vehicle Collisions in New York City provided by the Police Department (NYPD). The latest update on this database was on May 11, 2017.
+
+### Obtaining Bicycle Accidents Reports
+
+For this section of the project, I will be using the following open data links.
+
+**Url:** https://data.cityofnewyork.us/Public-Safety/NYC-accidents-heat-map/ehqi-g294
+
+**API:** https://dev.socrata.com/foundry/data.cityofnewyork.us/qiz3-axqb
+
+```{r gatherBikeAccidents, echo=FALSE,  warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+
+# Raw JSON Url for updated information of NYC Reported Accidents where the Number of Cyclists injured is more than zero.
+downloadBikeAccidents <- function(){
+    
+    # Defining our limit of bike accidents
+    limit = 50000
+    url_NYCBikeAccidents <- 'https://data.cityofnewyork.us/resource/qiz3-axqb.json?$where=number_of_cyclist_injured%3E0'
+    url_NYCBikeAccidents <- paste(url_NYCBikeAccidents, '&$limit=', limit, sep='')
+    
+    # Extract data into JSON data frame from API query
+    NYCBikeAccidents_Raw <- fromJSON(url_NYCBikeAccidents)
+
+    # Clean data
+    NYCBikeAccidents_Table <- cleanBikeAccidents(NYCBikeAccidents_Raw)
+    
+    # Return extracted data
+    return(NYCBikeAccidents_Table)
+}
+
+
+# Procedure that clean extracted data from the NYC Bike Accidents dataset
+cleanBikeAccidents <- function(NYCBikeAccidents_Raw = NULL){
+    
+    # Taking off internal data frame for latitude and longitude.
+    NYCBikeAccidents_Table <- subset(NYCBikeAccidents_Raw, select = -c(location))
+
+    # Clean NA
+    NYCBikeAccidents_Table[is.na(NYCBikeAccidents_Table)] <- "NA"
+    
+    return(NYCBikeAccidents_Table)
+}
+
+```
+
+```{r downloadBike_Accidents, echo=FALSE,  warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+# Update bike accidents Table
+NYCBikeAccidents_Table <- downloadBikeAccidents()
+```
+
+## Geocoding
+
+One of the ideas of this project is to interpolate datasets and find out if extra information is available by combining results given by Geocoding services.
+
+### Google
+
+The Google Maps Geocoding API is a service that provides geocoding and reverse geocoding of addresses, this service has a limitation of 2500 daily queries and it might not be of much value in the incipient part of the project but as an extended part of it.
+
+**API:** https://developers.google.com/maps/
+
+For this project I will be employing provided mechanisms in order to plot a Google Map from R and overlay it with shapes and markers. Also I will retrieve Google Maps info trough APIs, including places, directions, roads, distances, geocoding, elevation and timezone.
+
+```{r googleAPIKey, echo=FALSE,  warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+Googlekey <- "AIzaSyB5zrpkMRQjmdPg6nTkDUHkyATbw1XhEQg"
+MapQuestKey <- "3jfim58yiYhVoHYojbW4whUGJqTBey9L"
+```
+
+```{r returnGoogleAddress,  echo=FALSE,  warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+
+# Using Google API
+ReverseGoogleAddress <- function(coordinates = NULL){
+
+    #coordinates <- c$coordinates
+    coordinates <- data.frame(coordinates, stringsAsFactors = FALSE)
+    names(coordinates) <- c("coordinates")
+    coordinates <- strsplit(coordinates$coordinates, ",")
+    coordinates <- ldply(coordinates)
+    colnames(coordinates) <- c("latitude", "longitude")
+    coordinates$latitude <- as.numeric(coordinates$latitude)
+    coordinates$longitude <- as.numeric(coordinates$longitude)
+    addressFound <- google_reverse_geocode(location = c(coordinates$latitude, coordinates$longitude), key = Googlekey)
+    address <- addressFound$results$formatted_address[1]
+    addressType <- addressFound$results$types[1]
+    Location <- addressFound$results$geometry$location_type[1]
+    Status <- addressFound$status
+    
+    addressdf <- paste(address,";", 
+                       addressType,";",
+                       Location,";",
+                       Status,";",
+                       coordinates$latitude,";",
+                       coordinates$longitude,
+                       sep="" )
+    
+    # Create data frame from returned list
+    addressdf <- createDataFrame(addressdf)
+
+    
+    # Return address as data frame
+    return(addressdf)
+    
+}
+
+# Create Data Frame from List
+createDataFrame <- function(convertDataType = NULL){
+
+    convertDataType <- ldply(convertDataType)
+    convertDataType <- strsplit(convertDataType$V1, ";") 
+    convertDataType <- ldply(convertDataType)
+
+    return(convertDataType)
+    
+}
+```
+
+
+### MapQuest 
+
+With the previous limitation provided by Google of 2500 daily queries, I have then looked into alternatives; that is MapQuest offers extra data that Google does Not provide but also an increase number of 15000 queries a month.
+
+If it is true 15000 queries a month is not a much compared to Google, this 15000 can be performed at one time instead of breaking down into smaller batches.
+
+**API:** https://developer.mapquest.com/documentation/geocoding-api/reverse/get/
+
+A remarkable programming part about MapQuest is that they offer results as JSON and XML, I have programmed the two options in order to obtain information but I have decided for JSON; due to XML does not provide some information that JSON does such as the speed limit for example.
+
+```{r retrunMapQuestAddress_XML, echo=FALSE,  warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+# Using MapQuest API
+ReverseMapQuestAddress_XML <- function(coordinates = NULL){
+
+    url_MapQuest <- 'http://www.mapquestapi.com/geocoding/v1/reverse?'
+    url_MapQuest <- paste(url_MapQuest,
+                          'key=',MapQuestKey,
+                          '&location=', coordinates,
+                          '&thumbMaps=false',
+                          '&outFormat=xml',
+                          '&includeNearestIntersection=false',
+                          '&includeRoadMetadata=false', sep='')
+
+
+    # Extract data into XML data frame
+    locationInfo <- getURL(url_MapQuest)
+    locationInfo <- xmlToList(locationInfo)
+    
+    locationInfo_df <- data.frame(coordinates)
+    locationInfo_df$providedLocation   <- paste(locationInfo$results$result$providedLocation$latLng$lat,
+                                              locationInfo$results$result$providedLocation$latLng$lng, sep = ",")
+    
+    locationInfo_df$street             <- locationInfo$results$result$locations$location$street
+    locationInfo_df$adminArea6         <- locationInfo$results$result$locations$location$adminArea6
+    locationInfo_df$adminArea5         <- locationInfo$results$result$locations$location$adminArea5$text
+    locationInfo_df$adminArea5Type     <- locationInfo$results$result$locations$location$adminArea5$.attrs
+    locationInfo_df$adminArea4         <- locationInfo$results$result$locations$location$adminArea4$text
+    locationInfo_df$adminArea4Type     <- locationInfo$results$result$locations$location$adminArea4$.attrs
+    locationInfo_df$adminArea3         <- locationInfo$results$result$locations$location$adminArea3$text
+    locationInfo_df$adminArea3Type     <- locationInfo$results$result$locations$location$adminArea3$.attrs    
+    locationInfo_df$adminArea1         <- locationInfo$results$result$locations$location$adminArea1$text
+    locationInfo_df$adminArea1Type     <- locationInfo$results$result$locations$location$adminArea1$.attrs       
+    locationInfo_df$postalCode         <- locationInfo$results$result$locations$location$postalCode
+    locationInfo_df$geocodeQualityCode <-  locationInfo$results$result$locations$location$geocodeQualityCode
+    locationInfo_df$geocodeQuality     <-  locationInfo$results$result$locations$location$geocodeQuality 
+    locationInfo_df$sideOfStreet       <- locationInfo$results$result$locations$location$sideOfStreet
+    locationInfo_df$type               <-  locationInfo$results$result$locations$location$type
+    
+    locationInfo_df$latLng             <- paste(locationInfo$results$result$locations$location$latLng$lat,
+                                                locationInfo$results$result$locations$location$latLng$lng, sep = ",")
+    
+    # Not able to extract these file with XML (API Server send Error)
+    #locationInfo_df$nearestIntersection <- locationInfo$results$result$locations$location$nearestIntersection$label                                    
+    #locationInfo_df$distanceMeters <- locationInfo$results$result$locations$location$nearestIntersection$distanceMeters
+    #locationInfo_df$speedLimit <- locationInfo$results$result$locations$location$roadMetaData$speedLimit
+    #locationInfo_df$speedLimitUnits <- locationInfo$results$result$locations$location$roadMetaData$speedLimitUnits
+    
+    # Return address as data frame
+    return(locationInfo_df)
+}
+```
+
+
+```{r retrunMapQuestAddress_JSON, echo=FALSE,  warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+
+# Using MapQuest API
+ReverseMapQuestAddress_json <- function(coordinates = NULL){
+
+    url_MapQuest <- 'http://www.mapquestapi.com/geocoding/v1/reverse?'
+    url_MapQuest <- paste(url_MapQuest,
+                          'key=',MapQuestKey,
+                          '&location=', coordinates,
+                          '&includeRoadMetadata=true&includeNearestIntersection=true', sep='')
+
+    # Extract data into JSON data frame
+    locationInfo <- fromJSON(url_MapQuest)
+    
+    providedLocation <- paste(locationInfo$results$providedLocation$latLng$lat, ",",
+                              locationInfo$results$providedLocation$latLng$lng, 
+                              sep = "")
+    
+    location <- data.frame(locationInfo$results$locations)
+    location$latLng <- paste(location$latLng$lat, ",",
+                              location$latLng$lng,
+                              sep = "")
+    location$displayLatLng <- paste(location$displayLatLng$lat, ",",
+                              location$displayLatLng$lng,
+                              sep = "")
+    
+    if (is.na(location$nearestIntersection) == TRUE) {
+        location$intersectionDisplayName <- "NA"
+        location$distanceMetersNearestIntersection <- "NA"
+        location$intersectionLatLong <- ""
+        location$intersectionLabel <- "NA"
+    } else {
+        location$intersectionDisplayName <- location$nearestIntersection$streetDisplayName        
+        location$distanceMetersNearestIntersection <- location$nearestIntersection$distanceMeters
+        location$intersectionLatLong <- paste(location$nearestIntersection$Lat, ",",
+                                              location$nearestIntersection$lng,
+                                              sep = "")
+        location$intersectionLabel <- location$label
+    }
+
+    if (is.na(location$roadMetadata) == TRUE) {
+        location$speedLimitUnits <- "NA"
+        location$speedLimit <- "NA"
+
+    } else {
+        location$speedLimitUnits <- location$roadMetadata$speedLimitUnits
+        location$speedLimit <- location$roadMetadata$speedLimit
+    }
+
+    location <- subset(location, select = -c(nearestIntersection, roadMetadata))
+    
+    location <- data.frame(coordinates, providedLocation, location)
+    
+    # Return address as data frame
+    return(location)
+    
+}
+
+```
+
+
+### Physical Addresses
+
+If it is true that our given data has some physical addresses, some present missing entries or typos that could generate errors; this can be easily "fix" by interpolating given coordinates from accidents and routes into reverse geocoding services such as Google or MapQuest as described above in order to obtain more accurate information.
+
+```{r ObtainCleanCoords, echo=FALSE,  warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+
+cleanCoordinates <- function(latitude = NULL, longitude = NULL){
+
+    latitude  <-  as.numeric(latitude)
+    longitude <-  as.numeric(longitude)
+
+    coordinates <- data.frame(latitude, longitude) 
+    coordinates <- drop_na(coordinates)
+
+    coordinates$coordinates <- as.character(paste(latitude, ",", longitude, sep=""))
+
+    return(coordinates)
+
+}  
+
+# Prepare a single set of coordinates for Address lookup.
+prepareCoords <- function (Coordinates = NULL){
+
+    Coordinates <- data.frame(Coordinates)
+    names(Coordinates) <- c("Coordinates")
+    Coordinates <- subset(Coordinates, Coordinates != "NA,")
+    Coordinates <- subset(Coordinates, Coordinates != "NA,NA")
+    Coordinates <- subset(Coordinates, Coordinates != ",NA")
+    Coordinates <- subset(Coordinates, Coordinates != ",")
+
+    return(Coordinates)
+}
+
+```
+
+
+```{r ReverseGeoCoding, echo=FALSE, eval=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+
+# Obtain bike routes Coordinates
+#  bikeRouteStartCoords <- paste(bikeRoutes_Table$roadStart.Lat, bikeRoutes_Table$roadStart.Long, sep = ",")
+#  bikeRouteEndCoords <- paste(bikeRoutes_Table$roadEnd.Lat, bikeRoutes_Table$roadEnd.Long, sep = ",")
+
+# Preparing bike routes Coordinates for API Search
+#  bikeRouteStartCoords  <- prepareCoords(bikeRouteStartCoords)
+#  bikeRouteEndCoords    <- prepareCoords(bikeRouteEndCoords)
+
+# Obtain bike accident coordinates
+bikeAccidentCoords <- data.frame(paste(NYCBikeAccidents_Table$longitude, NYCBikeAccidents_Table$latitude,  sep = ","))
+bikeAccidentCoords <- prepareCoords(bikeAccidentCoords)
+
+
+# Obtain Unique coordinates for API Search
+#  bikeRouteStartCoords <- bikeRouteStartCoords[!duplicated(bikeRouteStartCoords$Coordinates),]
+#  bikeRouteEndCoords   <- bikeRouteEndCoords[!duplicated(bikeRouteEndCoords$Coordinates),]
+bikeAccidentCoords   <- bikeAccidentCoords[!duplicated(bikeAccidentCoords$Coordinates),]
+
+# Obtain Combined Unique Coordinates in order to reduce API search
+#  combinedCoords <- dplyr::union(bikeRouteStartCoords, bikeRouteEndCoords)
+#  combinedCoords <- dplyr::union(combinedCoords, bikeAccidentCoords)
+
+
+combinedCoords <- data.frame(Coordinates = bikeAccidentCoords, stringsAsFactors = FALSE)
+
+# Obtain physical addresses of given Coordinates by API search 
+#"ReverseMapQuestAddress_json" or "ReverseMapQuestAddress_XML" or "ReverseGoogleAddress" 
+GeneralAddress <- lapply(head(combinedCoords$Coordinates, 2500), ReverseGoogleAddress )
+
+# Transform results into columns
+GeneralAddress <- ldply(GeneralAddress)
+
+# Write Addresses as .csv
+#write.csv(GeneralAddress, file = 'GeneralAddress.csv')
+
+```
+
+
+## MariaDB
+
+My database server of choice is MariaDB, once downloaded the data I will store the information in it and retrieve it when needed.
+
+```{r Duubar_MariaDB_Setup, echo=FALSE,  warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+### MySQL connection setup
+# Read password and user name from remote location in order to establish connection to MySQL
+# Connect to my-db as defined in /etc/my.cnf
+# Remote definitions
+myLocalMariaDBSchema <- 'mariadb_cuny'
+myLocalTableName <- 'NULL'
+
+```
+
+```{r Duubar_MariaDB_Write, echo=FALSE,  warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+# Writing data into MariaDB
+# This code connects to our remote MariaDB server and writes a data frame into a table.
+
+writeMariaDBTable <- function(my.data = NULL, myLocalTableName = NULL){
+
+    # Create a RMySQL Connection
+    mydbConnection <- dbConnect(RMySQL::MySQL())
+    
+    # Creating a schema if it doesn't exist by employing RMySQL() in R
+    MySQLcode <- paste0("CREATE SCHEMA IF NOT EXISTS ",myLocalMariaDBSchema,";",sep="")
+    dbSendQuery(mydbConnection, MySQLcode)
+
+    # Drop  table if it exists
+    myLocalTableName <- tolower(myLocalTableName)
+    MySQLcode <- paste0("DROP TABLE IF EXISTS ",myLocalTableName,";",sep="")
+    dbSendQuery(mydbConnection, MySQLcode)
+  
+    # Write our data frame into MariaDB
+    dbWriteTable(mydbConnection, myLocalTableName, my.data)
+
+    # Closing connection with local MariaDB Schema
+    dbDisconnect(mydbConnection)
+
+}
+
+```
+
+```{r Duubar_MariaDB_Read, echo=FALSE,  warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+
+readMariaDBTable <- function(myLocalTableName = NULL){
+
+    # Create a RMySQL Connection
+    mydbConnection <- dbConnect(RMySQL::MySQL())
+
+    # Check to see if our table exists? and read our data
+    myLocalTableName <- tolower(myLocalTableName)
+    if (dbExistsTable(mydbConnection, name = myLocalTableName)  == TRUE){
+        my.data <- dbReadTable(mydbConnection, name = myLocalTableName)
+    }
+
+    # Closing connection with local MAriaDB Schema
+    dbDisconnect(mydbConnection)
+
+    # Return Data
+    return(my.data)
+    
+}
+
+```
+
+
+```{r MariaDBWriteTable, echo=FALSE, eval=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+
+# Write Bike Routes Table into MariaDB
+#writeMariaDBTable(bikeRoutes_Table, 'tbl_bikeroutesnyc')
+
+# Write NYC Accidents Table into MariaDB
+#writeMariaDBTable(NYCBikeAccidents_Table, 'tbl_nycbikeaccidents')
+
+# Write NYC Accidents Address Table into MariaDB
+#writeMariaDBTable(bikeAccidentAddress, 'tbl_nycbikeaccidentsaddress')
+
+
+
+```
+
+```{r MariaDBReadTable, echo=FALSE,  eval=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+
+# Read Bike Routes Table from MariaDB
+#bikeRoutes_Table <- readMariaDBTable('tbl_bikeroutesnyc')
+
+# Read NYC Accidents Table from MariaDB
+#NYCBikeAccidents_Table <- readMariaDBTable('tbl_nycbikeaccidents')
+
+# Read NYC Accidents Address Table into MariaDB
+#bikeAccidentAddress <- readMariaDBTable('tbl_nycbikeaccidentsaddress')
+```
+
+
+
+
+# By the numbers
+
+```{r, echo=FALSE, include=FALSE,  warning=FALSE, message=FALSE}
+
+# Calculations
+accidentDateRange <- as.Date(NYCBikeAccidents_Table$date)
+NYCBikeAccidents_Table$Date <- format(as.Date(NYCBikeAccidents_Table$date), "%Y-%m-%d")
+NYCBikeAccidents_Table$MonthYM <- format(as.Date(NYCBikeAccidents_Table$date), "%Y/%m")
+NYCBikeAccidents_Table$Month <- paste(months(as.Date(NYCBikeAccidents_Table$date), abbreviate = TRUE), 
+                                           format(as.Date(NYCBikeAccidents_Table$date), "%Y"), sep=", ")
+NYCBikeAccidents_Table$Year <-  format(as.Date(NYCBikeAccidents_Table$date), "%Y")
+nrcords <- nrow(NYCBikeAccidents_Table)
+
+minDate <- min(accidentDateRange)
+maxDate <- max(accidentDateRange)
+```
+
+## Dates
+
+- First reported accident involving a cyclist: **`r minDate`**.
+
+- Last reported accident involving a cyclist: **`r maxDate`**.
+
+- Total number of days passed since first and last reported accident involving a cyclist: **`r maxDate - minDate`**.
+
+- Total number of years passed since first and last reported accident involving a cyclist: **`r round((maxDate - minDate)/365,0)`**.
+
+## Amount of data collected
+
+- Total number of records referring to accidents involving cyclists in NYC: **`r nrcords`**.
+
+- Total number of records referring to bike routes: **`r nrow(bikeRoutes_Table)`.**
+
+# Reported accidents table
+
+```{r, echo=FALSE, include=FALSE, warning=FALSE, message=FALSE, results='hide'}
+
+NYCBikeAccidents_Table$number_of_cyclist_injured <- as.numeric(NYCBikeAccidents_Table$number_of_cyclist_injured)
+NYCBikeAccidents_Table$number_of_pedestrians_injured <- as.numeric(NYCBikeAccidents_Table$number_of_pedestrians_injured)
+
+TotalInjuries <- NYCBikeAccidents_Table$number_of_cyclist_injured %>% sum()
+
+# Procedure to Find summary yearly Values
+yearlyAccidentdata <- NYCBikeAccidents_Table %>%
+                    group_by(Year) %>%
+                    summarise(`No. pedestrians injuried` = sum(number_of_pedestrians_injured),
+                              `No. cyclist injuried` = sum(number_of_cyclist_injured),
+                              Percentage = paste(round((`No. cyclist injuried`/TotalInjuries)*100,2),"%"),
+                              `Monthly Average` = round(`No. cyclist injuried`/12,0),
+                              `Daily Average` = round(`No. cyclist injuried`/365,0),
+                              `Probability` = paste('1 every ', round(24/`Daily Average`,0), ' hours', sep="")
+                              )  %>%
+                    arrange(desc(`Year`))
+
+# Procedure to Find summary monthly Values
+monthlyAccidentdata <- NYCBikeAccidents_Table %>%
+                    group_by(Year, Month, MonthYM) %>%
+                    summarise(`No. pedestrians injuried` = sum(number_of_pedestrians_injured),
+                              `No. cyclist injuried` = sum(number_of_cyclist_injured),
+                              Percentage = paste(round((`No. cyclist injuried`/TotalInjuries)*100,2),"%"),
+                              `Daily Average` = round(`No. cyclist injuried`/30,0),
+                              `Probability` = paste('1 every ', round(24/`Daily Average`,0), ' hours', sep="")
+                              )  %>%
+                    arrange(desc(`MonthYM`))
+monthlyAccidentdata_1 <- monthlyAccidentdata
+monthlyAccidentdata <- subset(monthlyAccidentdata, select = -c(Year, MonthYM))
+
+# Procedure to Find summary yearly Values by the borough
+boroughyearlyAccidentdata <- NYCBikeAccidents_Table %>%
+                    group_by(borough) %>%
+                    summarise(`No. pedestrians injuried` = sum(number_of_pedestrians_injured),
+                              `No. cyclist injuried` = sum(number_of_cyclist_injured),
+                              Percentage = paste(round((`No. cyclist injuried`/TotalInjuries)*100,2),"%"),
+                              `Monthly Average` = round(`No. cyclist injuried`/12,0),
+                              `Daily Average` = round(`No. cyclist injuried`/365,0),
+                              `Probability` = paste('1 every ', round(24/`Daily Average`,0), ' hours', sep="")
+                              )  %>%
+                    arrange(desc(`borough`))
+
+# Procedure to Find summary monthly Values by the borough
+boroughmonthlyAccidentdata <- NYCBikeAccidents_Table %>%
+                    group_by(Year, Month, MonthYM, borough) %>%
+                    summarise(`No. pedestrians injuried` = sum(number_of_pedestrians_injured),
+                              `No. cyclist injuried` = sum(number_of_cyclist_injured),
+                              Percentage = paste(round((`No. cyclist injuried`/TotalInjuries)*100,2),"%"),
+                              `Daily Average` = round(`No. cyclist injuried`/30,0),
+                              `Probability` = paste('1 every ', round(24/`Daily Average`,0), ' hours', sep="")
+                              )  %>%
+                    arrange(desc(`MonthYM`))
+boroughmonthlyAccidentdata_1 <- boroughmonthlyAccidentdata
+boroughmonthlyAccidentdata <- subset(boroughmonthlyAccidentdata, select = -c(Year, MonthYM))
+
+# Procedure to Find summary daily Values by the borough
+boroughAccidentdata <- NYCBikeAccidents_Table %>%
+                    group_by(Year, Month, MonthYM, borough) %>%
+                    summarise(`No. cyclist injuried` = sum(number_of_cyclist_injured))  %>%
+                    arrange(desc(`MonthYM`))
+
+boroughAccidentdata <- spread(data = boroughAccidentdata,
+                             key = borough,
+                             value = `No. cyclist injuried`
+                             )
+
+colnames(boroughAccidentdata)[7] <- "Not Available"
+boroughAccidentdata <- boroughAccidentdata[c(1,2,3,4,5,6,8,9,7)]
+#boroughAccidentdata <- subset(boroughAccidentdata, select = -c(7))
+
+```
+
+
+- Grand total number of injuries due to accidents involving cyclists in NYC: **`r TotalInjuries`.**
+
+## Yearly summary
+
+```{r, echo=FALSE}
+kable(yearlyAccidentdata, caption = 'Table 1: Summary yearly table of accidents involving cyclists in NYC.')
+
+
+today <- Sys.Date()
+today <-  format(as.Date(today), "%Y/%m/%d")
+beginingyear <-  format(as.Date(today), "%Y/01/01")
+datediff <- round(as.numeric(difftime(today,beginingyear)),0)
+
+currentDailyTrend  <- round(yearlyAccidentdata$`No. cyclist injuried`[1]/datediff,0)
+currentMonthlyTrend <- currentDailyTrend * 30
+currentYearlyTrend <- currentDailyTrend * 365
+
+currentTrend <- data.frame(Year = yearlyAccidentdata$Year[1],
+                           `Current Reported` = yearlyAccidentdata$`No. cyclist injuried`[1],
+                           `Curent Daily Avg` = currentDailyTrend,
+                           `Forecasted Month Avg` = currentMonthlyTrend,
+                           `Forecasted Yearly Avg` = currentYearlyTrend,
+                           `Previous Year` = yearlyAccidentdata$`No. cyclist injuried`[2])
+
+
+currentTrend$Difference <- currentTrend$Forecasted.Yearly.Avg - currentTrend$Previous.Year
+currentTrendPercentage <- round(currentTrend$Forecasted.Yearly.Avg * 100 / currentTrend$Previous.Year,2)
+```
+
+**Observed patterns:**
+
+If we analyze the above table, we can quickly figure out that at the current rate of accidents involving cyclists in NYC for this year will be as follows:
+
+- Forecasted number of accidents involving cyclists in NYC for the current year.
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE}
+kable(currentTrend, caption = 'Table 1.1: Poorly forecasted trend based on a current daily average for the current year.')
+```
+
+
+If you noticed, I have described the results as "poorly"; that is due to lack of rigor with the current evaluated data, and many adjustments need to be done, but as an initial point of reference will be a "good" starting point.
+
+From Table 1.1 we can have high hopes that this year's accident rate will be lower but with the spike of accidents observed during last year alone, it will be difficult to predict.
+
+- An interesting observation is that 1 accident involving a cyclist in NYC has been reported at an average rate of approximately every two hours for the majority of the recorded years.
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE}
+p <- plot_ly(data = yearlyAccidentdata, 
+             y = ~Year,
+             x = ~`No. cyclist injuried`,
+             text = ~paste("Total of cyclist injured:", `No. cyclist injuried` ),
+             type = 'bar',
+             orientation = 'h') %>%
+  layout(yaxis = list(title = "Year"),
+         xaxis = list(title = "Total of cyclist Injuried"),
+         margin = list(b = 50, l = 50, r = 10)) %>%
+  layout(showlegend = FALSE, 
+         title = "Graph 1: Summary yearly table of accidents involving cyclists in NYC.", 
+         autosize = TRUE
+         ) %>%
+  layout(autosize = F, width = 800, height = 500)
+
+ggplotly(p)
+```
+
+
+## Monthly summary
+
+In this section, I have listed our given data into monthly results, with hopes of finding some patterns; one of these patterns could be related to the season of the year for example.
+
+```{r, echo=FALSE}
+kable(monthlyAccidentdata, caption = 'Table 2: Summary monthly table of accidents involving cyclists in NYC.')
+```
+
+If it is true, by looking at the Table 2, it is very difficult to determine some accident patterns in which cyclists were involved, with the below graph we can quickly observe and identify very well defined patterns. 
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE}
+p <- plot_ly(data = monthlyAccidentdata_1, 
+             y = ~MonthYM,
+             x = ~`No. cyclist injuried`,
+             text = ~paste("Total of cyclist injured:", `No. cyclist injuried` ),
+             type = 'bar',
+             orientation = 'h') %>%
+  layout(yaxis = list(title = "Month"),
+         xaxis = list(title = "Total of cyclist Injuried"),
+         margin = list(b = 50, l = 70, r = 10)) %>%
+  layout(showlegend = FALSE, 
+         title = "Graph 2: Summary monthly table of accidents involving cyclists in NYC.", 
+         autosize = TRUE
+         ) %>%
+  layout(autosize = F, width = 800, height = 500)
+
+ggplotly(p)
+```
+
+**Observed patterns:**
+
+- There is an evident increased number of accidents involving cyclists during the summer months, with a remarkable spike during the months of August and September of 2016.
+
+- There is a remarkable reduction of accidents during the month of February in previous years but an observed increased in the most current data. This could be correlated due to February being the shortest month in the year and being during the winter season.
+
+- There seems to be an observed increase of accidents involving cyclist starting in January 2016.
+
+**Questions:**
+
+Those interesting observations come to wonder the following questions:
+
+- Are accidents involving cyclists happening in established bicycle friendly paths?
+
+- Why there seems to be an increased number of accidents involving cyclists if there are more "safe" zones?
+
+- What happened in the summer months of 2016? Why so many more accidents involving cyclists?
+
+- What could be the reasons for the observed patterns?
+
+
+In hopes of responding the above questions, I will keep breaking down the data in hopes of identifying more patterns and possible causes.
+
+## By the borough
+
+In hopes of identifying extra patterns and possible, causes and "hot" locations, I will review the data provided and split it into the five boroughs.
+
+**Borough yearly summary**
+
+```{r, echo=FALSE}
+
+boroughyearlyAccidentdata_1 <- boroughyearlyAccidentdata
+boroughyearlyAccidentdata_1 <- boroughyearlyAccidentdata_1[order(boroughyearlyAccidentdata_1$`No. cyclist injuried`, decreasing = TRUE), ]
+
+kable(boroughyearlyAccidentdata_1, caption = 'Table 3: Borough summary yearly table of accidents involving cyclists in NYC.')
+
+
+minborough <- subset(boroughyearlyAccidentdata, 
+                     boroughyearlyAccidentdata$`No. cyclist injuried` == min(boroughyearlyAccidentdata$`No. cyclist injuried`))
+
+colnames(boroughyearlyAccidentdata_1)[3] <- "No.cyclist.Injured"
+colnames(minborough)[3] <- "cyclistInjured"
+
+```
+
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE}
+
+p <- plot_ly(data = boroughyearlyAccidentdata_1, 
+             y = ~borough,
+             x = ~No.cyclist.Injured,
+             text = ~paste("Total of cyclist injured:", No.cyclist.Injured ),
+             type = 'bar',
+             orientation = 'h') %>%
+  layout(yaxis = list(title = "Borough"),
+         xaxis = list(title = "Total of cyclist Injuried"),
+         margin = list(b = 50, l = 100, r = 10)) %>%
+  layout(showlegend = FALSE, 
+         title = "Graph 3: Summary yearly table of accidents involving cyclists in NYC by borough.", 
+         autosize = TRUE
+         ) %>%
+  layout(autosize = F, width = 800, height = 500)
+
+ggplotly(p)
+```
+
+**Observed patterns:**
+
+From the Table 3, we can quickly identify interesting observations as follows:
+
+-  **`r boroughyearlyAccidentdata_1$borough[1]`** heads the count with the highest number of cyclist involved in an accident with a total number of **`r boroughyearlyAccidentdata_1$No.cyclist.Injured[1]`**, representing **`r boroughyearlyAccidentdata_1$Percentage[1]`** of our given data.
+
+- **`r boroughyearlyAccidentdata_1$borough[2]`** is the second borough with the highest number of cyclist involved in an accident with a total number of **`r boroughyearlyAccidentdata_1$No.cyclist.Injured[2]`**, representing **`r boroughyearlyAccidentdata_1$Percentage[2]`** of our given data.
+
+- The difference in between **`r boroughyearlyAccidentdata_1$borough[1]`** and  **`r boroughyearlyAccidentdata_1$borough[2]`** is given by **`r boroughyearlyAccidentdata_1$No.cyclist.Injured[1] - boroughyearlyAccidentdata_1$No.cyclist.Injured[2]`** accidents involving cyclists or **`r round((boroughyearlyAccidentdata_1$No.cyclist.Injured[1] - boroughyearlyAccidentdata_1$No.cyclist.Injured[2]) / TotalInjuries,4) * 100` %** difference.
+
+- **`r minborough$borough[1]`** heads the count with the lowest number of cyclist involved in an accident with a total number of **`r minborough$cyclistInjured[1]`**, representing **`r minborough$Percentage[1]`** of our given data. Thus, makes it the "safest" borough to ride a bicycle since an average of 1 accident per day has been recorded.
+
+- **BRONX** has a significant low number of reported accidents involving cyclists compared to the other boroughs.
+
+- There's an important number of accidents involving cyclists not assigned to their respective borough.
+
+
+With the expectation of identifying extra patterns and identifying extra information, I will break down our data into their respective boroughs.
+
+**Borough monthly summary**
+
+```{r, echo=FALSE}
+boroughAccidentdata_1 <- boroughAccidentdata
+
+boroughAccidentdata_1$BRONX <- as.numeric(boroughAccidentdata_1$BRONX)
+boroughAccidentdata_1$BROOKLYN <- as.numeric(boroughAccidentdata_1$BROOKLYN)
+boroughAccidentdata_1$MANHATTAN <- as.numeric(boroughAccidentdata_1$MANHATTAN)
+boroughAccidentdata_1$QUEENS <- as.numeric(boroughAccidentdata_1$QUEENS)
+boroughAccidentdata_1$`STATEN ISLAND`  <- as.numeric(boroughAccidentdata_1$`STATEN ISLAND`)
+boroughAccidentdata_1$`Not Available` <- as.numeric(boroughAccidentdata_1$`Not Available`)
+
+
+boroughAccidentdata_1[is.na(boroughAccidentdata_1)] <- 0
+boroughAccidentdata_1$Total <-  boroughAccidentdata_1$BRONX +
+                                boroughAccidentdata_1$BROOKLYN +
+                                boroughAccidentdata_1$MANHATTAN +
+                                boroughAccidentdata_1$QUEENS + 
+                                boroughAccidentdata_1$`STATEN ISLAND` + 
+                                boroughAccidentdata_1$`Not Available`
+
+boroughAccidentdata_1 <- boroughAccidentdata_1[order(boroughAccidentdata_1$MonthYM, decreasing = TRUE), ]
+boroughAccidentdata_1 <- subset(boroughAccidentdata_1, select = -c(Year, MonthYM))
+
+kable(boroughAccidentdata_1, caption = 'Table 4: Borough summary monthly table of accidents involving cyclists in NYC.')
+```
+
+### Bronx borough
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE}
+
+p <- plot_ly(data = boroughAccidentdata, 
+             y = ~MonthYM,
+             x = ~BRONX,
+             text = ~paste("Total of cyclist injured:", BRONX ),
+             type = 'bar',
+             orientation = 'h') %>%
+  layout(yaxis = list(title = "Month"),
+         xaxis = list(title = "Total of cyclist Injuried in the Bronx"),
+         margin = list(b = 150, l = 150, r = 70)) %>%
+  layout(showlegend = FALSE, 
+         title = "Graph 4.1: Summary monthly table of accidents involving cyclists in the Bronx borough.", 
+         autosize = TRUE
+         ) %>%
+  layout(autosize = F, width = 800, height = 500)
+
+ggplotly(p)
+
+```
+
+
+### Brooklyn borough
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE}
+
+p <- plot_ly(data = boroughAccidentdata, 
+             y = ~MonthYM,
+             x = ~BROOKLYN,
+             text = ~paste("Total of cyclist injured:", BROOKLYN ),
+             type = 'bar',
+             orientation = 'h') %>%
+  layout(yaxis = list(title = "Month"),
+         xaxis = list(title = "Total of cyclist Injuried in Brooklyn"),
+         margin = list(b = 150, l = 150, r = 70)) %>%
+  layout(showlegend = FALSE, 
+         title = "Graph 4.2: Summary monthly table of accidents involving cyclists in the Broooklyn borough.", 
+         autosize = TRUE
+         ) %>%
+  layout(autosize = F, width = 800, height = 500)
+
+ggplotly(p)
+
+```
+
+
+### Manahttan borough
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE}
+
+p <- plot_ly(data = boroughAccidentdata, 
+             y = ~MonthYM,
+             x = ~MANHATTAN,
+             text = ~paste("Total of cyclist injured:", MANHATTAN ),
+             type = 'bar',
+             orientation = 'h') %>%
+  layout(yaxis = list(title = "Month"),
+         xaxis = list(title = "Total of cyclist Injuried in Manhattan"),
+         margin = list(b = 150, l = 150, r = 70)) %>%
+  layout(showlegend = FALSE, 
+         title = "Graph 4.3: Summary monthly table of accidents involving cyclists in the Manhattan borough.", 
+         autosize = TRUE
+         ) %>%
+  layout(autosize = F, width = 800, height = 500)
+
+ggplotly(p)
+
+```
+
+### Queens borough
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE}
+
+p <- plot_ly(data = boroughAccidentdata, 
+             y = ~MonthYM,
+             x = ~QUEENS,
+             text = ~paste("Total of cyclist injured:", QUEENS ),
+             type = 'bar',
+             orientation = 'h') %>%
+  layout(yaxis = list(title = "Month"),
+         xaxis = list(title = "Total of cyclist Injuried in Queens"),
+         margin = list(b = 150, l = 150, r = 70)) %>%
+  layout(showlegend = FALSE, 
+         title = "Graph 4.4: Summary monthly table of accidents involving cyclists in the Queens borough.", 
+         autosize = TRUE
+         ) %>%
+  layout(autosize = F, width = 800, height = 500)
+
+ggplotly(p)
+
+```
+
+### Staten Island borough
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE}
+
+p <- plot_ly(data = boroughAccidentdata, 
+             y = ~MonthYM,
+             x = ~`STATEN ISLAND`,
+             text = ~paste("Total of cyclist injured:", `STATEN ISLAND`),
+             type = 'bar',
+             orientation = 'h') %>%
+  layout(yaxis = list(title = "Month"),
+         xaxis = list(title = "Total of cyclist Injuried in Staten Island"),
+         margin = list(b = 150, l = 150, r = 70)) %>%
+  layout(showlegend = FALSE, 
+         title = "Graph 4.5: Summary monthly table of accidents involving cyclists in the Staten Island borough.", 
+         autosize = TRUE
+         ) %>%
+  layout(autosize = F, width = 800, height = 500)
+
+ggplotly(p)
+
+```
+
+
+### Unknown borough
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE}
+
+p <- plot_ly(data = boroughAccidentdata, 
+             y = ~MonthYM,
+             x = ~`Not Available`,
+             text = ~paste("Total of cyclist injured:", `Not Available`),
+             type = 'bar',
+             orientation = 'h') %>%
+  layout(yaxis = list(title = "Month"),
+         xaxis = list(title = "Total of cyclist Injuried in an unknown borough"),
+         margin = list(b = 150, l = 150, r = 70)) %>%
+  layout(showlegend = FALSE, 
+         title = "Graph 4.6: Summary monthly table of accidents involving cyclists in the unknown borough.", 
+         autosize = TRUE
+         ) %>%
+  layout(autosize = F, width = 800, height = 500)
+
+ggplotly(p)
+
+```
+
+**Observed patterns:**
+
+- Normality is observed with the majority of the boroughs as follows:
+
+If we look and visually compare our Graph 2 with their respective boroughs graphs, we quickly identify some sort of "pattern similarity" in regards of all boroughs except Staten Island; that is, Staten Island seems not to follow the norm "observed" with the other boroughs and the General data as displayed in the Graph 2. This could be related to lower number of reported accidents not allowing a sense of normality to be defined with their borough's data.
+
+## By Street and Zip Code
+
+### Yearly summary
+
+The below table, display the top 10 streets with the highest number of accidents involving cyclists in NYC. This table is ranked with the top mention being first and the least of the ten mentions being last.
+
+```{r, echo=FALSE, include=FALSE, warning=FALSE, message=FALSE, results='hide'}
+
+NYCBikeAccidents_Table_1 <- subset(NYCBikeAccidents_Table, select = c(Year, borough, on_street_name, zip_code))
+NYCBikeAccidents_Table_1$on_street_name <- trimws(NYCBikeAccidents_Table_1$on_street_name, "both")
+NYCBikeAccidents_Table_1 <- subset(NYCBikeAccidents_Table_1, NYCBikeAccidents_Table_1$borough != "NA")
+NYCBikeAccidents_Table_1 <- subset(NYCBikeAccidents_Table_1, NYCBikeAccidents_Table_1$on_street_name != "NA")
+NYCBikeAccidents_Table_1 <- subset(NYCBikeAccidents_Table_1, NYCBikeAccidents_Table_1$on_street_name != "")
+NYCBikeAccidents_Table_1 <- subset(NYCBikeAccidents_Table_1, NYCBikeAccidents_Table_1$zip_code != "NA")
+
+
+
+NYCBikeAccidents_Table_1$street <- paste(NYCBikeAccidents_Table_1$on_street_name, NYCBikeAccidents_Table_1$zip_code, sep=", ")
+
+# Procedure to Find summary yearly Values
+yearlyContributingFactor <- NYCBikeAccidents_Table_1 %>%
+                    group_by(Year, street) %>%
+                    summarise(Count=n()
+                              )  %>%
+                    arrange(desc(`Year`), desc(`Count`))
+
+yearlyContributingFactor$Street <- paste("[",yearlyContributingFactor$Count,"] ", yearlyContributingFactor$street)
+
+yearlyContributingFactor2017 <- head(subset(yearlyContributingFactor, Year == "2017"),10)
+yearlyContributingFactor2016 <- head(subset(yearlyContributingFactor, Year == "2016"),10)
+yearlyContributingFactor2015 <- head(subset(yearlyContributingFactor, Year == "2015"),10)
+yearlyContributingFactor2014 <- head(subset(yearlyContributingFactor, Year == "2014"),10)
+yearlyContributingFactor2013 <- head(subset(yearlyContributingFactor, Year == "2013"),10)
+yearlyContributingFactor2012 <- head(subset(yearlyContributingFactor, Year == "2012"),10)
+
+yearlyContributingFactor_1 <- data.frame(Rank = seq_len(nrow(yearlyContributingFactor2017)),
+                                       `2017` = yearlyContributingFactor2017$Street, 
+                                       `2016` = yearlyContributingFactor2016$Street,
+                                       `2015` = yearlyContributingFactor2015$Street,
+                                       `2014` = yearlyContributingFactor2014$Street,
+                                       `2013` = yearlyContributingFactor2013$Street,
+                                       `2012` = yearlyContributingFactor2012$Street,
+                                       stringsAsFactors = FALSE)
+
+
+yearlyContributingFactor <- NYCBikeAccidents_Table_1 %>%
+                    group_by(street) %>%
+                    summarise(Count=n()
+                              )  %>%
+                    arrange(desc(`Count`))
+
+#yearlyContributingFactor <- subset(yearlyContributingFactor, contributing.Factor != 'Unspecified' )
+yearlyContributingFactor$street[is.na(yearlyContributingFactor$street)] <- "Not Available"
+yearlyContributingFactor <- data.frame(yearlyContributingFactor, stringsAsFactors = FALSE)
+
+
+```
+
+### Top 10 by year
+
+```{r, echo=FALSE}
+kable(yearlyContributingFactor_1, caption = 'Table 5: Top 10 Streets involving accidents with cyclists in NYC by years.')
+```
+
+
+**Observed patterns:**
+
+From the table 5, we can identify as follows:
+
+- **EAST HOUSTON STREET, 10002** seems to be a **hot** spot for accidents involving cyclists in NYC. As we know, that is busy street and the proximity to **BROOKLYN** which contains the highest number of accidents in the five borough might impact as well.
+
+- **BROADWAY, 11206** was the top street with the most accidents involving cyclists reported in 2016, but also ranks within the top ten in previous years as well; an interesting observation is that **BROADWAY, 11206** is opposite located from **EAST HOUSTON STREET, 10002** being BROADWAY in BROOKLYN and EAST HOUSTON STREET in MANHATTAN. The two of them are connected by the famous Williamsburg Bridge.
+
+- **GRAND STREET, 11211** is located right off the Williamsburg bridge and same as **BROADWAY, 11206** it has a high rate of accidents in the BROOKLYN area.
+
+- **DELANCEY STREET, 10002** has been on the top as well, and a very interesting observation is that this is also, located off the Williamsburg bridge in MANHATTAN.
+
+- A good observation to make is the high number of accidents involving cyclists around the Williamsburg bridge; there seems to be a great sense of distraction and traffic around that area.
+
+### Top 10 of all times
+
+```{r, echo=FALSE}
+accidentTotal <- sum(yearlyContributingFactor$Count)
+yearlyContributingFactor$Percentage <- paste(round(yearlyContributingFactor$Count/ accidentTotal,4)*100, " %")
+kable(head(yearlyContributingFactor,10), caption = 'Table 6: Top 10 streets involving accidents with cyclists in NYC of all times.')
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE}
+
+p <- plot_ly(data = head(yearlyContributingFactor,10), 
+             y = ~street,
+             x = ~Count,
+             text = ~paste("Total of vehicles:", Count),
+             type = 'bar',
+             orientation = 'h') %>%
+  layout(yaxis = list(title = "Street"),
+         xaxis = list(title = "Number of accidents involving a cyclist."),
+         margin = list(b = 100, l = 250, r = 70)) %>%
+  layout(showlegend = FALSE, 
+         title = "Graph 6: Top 10 street accidents with cyclists in NYC of all times.", 
+         autosize = TRUE
+         ) %>%
+  layout(autosize = F, width = 800, height = 500)
+
+ggplotly(p)
+
+```
+
+From our previous Graph, you can find all the top ten streets by the number of accidents in all reported accidents involving cyclists.
+
+**Observed patterns:**
+
+- **`r yearlyContributingFactor$street[1]`** and **`r yearlyContributingFactor$street[2]`** have the most accidents recorded involving a cyclist.
+
+- Some of those streets are marked as bicycle friendly zones and others do not; interesting is to find that bike paths present a high number of accidents specially in BROOKLYN.
+
+### Borough summary
+
+```{r, echo=FALSE}
+# Procedure to Find summary daily Values by the borough
+
+NYCBikeAccidents_Table_1 <- subset(NYCBikeAccidents_Table, select = c(Year, borough, vehicle_type_code1))
+NYCBikeAccidents_Table_2 <- subset(NYCBikeAccidents_Table, select = c(Year, borough, vehicle_type_code2))
+
+colnames(NYCBikeAccidents_Table_1)[3] <- "vehicle.Type"
+colnames(NYCBikeAccidents_Table_2)[3] <- "vehicle.Type"
+
+NYCBikeAccidents_Table_1 <- bind_rows(NYCBikeAccidents_Table_1, NYCBikeAccidents_Table_2)
+
+NYCBikeAccidents_Table_1 <- subset(NYCBikeAccidents_Table_1, vehicle.Type != "BICYCLE")
+
+boroughContributingFactorsAccidentdata <- NYCBikeAccidents_Table_1 %>%
+                    group_by(borough, vehicle.Type) %>%
+                    summarise(Count = n())  %>%
+                    arrange(desc(`Count`))
+
+boroughAccidentdata <- spread(data = boroughContributingFactorsAccidentdata,
+                             key = borough,
+                             value = Count
+                             )
+boroughAccidentdata <- boroughAccidentdata[c(1,2,3,4,6,7,5)]
+colnames(boroughAccidentdata)[7] <- "Not Available"
+boroughAccidentdata_1 <- boroughAccidentdata
+boroughAccidentdata_1[is.na(boroughAccidentdata_1)] <- 0
+
+boroughAccidentdata_1$Total <-  boroughAccidentdata_1$BRONX +
+                                boroughAccidentdata_1$BROOKLYN +
+                                boroughAccidentdata_1$MANHATTAN +
+                                boroughAccidentdata_1$QUEENS + 
+                                boroughAccidentdata_1$`STATEN ISLAND` + 
+                                boroughAccidentdata_1$`Not Available`
+
+accidentTotal <- sum(boroughAccidentdata_1$Total)
+boroughAccidentdata_1$Percentage <- paste(round(boroughAccidentdata_1$Total / accidentTotal,4)*100, " %")
+
+boroughAccidentdata_1 <- boroughAccidentdata_1[order(boroughAccidentdata_1$Total, decreasing = TRUE), ]
+
+boroughAccidentdata_1 <- subset(boroughAccidentdata_1, vehicle.Type != "Unspecified")
+boroughAccidentdata_1 <- subset(boroughAccidentdata_1, vehicle.Type != "0")
+
+kable(boroughAccidentdata_1, caption = 'Table 7: Borough summary table of vehicle types at the time of accidents involving cyclists in NYC.')
+```
+
+**Observed patterns:**
+
+From table 10, we can quickly observe a few interesting patterns of vehicle types reported during accidents involving cyclists as follows:
+
+- The main vehicle type involved in accidents with cyclists in all NYC boroughs is **`r boroughAccidentdata_1$vehicle.Type[1]`** with grand total of **`r format(boroughAccidentdata_1$Total[1],scientific=FALSE)`** accidents involved representing **`r boroughAccidentdata_1$Percentage[1]`** for all years.
+
+- **BROOKLYN** has the highest bicycle ratio of accidents with a passenger vehicle and sport utility / station wagon vehicle types, doubling **MANHATTAN** and **QUEENS** on each vehicle type.
+
+- **MANHATTAN** leads the number of accidents involving cyclists with Taxi cabs, livery vehicles, buses and pick-up trucks.
+
+
+
+
+
+
+## By contributing factors
+
+### Yearly summary
+
+The below table, display the top 10 contributed factors that were mentioned as the cause of accident involving cyclists in NYC. This table is ranked with the top mention being first and the least of the ten mentions being last.
+
+```{r, echo=FALSE, include=FALSE, warning=FALSE, message=FALSE, results='hide'}
+
+NYCBikeAccidents_Table_1 <- subset(NYCBikeAccidents_Table, select = c(Year, borough, contributing_factor_vehicle_1))
+NYCBikeAccidents_Table_2 <- subset(NYCBikeAccidents_Table, select = c(Year, borough, contributing_factor_vehicle_2))
+
+NYCBikeAccidents_Table_1 <- separate_rows(data = NYCBikeAccidents_Table_1, 
+                                          contributing_factor_vehicle_1,
+                                          sep = "/",
+                                          convert = FALSE
+                                          )
+
+NYCBikeAccidents_Table_2 <- separate_rows(data = NYCBikeAccidents_Table_2, 
+                                          contributing_factor_vehicle_2,
+                                          sep = "/",
+                                          convert = FALSE
+                                          )
+
+colnames(NYCBikeAccidents_Table_1)[3] <- "contributing.Factor"
+colnames(NYCBikeAccidents_Table_2)[3] <- "contributing.Factor"
+
+NYCBikeAccidents_Table_1 <- bind_rows(NYCBikeAccidents_Table_1, NYCBikeAccidents_Table_2)
+NYCBikeAccidents_Table_month <- NYCBikeAccidents_Table_1
+# Procedure to Find summary yearly Values
+yearlyContributingFactor <- NYCBikeAccidents_Table_1 %>%
+                    group_by(Year, contributing.Factor) %>%
+                    summarise(Count=n()
+                              )  %>%
+                    arrange(desc(`Year`), desc(`Count`))
+
+yearlyContributingFactor <- subset(yearlyContributingFactor, contributing.Factor != 'Unspecified' )
+yearlyContributingFactor <- subset(yearlyContributingFactor, is.null(contributing.Factor) == FALSE)
+
+yearlyContributingFactor2017 <- head(subset(yearlyContributingFactor, Year == "2017"),10)
+yearlyContributingFactor2016 <- head(subset(yearlyContributingFactor, Year == "2016"),10)
+yearlyContributingFactor2015 <- head(subset(yearlyContributingFactor, Year == "2015"),10)
+yearlyContributingFactor2014 <- head(subset(yearlyContributingFactor, Year == "2014"),10)
+yearlyContributingFactor2013 <- head(subset(yearlyContributingFactor, Year == "2013"),10)
+yearlyContributingFactor2012 <- head(subset(yearlyContributingFactor, Year == "2012"),10)
+
+yearlyContributingFactor_1 <- data.frame(Rank = seq_len(nrow(yearlyContributingFactor2017)),
+                                        `2017` = yearlyContributingFactor2017$contributing.Factor, 
+                                       `2016` = yearlyContributingFactor2016$contributing.Factor,
+                                       `2015` = yearlyContributingFactor2015$contributing.Factor,
+                                       `2014` = yearlyContributingFactor2014$contributing.Factor,
+                                       `2013` = yearlyContributingFactor2013$contributing.Factor,
+                                       `2012` = yearlyContributingFactor2012$contributing.Factor,
+                                       stringsAsFactors = FALSE)
+
+
+yearlyContributingFactor <- NYCBikeAccidents_Table_1 %>%
+                    group_by(contributing.Factor) %>%
+                    summarise(Count=n()
+                              )  %>%
+                    arrange(desc(`Count`))
+
+yearlyContributingFactor <- subset(yearlyContributingFactor, contributing.Factor != 'Unspecified' )
+yearlyContributingFactor <- subset(yearlyContributingFactor, is.null(contributing.Factor) == FALSE)
+yearlyContributingFactor <- data.frame(yearlyContributingFactor, stringsAsFactors = FALSE)
+
+
+
+
+```
+
+### Top 10 by year
+
+```{r, echo=FALSE}
+kable(yearlyContributingFactor_1, caption = 'Table 8: Top 10 contributing factors involving accidents with cyclists in NYC by years.')
+```
+
+
+**Observed patterns:**
+
+From the table 5, we can quickly identify as follows:
+
+- **`r yearlyContributingFactor_1$X2017[1]`** and **`r yearlyContributingFactor_1$X2017[2]`** are the two leading contributing factors for the present year.
+
+- **`r yearlyContributingFactor_1$X2017[1]`** and **`r yearlyContributingFactor_1$X2017[2]`** were also the two most contributing factors in registered accidents involving cyclists in the past years as well.
+
+- **Pedestrians** show a significant increase starting in 2016; that is, pedestrians were not listed in the 10 ten in previous years.
+
+- **Failure to obey traffic control signals** seems to be a major contributing factor by both drivers and cyclists.
+
+- **Prescription**, **non prescription** medication and **physical disability** seems to be recurrent factors for all years.
+
+### Top 10 of all times
+
+```{r, echo=FALSE}
+kable(head(yearlyContributingFactor,10), caption = 'Table 9: Top 10 contributing factors involving accidents with cyclists in NYC of all times.')
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE}
+
+p <- plot_ly(data = head(yearlyContributingFactor,10), 
+             y = ~contributing.Factor,
+             x = ~Count,
+             text = ~paste("Total of mentions:", Count),
+             type = 'bar',
+             orientation = 'h') %>%
+  layout(yaxis = list(title = "Contributing Factors"),
+         xaxis = list(title = "Number of mentions during accidents involving a cyclist."),
+         margin = list(b = 100, l = 200, r = 70)) %>%
+  layout(showlegend = FALSE, 
+         title = "Graph 9: Top 10 contributing factors involving accidents with cyclists in NYC of all times.", 
+         autosize = TRUE
+         ) %>%
+  layout(autosize = F, width = 800, height = 500)
+
+ggplotly(p)
+
+```
+
+From our previous Graph, you can find all the top ten contributing factors by the number of mentions in all reported accidents involving cyclists. These mentions were taken from all parties involved, that is: drivers, cyclists and pedestrians.
+
+**Observed patterns:**
+
+- In this, case we can quickly identify the contributing factor mentions difference in between the top and bottom, these differences are quite significant and large.
+
+- **Distraction** and **driver inattention** have been consistent for all years and really play a big role in the contribution of factors at the time of accidents involving cyclists if we go by the number of mentions.
+
+- Amazing to see how **pedestrian** factors are in the rise starting in 2016.
+
+### Borough summary
+
+```{r, echo=FALSE}
+# Procedure to Find summary daily Values by the borough
+boroughContributingFactorsAccidentdata_1 <- separate_rows(data = NYCBikeAccidents_Table,
+                                                          contributing_factor_vehicle_1,
+                                                          sep = "/",
+                                                          convert = FALSE)
+
+colnames(boroughContributingFactorsAccidentdata_1)[32] <- 'contributing.Factor'
+boroughContributingFactorsAccidentdata_1 <- subset(boroughContributingFactorsAccidentdata_1, select = -c(3))
+
+boroughContributingFactorsAccidentdata_2<- separate_rows(data = NYCBikeAccidents_Table,
+                                                          contributing_factor_vehicle_2,
+                                                          sep = "/",
+                                                          convert = FALSE)
+colnames(boroughContributingFactorsAccidentdata_2)[32] <- "contributing.Factor"
+boroughContributingFactorsAccidentdata_2 <- subset(boroughContributingFactorsAccidentdata_2, select = -c(3))
+
+boroughContributingFactorsAccidentdata <- bind_rows(boroughContributingFactorsAccidentdata_1,
+                                                    boroughContributingFactorsAccidentdata_2)
+
+boroughContributingFactorsAccidentdata <- boroughContributingFactorsAccidentdata %>%
+                    group_by(borough, contributing.Factor) %>%
+                    summarise(Count = n())  %>%
+                    arrange(desc(`Count`))
+
+boroughAccidentdata <- spread(data = boroughContributingFactorsAccidentdata,
+                             key = borough,
+                             value = Count
+                             )
+boroughAccidentdata <- boroughAccidentdata[c(1,2,3,4,6,7,5)]
+colnames(boroughAccidentdata)[7] <- "Not Available"
+boroughAccidentdata_1 <- boroughAccidentdata
+boroughAccidentdata_1[is.na(boroughAccidentdata_1)] <- 0
+boroughAccidentdata_1$Total <-  boroughAccidentdata_1$BRONX +
+                                boroughAccidentdata_1$BROOKLYN +
+                                boroughAccidentdata_1$MANHATTAN +
+                                boroughAccidentdata_1$QUEENS + 
+                                boroughAccidentdata_1$`STATEN ISLAND` + 
+                                boroughAccidentdata_1$`Not Available`
+
+boroughAccidentdata_1 <- boroughAccidentdata_1[order(boroughAccidentdata_1$Total, decreasing = TRUE), ]
+
+boroughAccidentdata_1 <- subset(boroughAccidentdata_1, contributing.Factor != "Unspecified")
+boroughAccidentdata_1 <- subset(boroughAccidentdata_1, contributing.Factor != "0")
+
+kable(boroughAccidentdata_1, caption = 'Table 10: Borough summary table of contributing factors at the time of accidents involving cyclists in NYC.')
+```
+
+**Observed patterns:**
+
+From table 7, we can quickly observe a few interesting patterns of contributing factors reported as the cause of accidents involving cyclists as follows:
+
+- The main contributing factors are problematic all over the 5 boroughs, that is **Distraction** and **Driver inattention** are the top contributed factors all over the five boroughs.
+
+- **BROOKLYN** seems to present a very high number of accidents reporting **Failure to Yield Right-of-Way** contrary to the **BRONX** or **STATEN ISLAND** for example.
+
+- **BROOKLYN** and **MANHATTAN** stand out due to **Passanger distraction**, doubling up **QUEENS** and about three times more than the **BRONX** boroughs.
+
+- **BROOKLYN** present a high number of **Alcohol Involvement** mentions compared to the other boroughs.
+
+## By vehicle type
+
+### Yearly summary
+
+The below table, display the top 5 vehicle types that were mentioned in accidents involving cyclists in NYC. This table is ranked with the top mention being first and the least of the ten mentions being last.
+
+
+```{r, echo=FALSE, include=FALSE, warning=FALSE, message=FALSE, results='hide'}
+
+NYCBikeAccidents_Table_1 <- subset(NYCBikeAccidents_Table, select = c(Year, borough, vehicle_type_code1))
+NYCBikeAccidents_Table_2 <- subset(NYCBikeAccidents_Table, select = c(Year, borough, vehicle_type_code2))
+
+colnames(NYCBikeAccidents_Table_1)[3] <- "vehicle.Type"
+colnames(NYCBikeAccidents_Table_2)[3] <- "vehicle.Type"
+
+NYCBikeAccidents_Table_1 <- bind_rows(NYCBikeAccidents_Table_1, NYCBikeAccidents_Table_2)
+
+NYCBikeAccidents_Table_1 <- subset(NYCBikeAccidents_Table_1, vehicle.Type != "BICYCLE")
+
+# Procedure to Find summary yearly Values
+yearlyContributingFactor <- NYCBikeAccidents_Table_1 %>%
+                    group_by(Year, vehicle.Type) %>%
+                    summarise(Count=n()
+                              )  %>%
+                    arrange(desc(`Year`), desc(`Count`))
+
+yearlyContributingFactor$vehicle.Type[is.na(yearlyContributingFactor$vehicle.Type)] <- "Not Available"
+
+yearlyContributingFactor2017 <- head(subset(yearlyContributingFactor, Year == "2017"),5)
+yearlyContributingFactor2016 <- head(subset(yearlyContributingFactor, Year == "2016"),5)
+yearlyContributingFactor2015 <- head(subset(yearlyContributingFactor, Year == "2015"),5)
+yearlyContributingFactor2014 <- head(subset(yearlyContributingFactor, Year == "2014"),5)
+yearlyContributingFactor2013 <- head(subset(yearlyContributingFactor, Year == "2013"),5)
+yearlyContributingFactor2012 <- head(subset(yearlyContributingFactor, Year == "2012"),5)
+
+yearlyContributingFactor_1 <- data.frame(Rank = seq_len(nrow(yearlyContributingFactor2017)),
+                                       `2017` = yearlyContributingFactor2017$vehicle.Type, 
+                                       `2016` = yearlyContributingFactor2016$vehicle.Type,
+                                       `2015` = yearlyContributingFactor2015$vehicle.Type,
+                                       `2014` = yearlyContributingFactor2014$vehicle.Type,
+                                       `2013` = yearlyContributingFactor2013$vehicle.Type,
+                                       `2012` = yearlyContributingFactor2012$vehicle.Type,
+                                       stringsAsFactors = FALSE)
+
+
+yearlyContributingFactor <- NYCBikeAccidents_Table_1 %>%
+                    group_by(vehicle.Type) %>%
+                    summarise(Count=n()
+                              )  %>%
+                    arrange(desc(`Count`))
+
+#yearlyContributingFactor <- subset(yearlyContributingFactor, contributing.Factor != 'Unspecified' )
+yearlyContributingFactor$vehicle.Type[is.na(yearlyContributingFactor$vehicle.Type)] <- "Not Available"
+yearlyContributingFactor <- data.frame(yearlyContributingFactor, stringsAsFactors = FALSE)
+
+
+```
+
+### Top 5 by year
+
+
+
+```{r, echo=FALSE}
+kable(yearlyContributingFactor_1, caption = 'Table 11: Top 5 vehicle types involving accidents with cyclists in NYC by years.')
+```
+
+
+**Observed patterns:**
+
+From the table 8, we can quickly identify as follows:
+
+- **`r yearlyContributingFactor_1$X2017[1]`** and **`r yearlyContributingFactor_1$X2017[2]`** are the two leading vehicle types registered in accidents for the present year.
+
+- **`r yearlyContributingFactor_1$X2017[1]`** and **`r yearlyContributingFactor_1$X2017[2]`** were also the two most leading vehicle types in registered accidents involving cyclists in the past years as well.
+
+- **`r yearlyContributingFactor_1$X2017[3]`** show as a consistent vehicle type involved in accidents with a cyclist.
+
+- **PICK-UP TRUCK** and **MOTORCYCLE** seems to be on the raise in the last couple years.
+
+### Top 10 of all times
+
+```{r, echo=FALSE}
+accidentTotal <- sum(yearlyContributingFactor$Count)
+yearlyContributingFactor$Percentage <- paste(round(yearlyContributingFactor$Count/ accidentTotal,4)*100, " %")
+kable(head(yearlyContributingFactor,10), caption = 'Table 12: Top 10 vehicle types involving accidents with cyclists in NYC of all times.')
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE}
+
+p <- plot_ly(data = head(yearlyContributingFactor,10), 
+             y = ~vehicle.Type,
+             x = ~Count,
+             text = ~paste("Total of vehicles:", Count),
+             type = 'bar',
+             orientation = 'h') %>%
+  layout(yaxis = list(title = "Vehicle Types"),
+         xaxis = list(title = "Number of vehicle types in accidents involving a cyclist."),
+         margin = list(b = 100, l = 250, r = 70)) %>%
+  layout(showlegend = FALSE, 
+         title = "Graph 12: Top 10 vehicles involving accidents with cyclists in NYC of all times.", 
+         autosize = TRUE
+         ) %>%
+  layout(autosize = F, width = 800, height = 500)
+
+ggplotly(p)
+
+```
+
+From our previous Graph, you can find all the top ten vehicle types by the number of accidents in all reported accidents involving cyclists.
+
+**Observed patterns:**
+
+- In this, case we can quickly identify how great of a difference relies in between the top (Passenger Vehicle) and the second to highest (Sport Utility / Station Wagon), these differences are quite significant and large.
+
+- **Public transporation** and **Commercial** vehicles don't have as many accidents involving cyclists as **private** owned vehicles do.
+
+- **Small** vehicles have the highest number of accidents involving cyclists compared to large vehicles such as buses, pick-up trucks or commercial vehicles.
+
+- **`r yearlyContributingFactor$vehicle.Type[1]`** is involved in one of every two accidents when a cyclist gets injured.
+
+### Borough summary
+
+```{r, echo=FALSE}
+# Procedure to Find summary daily Values by the borough
+
+NYCBikeAccidents_Table_1 <- subset(NYCBikeAccidents_Table, select = c(Year, borough, vehicle_type_code1))
+NYCBikeAccidents_Table_2 <- subset(NYCBikeAccidents_Table, select = c(Year, borough, vehicle_type_code2))
+
+colnames(NYCBikeAccidents_Table_1)[3] <- "vehicle.Type"
+colnames(NYCBikeAccidents_Table_2)[3] <- "vehicle.Type"
+
+NYCBikeAccidents_Table_1 <- bind_rows(NYCBikeAccidents_Table_1, NYCBikeAccidents_Table_2)
+
+NYCBikeAccidents_Table_1 <- subset(NYCBikeAccidents_Table_1, vehicle.Type != "BICYCLE")
+
+boroughContributingFactorsAccidentdata <- NYCBikeAccidents_Table_1 %>%
+                    group_by(borough, vehicle.Type) %>%
+                    summarise(Count = n())  %>%
+                    arrange(desc(`Count`))
+
+boroughAccidentdata <- spread(data = boroughContributingFactorsAccidentdata,
+                             key = borough,
+                             value = Count
+                             )
+boroughAccidentdata <- boroughAccidentdata[c(1,2,3,4,6,7,5)]
+colnames(boroughAccidentdata)[7] <- "Not Available"
+boroughAccidentdata_1 <- boroughAccidentdata
+boroughAccidentdata_1[is.na(boroughAccidentdata_1)] <- 0
+
+boroughAccidentdata_1$Total <-  boroughAccidentdata_1$BRONX +
+                                boroughAccidentdata_1$BROOKLYN +
+                                boroughAccidentdata_1$MANHATTAN +
+                                boroughAccidentdata_1$QUEENS + 
+                                boroughAccidentdata_1$`STATEN ISLAND` + 
+                                boroughAccidentdata_1$`Not Available`
+
+accidentTotal <- sum(boroughAccidentdata_1$Total)
+boroughAccidentdata_1$Percentage <- paste(round(boroughAccidentdata_1$Total / accidentTotal,4)*100, " %")
+
+boroughAccidentdata_1 <- boroughAccidentdata_1[order(boroughAccidentdata_1$Total, decreasing = TRUE), ]
+
+boroughAccidentdata_1 <- subset(boroughAccidentdata_1, vehicle.Type != "Unspecified")
+boroughAccidentdata_1 <- subset(boroughAccidentdata_1, vehicle.Type != "0")
+
+kable(boroughAccidentdata_1, caption = 'Table 13: Borough summary table of vehicle types at the time of accidents involving cyclists in NYC.')
+```
+
+**Observed patterns:**
+
+From table 10, we can quickly observe a few interesting patterns of vehicle types reported during accidents involving cyclists as follows:
+
+- The main vehicle type involved in accidents with cyclists in all NYC boroughs is **`r boroughAccidentdata_1$vehicle.Type[1]`** with grand total of **`r format(boroughAccidentdata_1$Total[1],scientific=FALSE)`** accidents involved representing **`r boroughAccidentdata_1$Percentage[1]`** for all years.
+
+- **BROOKLYN** has the highest bicycle ratio of accidents with a passenger vehicle and sport utility / station wagon vehicle types, doubling **MANHATTAN** and **QUEENS** on each vehicle type.
+
+- **MANHATTAN** leads the number of accidents involving cyclists with Taxi cabs, livery vehicles, buses and pick-up trucks.
+
+
+
+# Conclucions
+
+Something that caught my interest was something that NYCBikeMaps.com express on their site as follows: "NYCBikeMaps.com makes no guarantees that the bike routes listed will be suitable for all cyclists". I think this is remarkable true due to the high number of accidents already listed in diverse roads and locations.
+
+- Avoid Brooklyn.
+
+- Stay away from Williamsburg bridge.
+
+- Do not ride your bike in chinatown.
+
+
+# Recommendations
+
+- Follow NYCBikeMaps.com five color legend to classify routes for cyclists.
+
+- Stay in a Bike Path, Green way, Off-Street bike path or designated path in parks or on-street protected bike paths.
+
+- Use Special Bike Paths or Lanes with special hours or unique conditions, including Central Park & Prospect Park.
+
+- Use the Bike Lane on-street striped route.
+
+- Use Sharrows / Signed Route on street signed route or sharrow signs for bicycle riders.
+
+- Cyclists must be on high alert if riding on-street routes with traffic; that is no bike signage or separation is present.
+
+- Since bike lanes & paths sometimes may be blocked by cars or pedestrians, or closed due to construction or maintenance; drivers and cyclists need to enforce extra cautioning order to ride safely and responsibly.
+
+## References
+
+https://www.programmableweb.com/news/7-free-geocoding-apis-google-bing-yahoo-and-mapquest/2012/06/21
+
+https://www.programmableweb.com/api/mapquest-geocoding
+
+https://developers.google.com/maps/documentation/geocoding/start?refresh=1
+
+https://cran.r-project.org/web/packages/googleway/index.html
+
+http://www.nycbikemaps.com/
+
+http://www.nyc.gov/html/dot/html/bicyclists/bikemaps.shtml
+
+
+
