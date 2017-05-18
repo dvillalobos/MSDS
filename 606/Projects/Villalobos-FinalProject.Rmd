@@ -1,0 +1,357 @@
+---
+title: 'Final Project: Are data science skills predictive of salary?'
+author: "Duubar Villalobos Jimenez"
+date: "May 18, 2017"
+output:
+  pdf_document: default
+  html_document:
+    toc: yes
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+subtitle: CUNY MSDA DATA 606
+---
+
+
+```{r library_definitions, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+### Data Preparation
+knitr::opts_chunk$set(echo = TRUE)
+
+# Create vector with all needed libraries
+
+library(knitr)
+library(DBI)        # MariaDB Connector
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(DT)         # Library to drate datatable
+library(DATA606)
+library(statsr)
+
+### MySQL connection setup
+# Read password and user name from remote location in order to establish connection to MySQL
+# Connect to my-db as defined in /etc/my.cnf
+# Remote definitions
+
+readMariaDBTable <- function(myLocalHost = NULL, myLocalMySQLSchema = NULL, myLocalTableName = NULL){
+    
+    url <- "http://mydvtech.com/libraries/mysql.csv"
+    MySQLConnect <- read.csv(url, header = FALSE, sep = ",", stringsAsFactors=FALSE)
+
+    # Remote access definitions
+    myLocalPassword <- MySQLConnect$V1
+    myLocalUser <- MySQLConnect$V2
+
+    # Create a RMySQL Connection
+    mydbConnection <- dbConnect(RMySQL::MySQL(),                   
+                  user = myLocalUser,
+                  password = myLocalPassword,
+                  host = myLocalHost,
+                  dbname = myLocalMySQLSchema)
+
+    # Check to see if our table exists? and read our data
+    myLocalTableName <- tolower(myLocalTableName)
+    if (dbExistsTable(mydbConnection, name = myLocalTableName)  == TRUE){
+        my.data <- dbReadTable(mydbConnection, name = myLocalTableName)
+    }
+
+    # Closing connection with local MAriaDB Schema
+    dbDisconnect(mydbConnection)
+
+    # Return Data
+    return(my.data)
+    
+}
+
+my.data <- readMariaDBTable(myLocalHost = 'mydvtech.com', 
+                            myLocalMySQLSchema = 'mydvtech_cuny',
+                            myLocalTableName = 'tbl_paysatxt')
+
+colnames(my.data) <- c("Job_ID", "Position", "Base", "Annual", "Bonus", "Total", "Skills", "Location")
+```
+
+![](/home/rstudio/Documents/GitHub/MSDA/Spring-2017/606/Project/datascience.png)
+
+# Part 1 - Introduction:
+
+Noways with the increase in data collection and processing; companies, governments and agencies have a need to extract and produce educated decisions based on factual data.  Extracting that kind of information and knowledge from large, heterogeneous, and noisy data sets requires not only powerful computing resources, but the programming abstractions to use them effectively.
+
+In that context, data scientist need to have the skills in order to overcome the challenges that implies to work diverse structures in a given data science project.
+
+By looking at this relationship (data processing / data scientist), we know that it creates a third component with a numerical variable named salary.
+
+With that in mind, I will explore and try to answer a very important research question:
+
+**Are data science skills predictive of salary?**
+
+## Hypothesis
+
+From our exploration question, we can define our hypothesis as follows:
+
+$H_0:$ Data Science skills are not predictive of salary; that is, the mean for all Skill Values are the same.
+
+$H_1:$ Data Science skills are predictive of salary; that is, at least one mean for all Skill Values is different.
+
+# Part 2 - Data:
+
+## Data Source 
+
+The data that I will be working with, is collected by `Paysa` and is available online here: http://paysa.com
+
+For this project, the data was extracted by copying and pasting a job search of *"Data Science"* on March 16, 2017 into a text file, then cleaned and uploaded into a table in a remote MySQL server.
+
+This data is collected by Paysa as part of the integrated job posting website and this data is submitted by employers daily.
+
+## Raw Data
+
+The below table display all job listings compiled from Paysa.
+
+```{r displayJobsTable, echo=FALSE}
+datatable(my.data, options = list( pageLength = 5, lengthMenu = c(5, 10, 40),   initComplete = JS(
+    "function(settings, json) {",
+    "$(this.api().table().header()).css({'background-color': '#01975b', 'color': '#fff'});",
+    "}")), rownames=FALSE)
+```
+
+
+## Cases 
+
+Each case represents a job posting in the United States. There are `r length(unique(my.data$Job_ID))` observations in the given data set.
+
+
+## Explanatory variable
+
+The explanatory variable is `Data Science skills` and is categorical.
+
+
+## Response variable
+
+The response variable is `Base Salary` and is numerical.
+
+
+## Curated Data
+
+From the above table I will focus on the `Base Salary` and combination of `Skills` as follows:
+
+
+```{r, echo=FALSE}
+my.skills.data <- subset(my.data, select = c("Job_ID", "Base", "Skills"))
+
+my.skills.data$Base <-  str_trim(str_replace_all(my.skills.data$Base, "Base Salary",""))
+my.skills.data$Base <-  str_trim(str_replace_all(my.skills.data$Base, "K","000"))
+my.skills.data$Base <-  str_trim(str_replace_all(my.skills.data$Base, "\\$",""))
+my.skills.data$Base <- as.numeric(my.skills.data$Base)
+
+my.skills.data$Skills <-  str_trim(str_replace_all(my.skills.data$Skills, "You can learn valuable new skills like: ",""))
+my.skills.data$Skills <-  str_trim(str_replace_all(my.skills.data$Skills, " and more.",""))
+my.skills.data$Skills <-  str_trim(str_replace_all(my.skills.data$Skills, ", and ",", "))
+my.skills.data$Skills <-  str_trim(str_replace_all(my.skills.data$Skills, " and ",", "))
+my.skills.data$Skills <-  str_trim(str_replace_all(my.skills.data$Skills, "\\.",""))
+
+```
+
+```{r, echo=FALSE}
+datatable(my.skills.data, options = list( pageLength = 5, lengthMenu = c(5, 10, 40),   initComplete = JS(
+    "function(settings, json) {",
+    "$(this.api().table().header()).css({'background-color': '#01975b', 'color': '#fff'});",
+    "}")), rownames=FALSE)
+```
+
+
+## Skill value per job listing
+
+Since each case list multiple skills combined for a single base salary. For this study purposes, I will assign an "Skill Value" salary per skill listed on each listing; that is, by taking the base salary and dividing it by the number of skills listed for that study case.
+
+For example: In the first case, there is a base salary of \$253000 with 6 skills listed (Distributed Systems, Big Data, Algorithms, Data Science, Strategy, Databases). By taking \$253000 and dividing it by 6, we obtain an average of \$42167. That is, each skill value will be taken as \$42167 in the first case study. Similar process will be applied for the rest of the cases.
+
+
+```{r, echo=FALSE}
+
+my.skills.data_long <- separate_rows(my.skills.data, 
+                                     Skills,
+                                     sep = ", ")
+
+number_skills <- my.skills.data_long %>%
+                    group_by(Job_ID) %>%
+                    dplyr::summarise(Count=n()
+                              )  %>%
+                    arrange(Job_ID)
+
+my.skills.data_new <- left_join(my.skills.data, number_skills, by="Job_ID")
+
+my.skills.data_new$`Skill Value` <- as.numeric(round(my.skills.data_new$Base / my.skills.data_new$Count,0))
+```
+
+The below table shows the number of skills per job listing and also shows the "average" base salary for each skill in that listing.
+
+```{r, echo=FALSE}
+datatable(my.skills.data_new, options = list( pageLength = 5, lengthMenu = c(5, 10, 40),   initComplete = JS(
+    "function(settings, json) {",
+    "$(this.api().table().header()).css({'background-color': '#01975b', 'color': '#fff'});",
+    "}")), rownames=FALSE)
+```
+
+
+# Part 3 - Exploratory data analysis:
+
+From the above table, we have defined a series of `Skill Value` for each skill listed on each job posting.
+
+```{r, echo=FALSE}
+my.skills.data_long <- separate_rows(my.skills.data_new, 
+                                     Skills,
+                                     sep = ", ")
+
+my.skills.data_long <- subset(my.skills.data_long, select = c(Skills, `Skill Value`))
+
+```
+
+From the raw data, we have a total of `r nrow(my.skills.data_long)` skills listed in the `r length(unique(my.data$Job_ID))` job postings.
+
+```{r, echo=FALSE}
+datatable(my.skills.data_long, options = list( pageLength = 5, lengthMenu = c(5, 10, 40),   initComplete = JS(
+    "function(settings, json) {",
+    "$(this.api().table().header()).css({'background-color': '#01975b', 'color': '#fff'});",
+    "}")), rownames=FALSE)
+```
+
+## Summary
+
+Below is a summary of the individual skills data.
+
+```{r, echo=FALSE}
+summary(my.skills.data_long)
+```
+
+From the above summary table, we can quickly identify that the minimum skill value is set at \$15833 and the maximum is at \$161000 with a median skill value of \$22500 per skill.
+
+## Count, Mean and Standard deviation
+
+```{r, echo=FALSE}
+n_mean_sd <- my.skills.data_long %>%
+                    group_by(Skills) %>%
+                    dplyr::summarise(Frequency=n(),
+                                     `Min Value` =  round(min(`Skill Value`),0),
+                                     `Median Value` = round(median(`Skill Value`),0),
+                                     `Mean Value` =  round(mean(`Skill Value`),0),
+                                     `Max Value` =  round(max(`Skill Value`),0),
+                                     SD = round(sd(`Skill Value`),0)
+                              )  %>%
+                    arrange(Skills)
+```
+
+```{r, echo=FALSE}
+datatable(n_mean_sd, options = list( pageLength = 5, lengthMenu = c(5, 10, 40),   initComplete = JS(
+    "function(settings, json) {",
+    "$(this.api().table().header()).css({'background-color': '#01975b', 'color': '#fff'});",
+    "}")), rownames=FALSE)
+```
+
+
+```{r, echo=FALSE}
+boxplot(data=my.skills.data_long, `Skill Value`~Skills, main="Skills and Salary Value", xlab="Data Science Skills", ylab="Skill Value", col="#ffcc80")
+```
+
+From the above plot, as an initial inspection of the data, it suggests that there are differences in between the medians but is not clear at this point.
+
+## Outliers
+
+From the above set of box plots we can quickly identify that there are some outliers in the remaining data set, while the different medians seems to vary depending on the skill; this could be taking as an indication that the skills could be predictive of salary as established in our introduction.
+
+```{r, echo=FALSE}
+hist(my.skills.data_long$`Skill Value`, breaks = 100, main="Salary Value Frequency", xlab="Skill Value", col="#ffcc80")
+```
+
+From the above histogram we can visualize some sort of normality and skewness to the right, also we can confirm the outliers as well.
+
+For visualization purposes, I will include a new density histogram with a limited domain in the as follows:
+
+```{r, echo=FALSE}
+hist(my.skills.data_long$`Skill Value`, breaks = 100, main="Salary Value Density", xlab="Skill Value", probability = TRUE, xlim = c(13000, 50000), col="#ffcc80")
+```
+
+## Medians
+
+From the calculated medians, we can have the following histograms:
+
+
+```{r, echo=FALSE}
+hist(n_mean_sd$`Median Value`, breaks = 100, main="Median Value Frequency", xlab="Median Value", col="#ffcc80")
+```
+
+From the above histogram we can still visualize some sort of normality and skewness to the right, also we can confirm the presence of outliers, performing leverage.
+
+For visualization purposes, I will include a new density histogram with a limited domain in the as follows:
+
+```{r, echo=FALSE}
+
+hist(n_mean_sd$`Median Value`, breaks = 100, main="Median Salary Value Density", xlab="Median Skills Value", probability = TRUE, xlim = c(15000, 35000), col="#ffcc80")
+
+```
+
+
+```{r, echo=FALSE}
+qqnorm(n_mean_sd$`Median Value`)
+qqline(n_mean_sd$`Median Value`)
+```
+
+Based on out Q-Q Plot, we can visualize how our medians data follow the qqline most of the trajectory then due to leverage a couple of points fall away from it.
+
+# Part 4 - Inference:
+
+## Satisfying conditions for inference:
+
+Conditions:
+
+- The sample size is greater than 30.
+
+- The data sets follow a uni modal normal distribution.
+
+- The samples are random.
+
+Hence, the conditions for inference seems to be satisfied.
+
+## ANOVA
+
+```{r, echo=FALSE}
+# For some reason this function did not render when knitin; it did run in RStudio.
+#inference(y = SkillValue, x = Skills, "mean", type = "ht", null = 0, alternative = "greater", method = "theoretical")
+```
+
+### Summary
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE}
+Anova <- lm(`Skill Value` ~ Skills, data = my.skills.data_long)
+summary(Anova)
+```
+
+From the above results, the model output indicates some evidence of a difference in the average value for the skills.
+
+### Results
+
+```{r, echo=FALSE}
+anova(Anova)
+```
+
+Based on the above table confirms that there are differences between the skills which were highlighted in the model summary.
+
+
+# Part 5 - Conclusion: 
+
+From our initial question: Are data science skills predictive of salary? we can conclude as follows:
+
+By observing the above plots, linear modeling, and statistical analysis; we can observe how data science skills and income did appear to be correlated.
+
+The validity of the data was indicated by summary statistics in which our hypothesis $H_0$ gets discarded and our alternative hypothesis $H_1$ is accepted. The above conclusion is statistically accepted since our analysis of variance returned an extremely low p-value (2.2e-16) which is less than 0.05. This can be enforced by comparing our results with the normality and qqplots for the medians as well.
+
+# References:
+
+- OpenIntro Statistics, Third Edition. Diez, D. et all. 2015
+
+
+
+
+
+
+
