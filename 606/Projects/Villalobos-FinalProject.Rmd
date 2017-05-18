@@ -26,7 +26,7 @@ library(tidyr)
 library(dplyr)
 library(stringr)
 library(tidyverse)
-library(DT)         # Library to drate datatable
+library(DT)         # Library to create datatable
 library(DATA606)
 library(statsr)
 
