@@ -1,6 +1,6 @@
 # DATA 602
-## CUNY MSDA
-Private repository
+## CUNY MSDS
+Private Repository
 
 Duubar Villalobos Jimenez
 mydvtech@gmail.com
