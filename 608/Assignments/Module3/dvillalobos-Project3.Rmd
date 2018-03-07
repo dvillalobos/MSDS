@@ -1,0 +1,438 @@
+---
+title: "Project 3"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "March 11, 2018"
+output:
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+    prettydoc:code_folding: hide
+  pdf_document: default
+  html_document: default
+subtitle: CUNY MSDS DATA 608
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(warn=-1)
+```
+
+# Libraries
+
+In this section, I will include all libraries needed.
+
+```{r}
+libraries <- c(
+              "shiny",
+              "shinythemes",
+              "plotly",
+              "tidyverse",
+              "reshape2"
+              )
+```
+
+
+```{r library_setup, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+#install.packages('rsconnect') # To publish Shiny App.
+library(shiny)
+library(shinythemes)
+library(plotly)
+library(tidyverse)
+library(reshape2)
+#  localhost:5586 # To allow downloads must be typing in Browser search bar
+```
+
+# Project Description
+
+I have provided you with data about mortality from all 50 states and the District of Columbia.
+
+Please access it at https://github.com/charleyferrari/CUNY_DATA608/tree/master/module3/data.
+
+You are invited to gather more data from our provider, the CDC WONDER system, at https://wonder.cdc.gov/ucd-icd10.html.
+
++ This assignment must be done in R. It must be done using the 'shiny' package.
+
++ It is recommended you use an R package that supports interactive graphing such as plotly, or vegalite, but this is not required.
+
++ You will turn in four files to me: one called 'ui.R' and one called 'server.R' for each of problem 1 and problem 2. I will run the apps myself. Please make sure you turn in both scripts and that they work together!
+
++ I will create a quick intro video for Shiny, general concepts about interactive visualizations, and packages.
+
+
+# Question 1
+
+As a researcher, you frequently compare mortality rates from particular causes across different States. You need a visualization that will let you see (for 2010 only) the crude mortality rate, across all States, from one cause (for example, Neoplasms, which are effectively cancers). Create a visualization that allows you to rank States by crude mortality for each cause of death.
+
+## Gathering info
+
+The **CDC WONDER** system file.
+
+```{r URL, echo=FALSE}
+# Github
+url <- 'https://raw.githubusercontent.com/charleyferrari/CUNY_DATA608/master/lecture3/data/cleaned-cdc-mortality-1999-2010-2.csv'
+# Local run
+#url <- '/home/mydvadmin/Dropbox/CUNY/Courses/DATA608/Project03/cleaned-cdc-mortality-1999-2010-2.csv'
+#url <- '/home/mydvadmin/Dropbox/CUNY/Courses/DATA608/Project03/cleaned-cdc-mortality-1999-2016-1.csv'
+```
+
+```{r read-file, echo=FALSE}
+# Reading file
+my.mortality.data <- read.csv(url, header=TRUE, sep=",", stringsAsFactors=FALSE)
+```
+
+### Cleaning Data
+
+Proceeding to clean the data gathered from **CDC WONDER**.
+
+
+
+
+```{r shiny-prep1, echo=FALSE}
+# Prep Work
+my.mortality.data <-arrange(my.mortality.data,desc(Crude.Rate)) 
+
+my.data_tbl <- my.mortality.data 
+
+# my.data_tbl <- filter(my.mortality.data, Year == '2010') # Filter for 2010 only
+
+#my.tally_tbl <- tally(group_by(my.data_tbl, ICD.Chapter, State)) # Tally groups
+
+#my.tally_tbl$n <- as.numeric(my.tally_tbl$n) # Need as numeric
+
+# Creating a summary
+#my.ICD.Chapter_tbl <- my.data_tbl %>%
+#                  group_by(ICD.Chapter, State) %>%
+#                  summarise('Median.Crude.Rate' = median(Crude.Rate))
+
+df <- my.data_tbl
+
+# Need to Rank
+df$Rank <-  df$Crude.Rate %>%
+            rank() %>%
+            round(0)
+
+df$Rank <- max(df$Rank+1) - df$Rank
+```
+
+### About the data
+
+**Crude Rates**
+
+Crude Rates are expressed as the number of deaths reported each calendar year per the factor you select. The default factor is per 100,000 population, reporting the death rate per 100,000 persons.
+
+$$Crude\:Rate = \frac{Count}{Population} \times 100,000$$
+
+More information can be seeing here: https://wonder.cdc.gov/wonder/help/ucd.html#
+
+
+## Shiny
+
+### ui
+
+Shiny **ui** code.
+
+```{r shiny_ui1, echo=FALSE}
+# User interface select disease and year
+
+ui1 <- fluidPage(
+  
+ headerPanel('Mortality Rates by State'),
+ 
+ sidebarPanel(
+   selectInput('option_Year', 'Year', unique(df$Year), selected='2010'),                              # Option to Select Year
+   selectInput('option_ICD.Chapter', 'ICD.Chapter', unique(df$ICD.Chapter), selected='Neoplasms'),    # Option to Select Disease
+   h4("Top 5 States"),
+   tableOutput('MyRanks'), # Option to display Top 5 States Ranked
+   h1('')
+   # Button
+   #downloadButton("downloadData", "Download") # To download data as .csv file
+   #verbatimTextOutput('myRanks')
+ ),
+ 
+ mainPanel(
+   #selectInput('option_Graph', 'Type', c('bar','scatter'), selected='scatter'),                      # Option to Select Graph
+   radioButtons("option_Graph", "Graph Type",
+               choiceNames = list(
+                 #icon("glyphicon glyphicon-align-left", "fa-2x", lib = "glyphicon"),
+                 HTML("<div style='font-size:1em; color:Tomato'> <i class='glyphicon glyphicon-record'></i>  Scatter </div"),
+                 HTML("<div style='font-size:1em; color:Tomato'> <i class='glyphicon glyphicon-align-left'></i> Bar </div> ")
+               ),
+               choiceValues = list(
+                 "scatter", 
+                 "bar"
+               ),
+               inline = TRUE),
+   #textOutput("txt"),
+   plotlyOutput('plot1')  # Option to plot unsing plot.ly
+
+ )
+ 
+ )
+```
+
+### server
+
+Shiny **server** code.
+
+```{r shiny-server1, echo=FALSE}
+# server code filters and returns data in plot.ly  ----
+
+server1 <- function(input, output) {
+
+# Filter REACTIVE Data by Year and ICD.Chapter  ----
+selectedData <- reactive({
+     dfSlice <- df %>%
+     filter((Year == input$option_Year) , (ICD.Chapter == input$option_ICD.Chapter) ) %>%
+      mutate(Rank=min_rank(Rank)) %>%
+      arrange(Rank)
+ })
+
+
+  # Plot using plot.ly  ----
+  output$plot1 <- renderPlotly({
+
+   plot_ly(selectedData(), x = ~State, y = ~Crude.Rate, type=input$option_Graph) %>%
+             layout(title = paste(input$option_Year, input$option_ICD.Chapter, sep = " - "), #"Mortality Rates by State",
+                    xaxis = list(categoryorder = "array",
+                                 categoryarray = ~State,
+                                 type = "category"),
+                    yaxis = list(title = "Crude Mortality Rate"))
+    })
+
+  # Generate a summary of the data ----
+  output$MyRanks <- renderTable({
+    head(selectedData()[,c(-1,-3)],5) # Generate top 5 Ranks of selected columns
+  })
+
+  # Downloadable csv of selected dataset ----
+  #output$downloadData <- downloadHandler(
+  #  filename = function() {
+  #    paste(input$dataset, ".csv", sep = "")
+  #  },
+  #  content = function(file) {
+  #    write.csv(datasetInput(), file, row.names = FALSE)
+  #  })
+
+  #output$txt <- renderText({
+  #  paste("Rendering: ", input$option_ICD.Chapter)
+  #})
+
+}
+```
+
+### Run
+
+Command to **run** shiny app.
+
+```{r run-shiny1, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE, fig.height=4.2}
+# Run the Shiny application 
+shinyApp(ui = ui1, server = server1, options = list(height = 600) )
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Question 2
+
+Often you are asked whether particular States are improving their mortality rates (per cause) faster than, or slower than, the national average. Create a visualization that lets your clients see this for themselves for one cause of death at the time. Keep in mind that the national average should be weighted by the national population.
+
+## National Average
+
+Procedure to calculate the **national average** by year and ICD.Chapter.
+
+```{r national_average, echo=FALSE}
+# Creating a National Average Summary ----
+national_average_summary <- my.mortality.data %>%
+                  group_by(ICD.Chapter, Year) %>%
+                  summarise(
+                            'Deaths' = sum(Deaths), 
+                            'Population' = sum(Population), 
+                            'NationalAverage' = round(100000*sum(Deaths)/sum(Population),1)) %>%
+                  arrange(desc(NationalAverage))
+
+#a1 <- select(filter(df2_summary, State == 'NY' & Year == '1999'),c(State,Year,ICD.Chapter,Population,Deaths, NationalAverage))
+
+#a <- select(filter(my.mortality.data, Year == '1999'),c(State,Year,ICD.Chapter,Population,Deaths))
+#sum(a$Deaths)
+
+```
+
+
+## Shiny
+
+### ui
+
+Shiny **ui** code.
+
+```{r shiny_ui2, echo=FALSE}
+# User interface select disease and year
+
+ui2 <- fluidPage(
+  
+ headerPanel('Mortality Rates by State and Year'),
+ 
+ sidebarPanel(
+   selectInput('option_State', 'State', unique(df$State), selected='NY'), 
+   selectInput('option_ICD.Chapter', 'ICD.Chapter', unique(df$ICD.Chapter), selected='Neoplasms'),    # Option to Select Disease
+   selectInput('option_Year', 'Year', unique(df$Year), selected='2010'),                              # Option to Select Year
+   br(),
+   h4("Comparison Results"),
+   tableOutput('MyNational'), # Option to display National Average Results
+   tableOutput('MyState'),
+   h1('')
+   # Option to display National Average Results
+   # Button
+   #downloadButton("downloadData", "Download") # To download data as .csv file
+   #verbatimTextOutput('myRanks')
+ ),
+ 
+ mainPanel(
+   #selectInput('option_Graph', 'Type', c('bar','scatter'), selected='scatter'),                      # Option to Select Graph
+   radioButtons("option_Graph", "Graph Type",
+               choiceNames = list(
+                 #icon("glyphicon glyphicon-align-left", "fa-2x", lib = "glyphicon"),
+                 HTML("<div style='font-size:1em; color:Tomato'> <i class='glyphicon glyphicon-record'></i>  Scatter </div"),
+                 HTML("<div style='font-size:1em; color:Tomato'> <i class='glyphicon glyphicon-align-left'></i> Bar </div> ")
+               ),
+               choiceValues = list(
+                 "scatter", 
+                 "bar"
+               ),
+               inline = TRUE),
+   #textOutput("txt"),
+   plotlyOutput('plot1'),  # Option to plot unsing plot.ly
+   br(),
+   br(),
+   plotlyOutput('plot2')  # Option to plot unsing plot.ly
+
+ )
+ 
+ )
+```
+
+### server
+
+Shiny **server** code.
+
+```{r shiny-server2, echo=FALSE}
+# server code filters and returns data in plot.ly
+
+server2 <- function(input, output) {
+
+# Filter REACTIVE Data by Year and ICD.Chapter
+selectedData <- reactive({
+     dfSlice <- df %>%
+     filter((State == input$option_State), (Year == input$option_Year) , (ICD.Chapter == input$option_ICD.Chapter) ) %>%
+      mutate(Rank=min_rank(Rank)) %>%
+      arrange(Rank)
+ })
+
+# National Average
+national_average <-reactive({ 
+                  dfSlice <- national_average_summary %>%
+                  filter((Year == input$option_Year) , (ICD.Chapter == input$option_ICD.Chapter) )
+                  
+})
+
+# National Average
+national_average_all <-reactive({ 
+                  dfSlice <- national_average_summary %>%
+                  filter((ICD.Chapter == input$option_ICD.Chapter) )  %>%
+                  arrange(Year)
+                  
+})
+
+# National Average
+State_average_all <-reactive({ 
+                  dfSlice <- my.mortality.data %>%
+                  filter((State == input$option_State), (ICD.Chapter == input$option_ICD.Chapter) )  %>%
+                  arrange(Year)
+                  
+})
+
+  # Plot using plot.ly
+  output$plot1 <- renderPlotly({
+
+   plot_ly(selectedData(), x = ~ICD.Chapter, y = national_average()$NationalAverage, type=input$option_Graph, name = "National Average") %>%
+             add_trace(y = ~Crude.Rate, name = input$option_State) %>%
+             layout(title = paste('Year', input$option_Year, sep = " "), #" Single Mortality Rates by State and Year",
+                    xaxis = list(categoryorder = "array",
+                                 categoryarray = ~Crude.Rate,
+                                 type = "category"),
+                    yaxis = list(title = "Crude Mortality Rate"))
+    }
+   )
+  
+  # Plot using plot.ly
+  output$plot2 <- renderPlotly({
+
+   plot_ly(national_average_all(), x = ~Year, y = ~NationalAverage, type = 'scatter', mode = 'lines+markers', name = 'National Average') %>%
+             add_trace(y = State_average_all()$Crude.Rate, mode = 'lines+markers', name =  input$option_State) %>%
+             layout(title = paste('Mortality Rates', input$option_State, sep = " - "), #" Single Mortality Rates by State and Year",
+                    xaxis = list(categoryorder = "array",
+                                 categoryarray = ~Year,
+                                 type = "category"),
+                    yaxis = list(title = "Crude Mortality Rate"))
+    }
+   )
+  
+
+  # Generate a summary of the data ----
+    output$MyNational <- renderTable({
+    national_average()[,c(-1)]
+  })
+  
+  output$MyState <- renderTable({
+    selectedData()[,c(-1,-3,-7)]
+
+  })
+
+
+  # Downloadable csv of selected dataset ----
+  #output$downloadData <- downloadHandler(
+  #  filename = function() {
+  #    paste(input$dataset, ".csv", sep = "")
+  #  },
+  #  content = function(file) {
+  #    write.csv(datasetInput(), file, row.names = FALSE)
+  #  })
+
+  #output$txt <- renderText({
+  #  paste("Rendering: ", input$option_ICD.Chapter)
+  #})
+
+}
+```
+
+### Run
+
+Command to **run** shiny app.
+
+```{r run-shiny2, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, message=FALSE, fig.height=8.4}
+# Run the Shiny application 
+shinyApp(ui = ui2, server = server2, options = list(height = 1200) )
+```
+
+
+
+
+
