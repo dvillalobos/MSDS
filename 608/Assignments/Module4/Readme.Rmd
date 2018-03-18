@@ -10,6 +10,6 @@ https://www.waterqualitydata.us/portal/
 
 **River Keeper Readings:** *riverkeeper_data_2013.csv*
 
-Provided by our profesor from Github Link:
+Provided by our professor from Github Link:
 
 https://raw.githubusercontent.com/charleyferrari/CUNY_DATA_608/master/module4/Data/riverkeeper_data_2013.csv
