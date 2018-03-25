@@ -30,3 +30,6 @@ https://www.riverkeeper.org/wp-content/uploads/2017/11/Riverkeeper_WQReport_2017
 **Tested on Amazon EC2:**
 
 url >>> http://18.188.160.16:8050/
+
+
+**Pending** Docker
