@@ -16,7 +16,7 @@ Data 608 - Spring 2018
 
 To start “running” our docker image:
 
-	sudo docker run -p 80:8000 -it dvillalobos/data608-project04
+	sudo docker run -p 80:8050 -it dvillalobos/data608-project04
 
 # Docker Build
 
