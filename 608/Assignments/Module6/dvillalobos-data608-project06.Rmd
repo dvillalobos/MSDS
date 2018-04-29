@@ -1,0 +1,305 @@
+---
+title: "Project 6"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "April 29, 2018"
+output:
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+    prettydoc:code_folding: hide
+  pdf_document: default
+  html_document: default
+subtitle: CUNY MSDS DATA 608
+---
+
+
+```{r setup, echo=FALSE,warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+library(knitr)
+library(markdown)
+#rmarkdown::render('/home/mydvadmin/Dropbox/CUNY/Courses/DATA608/Project06/test.Rmd', envir=.GlobalEnv)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r library_setup, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+library(ggmap)
+```
+
+# Project 06
+
+## Description
+
+I have given all of you feedback for your final project proposals, and this assignment is meant to be a first step in service of your final project, and an (optional) chance to build your skills in the javascript libraries we've covered: d3 or plotly. Follow the directions in my feedback and create some preliminary graphs for your final project.
+
+I encourage all students to attempt to attempt to use javascript. Even if you are not planning on using these tools for your final project, the exercise can be used to build your skills above our basic assignments in project 5. Since this is in service of your final project however, projects submitted in either dash or shiny will be accepted if that's what you'll be using.
+
+## Multi Agency Permits.
+
+**Mayor's Office of Data Analytics**
+
++ Multi Agency Permits in NYC (Visualization).
+
+Department of Buildings work permits are required for most construction projects. If the project’s scope requires plans and permits, you must hire a New York State licensed professional engineer (PE) or registered architect (RA).
+
+## Data Gathering
+
+The data will be provided by the Mayor's Office of Data Analytics.
+
+**Link:**  http://www1.nyc.gov/site/analytics/index.page
+
+**Data source:** Socrata (**24as-fxn4**)
+
+ + **Link:** [https://data.cityofnewyork.us/City-Government/Multi-Agency-Permits/xfyi-uyt5](https://data.cityofnewyork.us/City-Government/Multi-Agency-Permits/xfyi-uyt5).
+ 
+ + **Developer Link:** [https://dev.socrata.com/foundry/data.cityofnewyork.us/24as-fxn4](https://dev.socrata.com/foundry/data.cityofnewyork.us/24as-fxn4).
+
+### Import from Socrata
+
+```{r, echo=FALSE, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide', eval=FALSE}
+## Install the required package with:
+## install.packages("devtools")
+## devtools::install_github("Chicago/RSocrata")
+
+library("RSocrata")
+
+url <- "https://data.cityofnewyork.us/resource/24as-fxn4.json"
+  #app_token = "YOURAPPTOKENHERE"
+  #email     = "user@example.com"
+  #password  = "fakepassword"
+permits.dat <- read.socrata(url, app_token = NULL, email = NULL, password = NULL, stringsAsFactors = FALSE)
+# Write CSV in R
+write.csv(permits.dat, file = "/home/rstudio/Documents/big_datasets/data/24as-fxn4-new.csv")  
+```
+
+
+### Local files
+
+```{r get_main_csv, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide', eval=FALSE}
+#url <- '/home/mydvadmin/Documents/big_datasets/data/24as-fxn4.csv'
+url <- '/home/rstudio/Documents/big_datasets/data/24as-fxn4-new.csv'
+permits.dat <- read.csv(url, header=TRUE, stringsAsFactors=FALSE)
+```
+
+
+```{r get_boroughs_csv, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide', eval=FALSE}
+url <- '/home/mydvadmin/Documents/big_datasets/data/'
+permits.BROOKLYN <- read.csv(paste(url, "24as-fxn4-BROOKLYN.csv", sep=""), header=TRUE, stringsAsFactors=FALSE)
+permits.BRONX<- read.csv(paste(url, "24as-fxn4-BRONX.csv", sep=""), header=TRUE, stringsAsFactors=FALSE)
+permits.MANHATTAN <- read.csv(paste(url, "24as-fxn4-MANHATTAN.csv", sep=""), header=TRUE, stringsAsFactors=FALSE)
+permits.QUEENS <- read.csv(paste(url, "24as-fxn4-QUEENS.csv", sep=""), header=TRUE, stringsAsFactors=FALSE)
+permits.STATEN_ISLAND <- read.csv(paste(url, "24as-fxn4-STATEN_ISLAND.csv", sep=""), header=TRUE, stringsAsFactors=FALSE)
+permits.NA <- read.csv(paste(url, "24as-fxn4-NA.csv", sep=""), header=TRUE, stringsAsFactors=FALSE)
+```
+
+
+### Boroughs
+
+```{r lisy_boroughs, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+NYC.boroughs <- c('BROOKLYN', 'BRONX', 'MANHATTAN', 'QUEENS', 'STATEN ISLAND', 'N/A')
+```
+
+
+### Insights
+```{r sep_boroughs, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide', eval=FALSE}
+permits.BROOKLYN <- subset(permits.dat, permits.dat$borough == 'BROOKLYN')
+permits.BRONX <- subset(permits.dat, permits.dat$borough == 'BRONX')
+permits.MANHATTAN <- subset(permits.dat, permits.dat$borough == 'MANHATTAN')
+permits.QUEENS <- subset(permits.dat, permits.dat$borough == 'QUEENS')
+permits.STATEN_ISLAND <- subset(permits.dat, permits.dat$borough == 'STATEN ISLAND')
+permits.NA <- subset(permits.dat, is.na(permits.dat$borough))
+```
+
+
+```{r write csv_boroughs, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide', eval=FALSE}
+url <- '/home/mydvadmin/Documents/big_datasets/data/'
+write.csv(permits.BROOKLYN, file = paste(url, "24as-fxn4-BROOKLYN.csv", sep=""))
+write.csv(permits.BRONX, file = paste(url, "24as-fxn4-BRONX.csv", sep="")) 
+write.csv(permits.MANHATTAN, file = paste(url,  "24as-fxn4-MANHATTAN.csv", sep=""))    
+write.csv(permits.QUEENS, file = paste(url, "24as-fxn4-QUEENS.csv", sep=""))   
+write.csv(permits.STATEN_ISLAND, file = paste(url, "24as-fxn4-STATEN_ISLAND.csv", sep=""))   
+write.csv(permits.NA, file = paste(url, "24as-fxn4-NA.csv", sep=""))  
+```
+
+### Plots
+
+```{r assign_types, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide', eval=FALSE}
+# Assigning numeric values to coordinates
+permits.BROOKLYN$latitude_wgs84 <- as.numeric(permits.BROOKLYN$latitude_wgs84)
+permits.BROOKLYN$longitude_wgs84 <- as.numeric(permits.BROOKLYN$longitude_wgs84)
+
+permits.BRONX$latitude_wgs84 <- as.numeric(permits.BRONX$latitude_wgs84)
+permits.BRONX$longitude_wgs84 <- as.numeric(permits.BRONX$longitude_wgs84)
+
+permits.MANHATTAN$latitude_wgs84 <- as.numeric(permits.MANHATTAN$latitude_wgs84)
+permits.MANHATTAN$longitude_wgs84 <- as.numeric(permits.MANHATTAN$longitude_wgs84)
+
+permits.QUEENS$latitude_wgs84 <- as.numeric(permits.QUEENS$latitude_wgs84)
+permits.QUEENS$longitude_wgs84 <- as.numeric(permits.QUEENS$longitude_wgs84)
+
+permits.STATEN_ISLAND$latitude_wgs84 <- as.numeric(permits.STATEN_ISLAND$latitude_wgs84)
+permits.STATEN_ISLAND$longitude_wgs84 <- as.numeric(permits.STATEN_ISLAND$longitude_wgs84)
+
+permits.NA$latitude_wgs84 <- as.numeric(permits.NA$latitude_wgs84)
+permits.NA$longitude_wgs84 <- as.numeric(permits.NA$longitude_wgs84)
+```
+
+```{r, echo=FALSE, eval=FALSE}
+# Eval single borough
+url <- '/home/mydvadmin/Documents/big_datasets/data/'
+permits.QUEENS <- read.csv(paste(url, "24as-fxn4-QUEENS.csv", sep=""), header=TRUE, stringsAsFactors=FALSE)
+permits.QUEENS$latitude_wgs84 <- as.numeric(permits.QUEENS$latitude_wgs84)
+permits.QUEENS$longitude_wgs84 <- as.numeric(permits.QUEENS$longitude_wgs84)
+```
+
+
+
+#### Brooklyn
+![Caption for the map: Brooklyn's permits Heatmap](/home/mydvadmin/Dropbox/CUNY/Courses/DATA608/Project06/images/BROOKLYN.png)
+
+```{r, echo=FALSE, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide', fig.width = 8.5, fig.height = 5.5, eval=FALSE}
+# Package source URL: http://cran.r-project.org/web/packages/ggmap/ggmap.pdf
+# Data source URL: http://www.geo.ut.ee/aasa/LOOM02331/heatmap_in_R.html
+
+# Download map data
+if (exists('.GeocodedInformation')) rm(.GeocodedInformation)
+map_g_str.BROOKLYN <- get_map(location = 'BROOKLYN', zoom = 12)
+
+# Draw the heat map
+ggmap(map_g_str.BROOKLYN, extent = "device") + 
+  geom_density2d(data = permits.BROOKLYN, 
+                 aes(x = longitude_wgs84, y = latitude_wgs84), size = 0.3) + 
+  stat_density2d(data = permits.BROOKLYN, 
+                 aes(x = longitude_wgs84, y = latitude_wgs84, fill = ..level.., alpha = ..level..), size = 0.01, 
+                 bins = 16, geom = "polygon") + scale_fill_gradient(low = "green", high = "red") + 
+  scale_alpha(range = c(0, 0.3), guide = FALSE)
+```
+
+#### Bronx
+![Caption for the map: Bronx's permits Heatmap](/home/mydvadmin/Dropbox/CUNY/Courses/DATA608/Project06/images/BRONX.png)
+
+```{r, echo=FALSE, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide', fig.width = 8.5, fig.height = 5.5, eval=FALSE}
+# Package source URL: http://cran.r-project.org/web/packages/ggmap/ggmap.pdf
+# Data source URL: http://www.geo.ut.ee/aasa/LOOM02331/heatmap_in_R.html
+
+# Download map data
+if (exists('.GeocodedInformation')) rm(.GeocodedInformation)
+map_g_str.BRONX <- get_map(location = 'BRONX', zoom = 12)
+
+# Draw the heat map
+ggmap(map_g_str.BRONX, extent = "device") + 
+  geom_density2d(data = permits.BRONX, 
+                 aes(x = longitude_wgs84, y = latitude_wgs84), size = 0.3) + 
+  stat_density2d(data = permits.BRONX, 
+                 aes(x = longitude_wgs84, y = latitude_wgs84, fill = ..level.., alpha = ..level..), size = 0.01, 
+                 bins = 16, geom = "polygon") + scale_fill_gradient(low = "green", high = "red") + 
+  scale_alpha(range = c(0, 0.3), guide = FALSE)
+```
+
+#### Manhattan
+![Caption for the map: Manhattan's permits Heatmap](/home/mydvadmin/Dropbox/CUNY/Courses/DATA608/Project06/images/MANHATTAN.png)
+
+```{r, echo=FALSE, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide', fig.width = 8.5, fig.height = 5.5, eval=FALSE}
+# Package source URL: http://cran.r-project.org/web/packages/ggmap/ggmap.pdf
+# Data source URL: http://www.geo.ut.ee/aasa/LOOM02331/heatmap_in_R.html
+
+# Download map data
+if (exists('.GeocodedInformation')) rm(.GeocodedInformation)
+map_g_str.MANHATTAN <- get_map(location = 'MANHATTAN', zoom = 12)
+
+# Draw the heat map
+ggmap(map_g_str.MANHATTAN, extent = "device") + 
+  geom_density2d(data = permits.MANHATTAN, 
+                 aes(x = longitude_wgs84, y = latitude_wgs84), size = 0.3) + 
+  stat_density2d(data = permits.MANHATTAN, 
+                 aes(x = longitude_wgs84, y = latitude_wgs84, fill = ..level.., alpha = ..level..), size = 0.01, 
+                 bins = 16, geom = "polygon") + scale_fill_gradient(low = "green", high = "red") + 
+  scale_alpha(range = c(0, 0.3), guide = FALSE)
+```
+
+#### Queens
+![Caption for the map: Queens' permits Heatmap](/home/mydvadmin/Dropbox/CUNY/Courses/DATA608/Project06/images/QUEENS.png)
+
+```{r, echo=FALSE, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide', fig.width = 8.5, fig.height = 5.5, eval=FALSE}
+# Package source URL: http://cran.r-project.org/web/packages/ggmap/ggmap.pdf
+# Data source URL: http://www.geo.ut.ee/aasa/LOOM02331/heatmap_in_R.html
+
+# Download map data
+if (exists('.GeocodedInformation')) rm(.GeocodedInformation)
+map_g_str.QUEENS <- get_map(location = 'QUEENS', zoom = 12)
+
+# Draw the heat map
+ggmap(map_g_str.QUEENS, extent = "device") + 
+  geom_density2d(data = permits.QUEENS, 
+                 aes(x = longitude_wgs84, y = latitude_wgs84), size = 0.3) + 
+  stat_density2d(data = permits.QUEENS, 
+                 aes(x = longitude_wgs84, y = latitude_wgs84, fill = ..level.., alpha = ..level..), size = 0.01, 
+                 bins = 16, geom = "polygon") + scale_fill_gradient(low = "green", high = "red") + 
+  scale_alpha(range = c(0, 0.3), guide = FALSE)
+```
+
+#### Staten Island
+![Caption for the map: Staten Island's permits Heatmap](/home/mydvadmin/Dropbox/CUNY/Courses/DATA608/Project06/images/STATEN_ISLAND.png)
+
+```{r, echo=FALSE, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide', fig.width = 8.5, fig.height = 5.5, eval=FALSE}
+# Package source URL: http://cran.r-project.org/web/packages/ggmap/ggmap.pdf
+# Data source URL: http://www.geo.ut.ee/aasa/LOOM02331/heatmap_in_R.html
+
+# Download map data
+if (exists('.GeocodedInformation')) rm(.GeocodedInformation)
+map_g_str.STATEN_ISLAND <- get_map(location = 'STATEN ISLAND', zoom = 12)
+
+# Draw the heat map
+ggmap(map_g_str.STATEN_ISLAND, extent = "device") + 
+  geom_density2d(data = permits.STATEN_ISLAND, 
+                 aes(x = longitude_wgs84, y = latitude_wgs84), size = 0.3) + 
+  stat_density2d(data = permits.STATEN_ISLAND, 
+                 aes(x = longitude_wgs84, y = latitude_wgs84, fill = ..level.., alpha = ..level..), size = 0.01, 
+                 bins = 16, geom = "polygon") + scale_fill_gradient(low = "green", high = "red") + 
+  scale_alpha(range = c(0, 0.3), guide = FALSE)
+```
+
+#### Unknown in dataset
+
+```{r, echo=FALSE, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide', fig.width = 8.5, fig.height = 5.5, eval=FALSE}
+# Package source URL: http://cran.r-project.org/web/packages/ggmap/ggmap.pdf
+# Data source URL: http://www.geo.ut.ee/aasa/LOOM02331/heatmap_in_R.html
+
+# Download map data
+if (exists('.GeocodedInformation')) rm(.GeocodedInformation)
+map_g_str.NYC <- get_map(location = 'MANHATTAN', zoom = 11)
+
+# Draw the heat map
+ggmap(map_g_str.NYC, extent = "device", fullpage = TRUE) + 
+  geom_density2d(data = permits.NA, 
+                 aes(x = longitude_wgs84, y = latitude_wgs84), size = 0.3) + 
+  stat_density2d(data = permits.NA, 
+                 aes(x = longitude_wgs84, y = latitude_wgs84, fill = ..level.., alpha = ..level..), size = 0.01, 
+                 bins = 16, geom = "polygon") + scale_fill_gradient(low = "green", high = "red") + 
+  scale_alpha(range = c(0, 0.3), guide = FALSE)
+```
+
+
+
+#### All dataset Combined
+
+```{r, echo=FALSE, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide', fig.width = 8.5, fig.height = 5.5, eval=FALSE}
+# Package source URL: http://cran.r-project.org/web/packages/ggmap/ggmap.pdf
+# Data source URL: http://www.geo.ut.ee/aasa/LOOM02331/heatmap_in_R.html
+
+# Download map data
+#map_g_str.NYC <- get_map(location = 'NYC', zoom = 10)
+
+# Draw the heat map
+ggmap(map_g_str.NYC, extent = "device", fullpage = TRUE) + 
+  geom_density2d(data = permits.dat, 
+                 aes(x = longitude_wgs84, y = latitude_wgs84), size = 0.3) + 
+  stat_density2d(data = permits.dat, 
+                 aes(x = longitude_wgs84, y = latitude_wgs84, fill = ..level.., alpha = ..level..), size = 0.01, 
+                 bins = 16, geom = "polygon") + scale_fill_gradient(low = "green", high = "red") + 
+  scale_alpha(range = c(0, 0.3), guide = FALSE)
+```
+
+
+
+
+
