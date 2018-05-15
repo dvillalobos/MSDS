@@ -32,7 +32,7 @@ The Multi Agency Permits dataset contains the permits data from two different da
 
 ### What’s in this Dataset?
 
-Columns in this Dataset
+Columns in this Dataset:
 
     Source
     License_Permit_Holder
@@ -80,7 +80,7 @@ The following are the tools employed for diverse processings.
   • Dash
   • Jupyter Notebooks
   • Docker
-  • EC2
+  • EC2.
   
  # References
  
