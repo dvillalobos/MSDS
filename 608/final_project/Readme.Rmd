@@ -81,8 +81,13 @@ The following are the tools employed for diverse processings.
  # References
  
 http://www1.nyc.gov/site/analytics/index.page
+
 https://moda-nyc.github.io/Project-Library/analytics/
+
 https://moda-nyc.github.io/Project-Library/projects/
+
 https://opendata.cityofnewyork.us/data/
+
 https://data.cityofnewyork.us/City-Government/Multi-Agency-Permits/xfyi-uyt5
+
 https://dev.socrata.com/foundry/data.cityofnewyork.us/24as-fxn4
