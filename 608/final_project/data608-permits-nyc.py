@@ -38,10 +38,11 @@ pd.options.mode.chained_assignment = None  # Pandas Copy Warning default='warn'
 
 ################################### D A T A ###################################
 
-# url = 'https://raw.githubusercontent.com/dvillalobos/MSDS/master/608/Assignments/Module4/'
-#url = '/home/mydvadmin/Dropbox/CUNY/Courses/DATA608/FinalProject/permits-app/data/'
+# Use for Github
+url = 'https://raw.githubusercontent.com/dvillalobos/MSDS/master/608/final_project/data/'
 
-url = '/usr/src/app/permits-nyc/data/'
+# Use for Docker Build
+#url = '/usr/src/app/permits-nyc/data/'
 
 
 sample_file = '24as-fxn4-SAMPLE.csv'
@@ -74,7 +75,7 @@ pdtype={'address': 'str',
 data_SAMPLE = pd.read_csv(url + sample_file, dtype=pdtype)
 
 #Sampling smaller data for speed
-#data_SAMPLE = data_SAMPLE.sample(frac=0.1, replace=False)
+data_SAMPLE = data_SAMPLE.sample(frac=0.1, replace=False)
 
 """
 file_BRONX = '24as-fxn4-BRONX.csv'
