@@ -1,6 +1,4 @@
-Masters in Data Science
-CUNY SPS DATA 608
-Spring 2018.
+**Masters in Data Science | CUNY SPS | DATA 608 | Spring 2018.**
 
 # Final Project
 
