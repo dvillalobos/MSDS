@@ -10,6 +10,9 @@ RUN apt-get update -y
 
 CMD [ "pip3", "install -U setuptools"]
 
+# >>>> IMPORTANT <<<<
+# In order to create a successful build, all csv files, requirements and python-app
+# need to be on the same directory when building the Docker image.
 
 # Uncomment these lines if adding csv files to Docker app
 WORKDIR /usr/src/app/permits-nyc/data
