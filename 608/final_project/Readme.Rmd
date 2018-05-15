@@ -1,0 +1,22 @@
+Masters in Data Science
+CUNY SPS DATA 608
+Spring 2018.
+
+# Final Project
+
+## Study: 
+  Multi Agency Permits in NYC (Visualization).
+
+## Author:
+  Duubar Villalobos Jimenez mydvtech@gmail.com
+  
+
+**Data Provided by**
+
++ Mayor’s Office of Data Analytics (MODA).
+
+The Mayor’s Office of Data Analytics (MODA) is New York City’s civic intelligence center, allowing the City
+to aggregate and analyze data from across City agencies, to more effectively address crime, public safety, and
+quality of life issues. The office uses analytics tools to prioritize risk more strategically, deliver services more
+efficiently, enforce laws more effectively and increase transparency.
+
