@@ -1,5 +1,9 @@
 **Masters in Data Science | CUNY SPS | DATA 608 | Spring 2018.**
 
+**Docker run:**
+
+    sudo docker run -p 80:8050 -it dvillalobos/data608-nyc-permits
+
 # Final Project
 
 ## Goal
