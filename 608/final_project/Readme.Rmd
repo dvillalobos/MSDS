@@ -4,7 +4,7 @@
 
 ## Goal
 
-To identify hidden patterns in the data set and find valuable information by the utilization of visualization techniques.
+To identify hidden patterns in the data set and find valuable insights with visualization techniques.
 
 ## Author:
   Duubar Villalobos Jimenez mydvtech@gmail.com
