@@ -162,7 +162,7 @@ Remember: a better performance corresponds to a faster finish.
 
 ### (a) Write down the short-hand for these two normal distributions.
 
-__Answer:__ Group Men, Ages 30 - 34: N(µ =4313, ?? =583), Group Women, Ages 25-29: N(µ =5261, ?? =807).
+__Answer:__ Group Men, Ages 30 - 34: N($\mu$ =4313, ?? =583), Group Women, Ages 25-29: N($\mu$ =5261, ?? =807).
 
 ### (b) What are the Z-scores for Leo's and Mary's finishing times? What do these Z-scores tell you?
 
