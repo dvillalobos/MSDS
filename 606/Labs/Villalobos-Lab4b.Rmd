@@ -109,7 +109,7 @@ strongly skewed, then the distribution of the sample mean is well approximated b
 
 **Answer:**
 
-Is the confidence interval level for the normal model with standard error SE. The confidence interval for the population parameter is $point \: estimate ± z \cdot SE$ where $z$ corresponds to the confidence level selected.
+Is the confidence interval level for the normal model with standard error SE. The confidence interval for the population parameter is $point \: estimate \pm z \cdot SE$ where $z$ corresponds to the confidence level selected.
 
 In this case we have the luxury of knowing the true population mean since we 
 have data on the entire population. This value can be calculated using the 
