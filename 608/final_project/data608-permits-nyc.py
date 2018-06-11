@@ -38,11 +38,10 @@ pd.options.mode.chained_assignment = None  # Pandas Copy Warning default='warn'
 
 ################################### D A T A ###################################
 
-# Use for Github
-url = 'https://raw.githubusercontent.com/dvillalobos/MSDS/master/608/final_project/data/'
+# url = 'https://raw.githubusercontent.com/dvillalobos/MSDS/master/608/Assignments/Module4/'
+#url = '/home/mydvadmin/Dropbox/CUNY/Courses/DATA608/FinalProject/permits-app/data/'
 
-# Use for Docker Build
-#url = '/usr/src/app/permits-nyc/data/'
+url = '/usr/src/app/permits-nyc/data/'
 
 
 sample_file = '24as-fxn4-SAMPLE.csv'
@@ -75,7 +74,7 @@ pdtype={'address': 'str',
 data_SAMPLE = pd.read_csv(url + sample_file, dtype=pdtype)
 
 #Sampling smaller data for speed
-data_SAMPLE = data_SAMPLE.sample(frac=0.1, replace=False)
+#data_SAMPLE = data_SAMPLE.sample(frac=0.1, replace=False)
 
 """
 file_BRONX = '24as-fxn4-BRONX.csv'
@@ -251,23 +250,23 @@ def bar_chart_permits_borough(df_permits):
     df_permits['permit_days'] = df_permits['permit_expiration_date'] - df_permits['permit_issuance_date']
     
     # Need to define color based on permit length
-    df_permits['permit_lenght'] = 'Error'
-    df_permits['permit_lenght'].loc[df_permits['permit_days'].dt.days == 1] = '1 Day'
-    df_permits['permit_lenght'].loc[(df_permits['permit_days'].dt.days > 1) & (df_permits['permit_days'].dt.days <= 7)] = '<= 1 Week'
-    df_permits['permit_lenght'].loc[(df_permits['permit_days'].dt.days > 7) & (df_permits['permit_days'].dt.days <= 30)] = '<= 1 Month'
-    df_permits['permit_lenght'].loc[(df_permits['permit_days'].dt.days > 30) & (df_permits['permit_days'].dt.days <= 180)] = '<= 6 Months'
-    df_permits['permit_lenght'].loc[df_permits['permit_days'].dt.days > 180] = '> 6 Months'
+    df_permits['permit_length'] = 'Error'
+    df_permits['permit_length'].loc[df_permits['permit_days'].dt.days == 1] = '1 Day'
+    df_permits['permit_length'].loc[(df_permits['permit_days'].dt.days > 1) & (df_permits['permit_days'].dt.days <= 7)] = '<= 1 Week'
+    df_permits['permit_length'].loc[(df_permits['permit_days'].dt.days > 7) & (df_permits['permit_days'].dt.days <= 30)] = '<= 1 Month'
+    df_permits['permit_length'].loc[(df_permits['permit_days'].dt.days > 30) & (df_permits['permit_days'].dt.days <= 180)] = '<= 6 Months'
+    df_permits['permit_length'].loc[df_permits['permit_days'].dt.days > 180] = '> 6 Months'
     
     # Need to group by
-    permit_counts = df_permits.groupby(['borough','permit_lenght']).size().reset_index(name='counts')
+    permit_counts = df_permits.groupby(['borough','permit_length']).size().reset_index(name='counts')
 
     # Grouping by Error in order to plot stacked bar chart
-    permit_error = permit_counts[permit_counts['permit_lenght'] == 'Error']
-    permit_g6month = permit_counts[permit_counts['permit_lenght'] == '> 6 Months']
-    permit_l6month = permit_counts[permit_counts['permit_lenght'] == '<= 6 Months']
-    permit_l1month = permit_counts[permit_counts['permit_lenght'] == '<= 1 Month']    
-    permit_l1week = permit_counts[permit_counts['permit_lenght'] == '<= 1 Week']  
-    permit_l1day = permit_counts[permit_counts['permit_lenght'] == '1 Day']      
+    permit_error = permit_counts[permit_counts['permit_length'] == 'Error']
+    permit_g6month = permit_counts[permit_counts['permit_length'] == '> 6 Months']
+    permit_l6month = permit_counts[permit_counts['permit_length'] == '<= 6 Months']
+    permit_l1month = permit_counts[permit_counts['permit_length'] == '<= 1 Month']    
+    permit_l1week = permit_counts[permit_counts['permit_length'] == '<= 1 Week']  
+    permit_l1day = permit_counts[permit_counts['permit_length'] == '1 Day']      
 
     # Unique Boroughs
     x = permit_counts['borough'].unique()
@@ -370,15 +369,15 @@ def bar_chart_permits_length(df_permits):
     df_permits['permit_days'] = df_permits['permit_expiration_date'] - df_permits['permit_issuance_date']
     
     # Need to define color based on permit length
-    df_permits['permit_lenght'] = 'Error'
-    df_permits['permit_lenght'].loc[df_permits['permit_days'].dt.days == 1] = '1 Day'
-    df_permits['permit_lenght'].loc[(df_permits['permit_days'].dt.days > 1) & (df_permits['permit_days'].dt.days <= 7)] = '<= 1 Week'
-    df_permits['permit_lenght'].loc[(df_permits['permit_days'].dt.days > 7) & (df_permits['permit_days'].dt.days <= 30)] = '<= 1 Month'
-    df_permits['permit_lenght'].loc[(df_permits['permit_days'].dt.days > 30) & (df_permits['permit_days'].dt.days <= 180)] = '<= 6 Months'
-    df_permits['permit_lenght'].loc[df_permits['permit_days'].dt.days > 180] = '> 6 Months'
+    df_permits['permit_length'] = 'Error'
+    df_permits['permit_length'].loc[df_permits['permit_days'].dt.days == 1] = '1 Day'
+    df_permits['permit_length'].loc[(df_permits['permit_days'].dt.days > 1) & (df_permits['permit_days'].dt.days <= 7)] = '<= 1 Week'
+    df_permits['permit_length'].loc[(df_permits['permit_days'].dt.days > 7) & (df_permits['permit_days'].dt.days <= 30)] = '<= 1 Month'
+    df_permits['permit_length'].loc[(df_permits['permit_days'].dt.days > 30) & (df_permits['permit_days'].dt.days <= 180)] = '<= 6 Months'
+    df_permits['permit_length'].loc[df_permits['permit_days'].dt.days > 180] = '> 6 Months'
     
     # Need to group by
-    permit_counts = df_permits.groupby(['borough','permit_lenght']).size().reset_index(name='counts')
+    permit_counts = df_permits.groupby(['borough','permit_length']).size().reset_index(name='counts')
 
     # Grouping by Error in order to plot stacked bar chart
     permit_BRONX = permit_counts[permit_counts['borough'] == 'BRONX']
@@ -388,7 +387,7 @@ def bar_chart_permits_length(df_permits):
     permit_STATEN_ISLAND = permit_counts[permit_counts['borough'] == 'STATEN ISLAND']  
     
     # Unique Boroughs
-    x = permit_counts['permit_lenght'].unique()
+    x = permit_counts['permit_length'].unique()
     
     trace1 = go.Bar(
         x=x,
@@ -459,7 +458,7 @@ def bar_chart_permits_length(df_permits):
     data = [trace1, trace2, trace3, trace4, trace5]
     layout = go.Layout(
                             barmode='stack',
-                            title='Permits by lenght.'
+                            title='Permits by length.'
                         )
 
     fig = go.Figure(data=data, layout=layout)
@@ -1515,7 +1514,7 @@ def permits_map(df_permits):
     bearing = 0
     map_style = 'satellite-streets' #options are: ['satellite-streets', 'satellite', 'dark',  'outdoors', 'streets']
 
-    # Need to define color dictionary based on permit lenght  
+    # Need to define color dictionary based on permit length  
     permit_color = [{'1 Day': 'rgb(0,128,0)',  # Green
                      '<= 1 Week': 'rgb(173,255,47)', # Green Yellow
                      '<= 1 Month': 'rgb(255,255,51)', # Light Yellow
@@ -1525,12 +1524,12 @@ def permits_map(df_permits):
     permit_color = pd.DataFrame(permit_color)
     
     # Need to define color based on permit length
-    df_permits['permit_lenght'] = 'Error'
-    df_permits['permit_lenght'].loc[df_permits['permit_days'].dt.days == 1] = '1 Day'
-    df_permits['permit_lenght'].loc[(df_permits['permit_days'].dt.days > 1) & (df_permits['permit_days'].dt.days <= 7)] = '<= 1 Week'
-    df_permits['permit_lenght'].loc[(df_permits['permit_days'].dt.days > 7) & (df_permits['permit_days'].dt.days <= 30)] = '<= 1 Month'
-    df_permits['permit_lenght'].loc[(df_permits['permit_days'].dt.days > 30) & (df_permits['permit_days'].dt.days <= 180)] = '<= 6 Months'
-    df_permits['permit_lenght'].loc[df_permits['permit_days'].dt.days > 180] = '> 6 Months'
+    df_permits['permit_length'] = 'Error'
+    df_permits['permit_length'].loc[df_permits['permit_days'].dt.days == 1] = '1 Day'
+    df_permits['permit_length'].loc[(df_permits['permit_days'].dt.days > 1) & (df_permits['permit_days'].dt.days <= 7)] = '<= 1 Week'
+    df_permits['permit_length'].loc[(df_permits['permit_days'].dt.days > 7) & (df_permits['permit_days'].dt.days <= 30)] = '<= 1 Month'
+    df_permits['permit_length'].loc[(df_permits['permit_days'].dt.days > 30) & (df_permits['permit_days'].dt.days <= 180)] = '<= 6 Months'
+    df_permits['permit_length'].loc[df_permits['permit_days'].dt.days > 180] = '> 6 Months'
     
     df_permits['permit_days'] =  df_permits['permit_days'].dt.days.astype(str)
     
@@ -1539,17 +1538,17 @@ def permits_map(df_permits):
         data=Data([
             Scattermapbox(
   
-                lat = df_permits[df_permits['permit_lenght'] == i]['latitude_wgs84'],
-                lon = df_permits[df_permits['permit_lenght'] == i]['longitude_wgs84'],
-                customdata = df_permits[df_permits['permit_lenght'] == i]['building_id'],
+                lat = df_permits[df_permits['permit_length'] == i]['latitude_wgs84'],
+                lon = df_permits[df_permits['permit_length'] == i]['longitude_wgs84'],
+                customdata = df_permits[df_permits['permit_length'] == i]['building_id'],
                 hoverinfo = "text",
-                text = 'Building ID:' + df_permits[df_permits['permit_lenght'] == i]['building_id'] + '<br>' \
-                        + 'Address: ' + df_permits[df_permits['permit_lenght'] == i]['permit_address'] + '<br>' \
-                        + 'Permit Issued: ' + df_permits[df_permits['permit_lenght'] == i]['permit_issuance_date']  + '<br>' \
-                        + 'Permit Expiration: ' + df_permits[df_permits['permit_lenght'] == i]['permit_expiration_date']  + '<br>' \
-                        + 'Permit Lenght: ' + df_permits[df_permits['permit_lenght'] == i]['permit_days'] + ' days <br>' \
-                        + 'Permit Description: ' + df_permits[df_permits['permit_lenght'] == i]['permit_type_description']  + '<br>' \
-                        + 'Permit Source: ' + df_permits[df_permits['permit_lenght'] == i]['source'],
+                text = 'Building ID:' + df_permits[df_permits['permit_length'] == i]['building_id'] + '<br>' \
+                        + 'Address: ' + df_permits[df_permits['permit_length'] == i]['permit_address'] + '<br>' \
+                        + 'Permit Issued: ' + df_permits[df_permits['permit_length'] == i]['permit_issuance_date']  + '<br>' \
+                        + 'Permit Expiration: ' + df_permits[df_permits['permit_length'] == i]['permit_expiration_date']  + '<br>' \
+                        + 'Permit length: ' + df_permits[df_permits['permit_length'] == i]['permit_days'] + ' days <br>' \
+                        + 'Permit Description: ' + df_permits[df_permits['permit_length'] == i]['permit_type_description']  + '<br>' \
+                        + 'Permit Source: ' + df_permits[df_permits['permit_length'] == i]['source'],
                 mode = 'markers',
                 marker=dict(
                     size = 15,
@@ -1557,7 +1556,7 @@ def permits_map(df_permits):
                     opacity=0.7
                 ),
                 name=i
-                ) for i in df_permits['permit_lenght'].unique() 
+                ) for i in df_permits['permit_length'].unique() 
                        
             #),
         ]),
@@ -1742,7 +1741,7 @@ def permits_map_filter(df_permits, filter_period):
     bearing = 0
     map_style = 'satellite-streets' #options are: ['satellite-streets', 'satellite', 'dark',  'outdoors', 'streets']
 
-    # Need to define color dictionary based on permit lenght  
+    # Need to define color dictionary based on permit length  
     permit_color = [{'1 Day': 'rgb(0,128,0)',  # Green
                      '<= 1 Week': 'rgb(173,255,47)', # Green Yellow
                      '<= 1 Month': 'rgb(255,255,51)', # Light Yellow
@@ -1752,12 +1751,12 @@ def permits_map_filter(df_permits, filter_period):
     permit_color = pd.DataFrame(permit_color)
     
     # Need to define color based on permit length
-    df_permits['permit_lenght'] = 'Error'
-    df_permits['permit_lenght'].loc[df_permits['permit_days'].dt.days == 1] = '1 Day'
-    df_permits['permit_lenght'].loc[(df_permits['permit_days'].dt.days > 1) & (df_permits['permit_days'].dt.days <= 7)] = '<= 1 Week'
-    df_permits['permit_lenght'].loc[(df_permits['permit_days'].dt.days > 7) & (df_permits['permit_days'].dt.days <= 30)] = '<= 1 Month'
-    df_permits['permit_lenght'].loc[(df_permits['permit_days'].dt.days > 30) & (df_permits['permit_days'].dt.days <= 180)] = '<= 6 Months'
-    df_permits['permit_lenght'].loc[df_permits['permit_days'].dt.days > 180] = '> 6 Months'
+    df_permits['permit_length'] = 'Error'
+    df_permits['permit_length'].loc[df_permits['permit_days'].dt.days == 1] = '1 Day'
+    df_permits['permit_length'].loc[(df_permits['permit_days'].dt.days > 1) & (df_permits['permit_days'].dt.days <= 7)] = '<= 1 Week'
+    df_permits['permit_length'].loc[(df_permits['permit_days'].dt.days > 7) & (df_permits['permit_days'].dt.days <= 30)] = '<= 1 Month'
+    df_permits['permit_length'].loc[(df_permits['permit_days'].dt.days > 30) & (df_permits['permit_days'].dt.days <= 180)] = '<= 6 Months'
+    df_permits['permit_length'].loc[df_permits['permit_days'].dt.days > 180] = '> 6 Months'
     
     df_permits['permit_days'] =  df_permits['permit_days'].dt.days.astype(str)
     
@@ -1766,17 +1765,17 @@ def permits_map_filter(df_permits, filter_period):
         data=Data([
             Scattermapbox(
   
-                lat = df_permits[df_permits['permit_lenght'] == i]['latitude_wgs84'],
-                lon = df_permits[df_permits['permit_lenght'] == i]['longitude_wgs84'],
-                customdata = df_permits[df_permits['permit_lenght'] == i]['building_id'],
+                lat = df_permits[df_permits['permit_length'] == i]['latitude_wgs84'],
+                lon = df_permits[df_permits['permit_length'] == i]['longitude_wgs84'],
+                customdata = df_permits[df_permits['permit_length'] == i]['building_id'],
                 hoverinfo = "text",
-                text = 'Building ID:' + df_permits[df_permits['permit_lenght'] == i]['building_id'] + '<br>' \
-                        + 'Address: ' + df_permits[df_permits['permit_lenght'] == i]['permit_address'] + '<br>' \
-                        + 'Permit Issued: ' + df_permits[df_permits['permit_lenght'] == i]['permit_issuance_date']  + '<br>' \
-                        + 'Permit Expiration: ' + df_permits[df_permits['permit_lenght'] == i]['permit_expiration_date']  + '<br>' \
-                        + 'Permit Lenght: ' + df_permits[df_permits['permit_lenght'] == i]['permit_days'] + ' days <br>' \
-                        + 'Permit Description: ' + df_permits[df_permits['permit_lenght'] == i]['permit_type_description']  + '<br>' \
-                        + 'Permit Source: ' + df_permits[df_permits['permit_lenght'] == i]['source'],
+                text = 'Building ID:' + df_permits[df_permits['permit_length'] == i]['building_id'] + '<br>' \
+                        + 'Address: ' + df_permits[df_permits['permit_length'] == i]['permit_address'] + '<br>' \
+                        + 'Permit Issued: ' + df_permits[df_permits['permit_length'] == i]['permit_issuance_date']  + '<br>' \
+                        + 'Permit Expiration: ' + df_permits[df_permits['permit_length'] == i]['permit_expiration_date']  + '<br>' \
+                        + 'Permit length: ' + df_permits[df_permits['permit_length'] == i]['permit_days'] + ' days <br>' \
+                        + 'Permit Description: ' + df_permits[df_permits['permit_length'] == i]['permit_type_description']  + '<br>' \
+                        + 'Permit Source: ' + df_permits[df_permits['permit_length'] == i]['source'],
                 mode = 'markers',
                 marker=dict(
                     size = 15,
@@ -1784,7 +1783,7 @@ def permits_map_filter(df_permits, filter_period):
                     opacity=0.7
                 ),
                 name=i
-                ) for i in df_permits['permit_lenght'].unique() 
+                ) for i in df_permits['permit_length'].unique() 
                        
             #),
         ]),
@@ -2180,7 +2179,7 @@ app.layout = html.Div(children=[
                     # NYC Permits by Permit Length
                     html.Div(
                         [
-                            dcc.Graph(id='bar-chart-lenght', figure=bar_chart_permits_length(data_SAMPLE)),
+                            dcc.Graph(id='bar-chart-length', figure=bar_chart_permits_length(data_SAMPLE)),
                         ],
                         className='four columns',
                         style={'margin-top': '20'}
@@ -2682,7 +2681,7 @@ app.layout = html.Div(children=[
             
             html.Div([  
                 dcc.Markdown(id='question-11-map-1',
-                             children='**Question:** Can I see these locations in a map and visualize the lenght of the permit?'.replace('  ', ''), 
+                             children='**Question:** Can I see these locations in a map and visualize the length of the permit?'.replace('  ', ''), 
                              className='twelve columns'
                 ), 
             ], className='row', style={'text-align': 'left', 'margin-bottom': '15px',  'margin-left': '50px'}),
