@@ -28,7 +28,7 @@ scores <- c(57, 66, 69, 71, 72, 73, 74, 77, 78, 78, 79, 79, 81, 81, 82, 83, 83, 
 
 ### 1.8 Smoking habits of UK residents.
 
-A survey was conducted to study the smoking habits of UK residents. Below is a data matrix displaying a portion of the data collected in this survey. Note that "£" stands for British Pounds Sterling, "cig" stands for cigarettes, and "N/A" refers to a missing component of the data.
+A survey was conducted to study the smoking habits of UK residents. Below is a data matrix displaying a portion of the data collected in this survey. Note that "$\pounds$" stands for British Pounds Sterling, "cig" stands for cigarettes, and "N/A" refers to a missing component of the data.
 
 (a) What does each row of the data matrix represent?
 
@@ -251,3 +251,6 @@ Based on the 100 simulations, we can conclude as follows:
 (1) We conclude that the study results do provide strong evidence against the NULL hypothesis. That is, we do have sufficiently strong evidence to conclude the heart transplant was a success since the difference in between the 100 simulations is centered near zero.
 
 (2) We conclude that the evidence is sufficiently strong to reject __H0__ and assert that there was a success survival rate due to heart transplant. When we conduct formal studies, usually we reject the notion that we just happened to observe a rare event 0.50 So in this case, we reject the independence model in favor of the alternative. That is, we are concluding the data provide strong evidence of survival due to hearth transplant.
+
+
+
