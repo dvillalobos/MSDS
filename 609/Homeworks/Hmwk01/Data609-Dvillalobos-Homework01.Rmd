@@ -1,0 +1,261 @@
+---
+title: "Homework 01"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "September 2, 2018"
+output:
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+  html_document: default
+  pdf_document: default
+subtitle: CUNY MSDS DATA 609
+---
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+type <- 'html'
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+library(knitr)
+library(data.table)
+library(xtable)
+library(plotly)
+
+```
+
+# Problems
+
+The below problems are taken from the text book:
+
+A First Course in Mathematical Modeling, 5th Edition. Frank R. Giordano, William P. Fox, Steven B. Horton. ISBN-13: 9781285050904.
+
+## Exercise \#10 Page Page 8.
+
+Your grandparents have an annuity. The value of the annuity increases each month by an automatic deposit of 1\% interest on the previous month's balance. Your grandparents withdraw \$1000 at the beginning of each month for living expenses. Currently, they have \$50,000 in the annuity. Model the annuity with a dynamical system. Will the annuity run out of money? When? Hint: What value will $a_n$ have when the annuity is depleted?
+
+### Solution
+
+Basically, the change in the amount increases by the amount paid in the form of interest and decreases by the amount withdraw each month.
+
+Change = $\Delta a_n = a_{n+1} - a_n = 0.01 \cdot a_n - 1000$
+
+The dynamical system will be:
+
+$a_0 = 50000$
+
+$a_{n+1} = a_n + 0.01 \cdot a_n - 1000$
+
+The below table represent the values for the upcoming months.
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+n <- 0
+Balance <- 50000
+annuity_Table <- data.frame(`Month` = n, `Balance` = Balance)
+```
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+new_Balance <- Balance
+while (new_Balance >= 0) {
+  
+  n <- n + 1
+  new_Balance <- round(annuity_Table$Balance[n] + 0.01 * annuity_Table$Balance[n] - 1000,2)
+  new_row <- data.frame(`Month` = n, `Balance` = new_Balance)
+  annuity_Table <- rbind(annuity_Table, new_row)
+  
+}
+
+head_annuity_table <- head(annuity_Table)
+tail_annuity_table <- tail(annuity_Table)
+```
+
+**Let's see a few records and the graphical representation.**
+
+```{r, echo=FALSE, results='asis'}
+print(xtable(head_annuity_table, caption='First records in the succession with no decimals', digits=0, floating=FALSE),hline.after=c(0,6), include.rownames=FALSE, type=type, comment=FALSE)
+```
+
+```{r, echo=FALSE, results='asis'}
+print(xtable(tail_annuity_table, caption='Last records in the succession with no decimals', digits=0, floating=FALSE), hline.after=c(0,6), include.rownames=FALSE, type=type, comment=FALSE)
+```
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+p <- plot_ly(annuity_Table, 
+             x = ~Month, 
+             y = ~Balance,
+             type = 'scatter', 
+             mode = 'lines')
+
+```
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+pdf <- plot(annuity_Table$Month, 
+            annuity_Table$Balance, 
+            type="l", 
+            col="blue",
+            main='Annuity sequence',
+            xlab="Month", 
+            ylab="Balance")
+pdf
+```
+
+
+
+### Answers
+
+**Will the annuity run out of money? **
+
+Yes, the annuity will run out of money.
+
+
+**When?**
+
+The annuity will run out of money in about 70 months from now on.
+
+**What value will $a_n$ have when the annuity is depleted?**
+
+$a_n$ will have a value of - \$338.09. That means that on their final withdrawal they will take home \$1000 - $338.09	= \$ `r 1000-338.09` since they gained some interest in the last month.
+
+
+
+
+
+## Exercise \#9 Page Page 17.
+
+The data in the accompanying table show the speed n (in increments of 5 mph) of an automobile and the associated distance $a_n$ in feet required to stop it once the brakes are applied. For instance, $n=6$ (representing $6 \times 5 = 30$ mph) requires a stopping distance of $a_6 = 47$ ft. 
+
+```{r, echo=FALSE}
+n <- c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16)
+distance <- c(3,6,11,21,32,47,65,87,112,140,171,204,241,282,325,376)
+stop_dist <- data.frame(`n` = n, `Distance` = distance)
+```
+
+```{r, echo=FALSE, results='asis'}
+print(xtable(stop_dist, caption='n vs stopping distance', digits=0), hline.after=c(0,16), include.rownames=FALSE, type=type, comment=FALSE)
+```
+
+###  a.
+
+**Calculate and plot the change $\Delta a_n$ versus n. Does the graph reasonably approximate a linear relationship?**
+
+#### Solution
+
+Now, the next table shows $\Delta a_n = a_{n+1} - a_n$.
+
+```{r, echo=FALSE}
+stop_dist <- data.table(stop_dist)
+stop_dist[ , Delta := shift(Distance, type ="lead") - Distance]
+```
+
+
+```{r, echo=FALSE, results='asis'}
+print(xtable(stop_dist, caption='Speed, stopping distance and delta', digits=0), hline.after=c(0,16), include.rownames=FALSE, type=type, comment=FALSE)
+```
+
+Let's plot our Delta vs our n values.
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+pdf <- plot(stop_dist$n, 
+            stop_dist$Delta, 
+            type="p", 
+            col="blue",
+            main='Delta',
+            xlab="n", 
+            ylab="Delta in ft")
+pdf
+```
+
+
+**Does the graph reasonably approximate a linear relationship?**
+
+Yes, the graph reasonably approximate a linear relationship.
+
+
+### b.
+
+**Based on your conclusions in part (a), find a difference equation model for the stopping distance data. Test your model by plotting the errors in the predicted values against n. Discuss the appropriateness of the model.**
+
+#### Solution
+
+In order to solve this, we can basically calculate our stopping distance as follows:
+
+$Distance_{n+1} = Distance_{n} + Delta_{n}$
+
+Since we already know the values for the $Distance_n$; we could find a formula for Delta in terms of n since we concluded that is somehow linear.
+
+That is:
+
+$Delta = k \cdot n + b$
+
+We could calculate k by finding the slope that passes in between the points $(n = 5, Delta = 15)$ and $(n = 6, Delta = 18)$.
+
+$k \approx \frac{18-15}{6-5} \approx 3$
+
+Now, if we want to substitute to find b, we could use as follows:
+
+let's use the point $(n = 1, Delta = 3)$ and by replacing in the following formula:
+
+$Delta = k \cdot n + b$
+
+$3 = 3 \cdot 1 + b$
+
+$0 = b$
+
+Hence our final model formula for the Delta will be as follows:
+
+$Delta_{n} = 3n$
+
+Now that we have our $Delta_n$ in terms of n; we can proceed as follows:
+
+$Predicted \: Distance_{n+1} = Distance_{n} + Delta_{n}$
+
+Based on the above result; in order to obtain our final model formula, we could write as follows:
+
+$Predicted \: Distance_{n+1} = Distance_{n} + 3n$
+
+
+```{r, echo=FALSE}
+stop_dist[ , Predicted := shift(Distance, type ="lag") + 3 * shift(n, type ="lag")]
+stop_dist$Predicted[1] <- stop_dist$Distance[1]
+stop_dist$Error <- stop_dist$Distance - stop_dist$Predicted
+```
+
+```{r, echo=FALSE, results='asis'}
+print(xtable(stop_dist, caption='Speed, stopping distance, delta and predicted values', digits=0), hline.after=c(0,16), include.rownames=FALSE, type=type, comment=FALSE)
+```
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+plot(stop_dist$n, 
+            stop_dist$Distance, 
+            type="p", 
+            col="blue",
+            main='Delta',
+            xlab="n", 
+            ylab="Delta in ft")
+points(stop_dist$n,stop_dist$Predicted,col="red")
+
+```
+
+The above plot, represents the real value in blue color and the predicted value in red.
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+plot(stop_dist$n, 
+            stop_dist$Error, 
+            type="p", 
+            col="blue",
+            main='Error',
+            xlab="n", 
+            ylab="Error in ft")
+```
+
+The above table represent the difference in between the actual reading and the predicted value employing the difference equation model for the stopping distance data.
+
+In regards of the appropriateness of the model; it seems to be very accurate with what seems to be an outlier when the speed is very high; this could be understandable and seems to predict the distance pretty good; perhaps could be improved using other methods.
+
+
+END.
