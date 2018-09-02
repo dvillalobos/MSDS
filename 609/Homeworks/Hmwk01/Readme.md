@@ -1,9 +1,11 @@
-This is the Assignment #1
+# This is the Assignment #1
 
-CUNY SPS
+## CUNY SPS
 
-Masters in Data Science
+## Masters in Data Science
 
-Data 609
+### Data 609
 
-Fall 2018
+## Duubar Villalobos Jimenez
+
+### Fall 2018
