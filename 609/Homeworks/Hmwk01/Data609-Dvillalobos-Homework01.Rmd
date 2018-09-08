@@ -3,19 +3,19 @@ title: "Homework 01"
 author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
 date: "September 2, 2018"
 output:
+  pdf_document: default
+  html_document: default
   prettydoc::html_pretty:
     highlight: github
     theme: leonids
     toc: yes
-  html_document: default
-  pdf_document: default
 subtitle: CUNY MSDS DATA 609
 ---
 
 ```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
 
 knitr::opts_chunk$set(echo = TRUE)
-type <- 'html'
+type <- 'latex'
 ```
 
 
@@ -146,6 +146,7 @@ print(xtable(stop_dist, caption='n vs stopping distance', digits=0), hline.after
 
 Now, the next table shows $\Delta a_n = a_{n+1} - a_n$.
 
+
 ```{r, echo=FALSE}
 stop_dist <- data.table(stop_dist)
 stop_dist[ , Delta := shift(Distance, type ="lead") - Distance]
@@ -155,6 +156,7 @@ stop_dist[ , Delta := shift(Distance, type ="lead") - Distance]
 ```{r, echo=FALSE, results='asis'}
 print(xtable(stop_dist, caption='Speed, stopping distance and delta', digits=0), hline.after=c(0,16), include.rownames=FALSE, type=type, comment=FALSE)
 ```
+
 
 Let's plot our Delta vs our n values.
 
@@ -212,18 +214,28 @@ $Delta_{n} = 3n$
 
 Now that we have our $Delta_n$ in terms of n; we can proceed as follows:
 
-$Predicted \: Distance_{n+1} = Distance_{n} + Delta_{n}$
+$Predicted \: Distance_{n+1} = Predicted \: Distance_{n} + Delta_{n}$
 
 Based on the above result; in order to obtain our final model formula, we could write as follows:
 
-$Predicted \: Distance_{n+1} = Distance_{n} + 3n$
+$Predicted \: Distance_{n+1} = Predicted \: Distance_{n} + 3n$
 
+with $Predicted \: Distance_0 = 3$.
 
 ```{r, echo=FALSE}
-stop_dist[ , Predicted := shift(Distance, type ="lag") + 3 * shift(n, type ="lag")]
-stop_dist$Predicted[1] <- stop_dist$Distance[1]
-stop_dist$Error <- stop_dist$Distance - stop_dist$Predicted
+
+for (i in stop_dist$n){
+  if (i == 1){
+    stop_dist$Predicted[1] <- stop_dist$Distance[1]
+  }
+  else {
+    stop_dist$Predicted[i] <- stop_dist$Predicted[i-1] + 3*(i-1)
+  }
+}
+
+stop_dist$Error <- stop_dist$Predicted - stop_dist$Distance
 ```
+
 
 ```{r, echo=FALSE, results='asis'}
 print(xtable(stop_dist, caption='Speed, stopping distance, delta and predicted values', digits=0), hline.after=c(0,16), include.rownames=FALSE, type=type, comment=FALSE)
@@ -234,9 +246,9 @@ plot(stop_dist$n,
             stop_dist$Distance, 
             type="p", 
             col="blue",
-            main='Delta',
+            main='Predicted vs given value',
             xlab="n", 
-            ylab="Delta in ft")
+            ylab="Stopping distance in ft")
 points(stop_dist$n,stop_dist$Predicted,col="red")
 
 ```
@@ -248,14 +260,250 @@ plot(stop_dist$n,
             stop_dist$Error, 
             type="p", 
             col="blue",
-            main='Error',
+            main='Error Predicted vs Real Value',
             xlab="n", 
             ylab="Error in ft")
 ```
 
-The above table represent the difference in between the actual reading and the predicted value employing the difference equation model for the stopping distance data.
+The above graph represent the difference in between the actual reading and the predicted value employing the difference equation model for the stopping distance data.
 
-In regards of the appropriateness of the model; it seems to be very accurate with what seems to be an outlier when the speed is very high; this could be understandable and seems to predict the distance pretty good; perhaps could be improved using other methods.
+In regards of the appropriateness of the model; it seems to be some how accurate with what seems to be a few outliers when the speed is high; this could be understandable and seems to predict the stopping distance fairly good; perhaps, this process could be improved using other methods.
+
+## Exercise \#13 Page 34.
+
+Consider the spreading of a rumor through a company of 1000 employees, all working in the same building. We assume that the spreading of a rumor is similar to the spreading of a contagious disease (see Example 3, Section 1.2) in that the number of people hearing the rumor each day is proportional to the product of the number who have heard the rumor previously and the number who have not heard the rumor. This is given by 
+
+$r_{n+1} = r_n + k r_n(1000 - n)$
+
+where k is a parameter that depends on how fast the rumor spreads and n is the number of days. Assume k = 0.001 and further assume that four people initially have heard the rumor. How soon will all 1000 employees have heard the rumor?
+
+### Solution
+
+From the above text we can collect the following information:
+
+$r_0 = 4$
+
+$k = 0.001$
+
+By replacing in the above formula we obtain as follows:
+
+$r_{n+1} = r_n + 0.001 r_n(1000 - n)$
+
+$r_0 = 4$
+
+Let's create a table of values based on the above dynamic system
+
+```{r, echo=FALSE, }
+n <- 0
+rn <- 4
+k <- 0.001
+
+rn.df <- data.frame(n, rn)
+
+while ((rn != 1000) & (rn != 999)){
+  #rn <- trunc(rn + k * rn * (1000 - rn))
+  #rn <- round(rn + k * rn * (1000 - rn),0)
+  rn <- rn + k * rn * (1000 - rn)
+  n <- n + 1
+  rn.temp <- data.frame(n, rn)
+  rn.df <- rbind(rn.df, rn.temp)
+}
+```
+
+```{r, echo=FALSE}
+rn.df
+```
 
 
-END.
+Let's plot our results:
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+pdf <- plot(rn.df$n, 
+            rn.df$rn, 
+            type="p", 
+            col="blue",
+            main='Spread of rumor',
+            xlab="n", 
+            ylab="Number of Employees")
+pdf
+```
+
+### Answer
+
+**How soon will all 1000 employees have heard the rumor?**
+
+If we take the decimals off from the results and we round down due to being person as a whole, our given function will never reach 1000 but 999 as the top value after 12 days.
+
+If we round to the nearest decimals, then it will be reached after 11 days.
+
+If we do not round any decimals, then it will take about 13 days.
+
+So basically; it will be safe to say that the spread of the rumor will take from 11 to 13 days to spread to 1000 employees.
+
+## Exercise \#6 Page Page 55.
+
+An economist is interested in the variation of the price of a single product. It is observed that a high price for the product in the  market attracts more suppliers. However, increasing the quantity of the product supplied tends to drive the price down. Over time, there is an interaction between price and supply. The economist has proposed the following model, where $P_n$ represents the price of the product at year n, and $Q_n$ the quantity. Find the equilibrium values for this system.
+
+$P_{n+1}=P_n-0.1(Q_n-500)$
+
+$Q_{n+1}=Q_n+0.2(P_n-100)$
+
+### Equilibrium values
+
+If we call the equilibrium values (P, Q) then we must have $P=P_{n+1}=P_n$ and $Q=Q_{n+1}=Q_n$ simultaneously. Substituting into the above dynamical system yields:
+
+$P=P-0.1(Q-500)$
+
+$Q=Q+0.2(P-100)$
+
+and by solving the above equations, we obtain
+
+$Q=500$ and $P=100$
+
+### a.
+
+**Does the model make sense intuitively? What is the significance of the constants 100 and 500? Explain the significance of the sign of the constants -0.1 and 0.2.**
+
+- Does the model make sense intuitively? **YES**.
+
+- What is the significance of the constants 100 and 500? 
+
+The constants 500  and  100  work  as  thresholds.
+
+- Explain the significance of the sign of the constants -0.1 and 0.2.
+
+Basically the constants -0.1 and 0.2 indicate as follows: The 0.2 indicate that the price has a positive change in the quantity if the price is over 100, while the -0.1 indicate that the quantity has a negative effect in the price if the quantity increases over 500.
+
+### b.
+
+**Test the initial condition in the following table and predict the long-term behaviour.**
+
+```{r, echo=FALSE}
+Case <- c('Case A','Case B','Case C','Case D')
+Price <- c(100,200,100,100)
+Quantity <- c(500,500,600,400)
+t.df <- data.frame(Price,Quantity, row.names = Case)
+```
+
+```{r, echo=FALSE, results='asis'}
+print(xtable(t.df, caption='', digits=0, floating=FALSE), hline.after=c(0,4), include.rownames=TRUE, type=type, comment=FALSE)
+```
+
+Please note that I have written a small script that will calculate our cases given our cases.
+
+```{r, echo=FALSE}
+runCase <- function(Case,P,Q,n_tests){
+  n <- 0
+  t.case <- data.frame(n,'Price' = P, 'Quantity' = Q)
+  
+  for (i in 0:(n_tests-2)){
+    n <- i+1
+    Pn1 <- t.case$Price[n] - 0.1 * (t.case$Quantity[n] - 500)
+    Qn1 <- t.case$Quantity[n] + 0.2 * (t.case$Price[n] - 100)
+    df <- data.frame(n,'Price' = Pn1, 'Quantity' = Qn1)
+    t.case <- rbind(t.case, df)
+  }
+  plot(t.case$Quantity ~ t.case$n, 
+       type = "p", 
+       main = Case, 
+       xlab="n", 
+       ylab="Price & Quantity", 
+       col = "blue", 
+       pch=20, 
+       xlim=c(-1,n_tests), 
+       ylim=c(0,1000))
+  lines(t.case$n, t.case$Price, col="red", type="p", pch=17)
+  legend("topright", 
+         c("Quantity","Price"),
+         #pch=c(20,17),
+         fill=c("blue","red")
+         )
+  
+  tail(t.case, 10)
+}
+```
+
+- **Case A**
+
+With 10 iterations
+
+```{r}
+runCase("Case A",P = 100, Q = 500, 10)
+```
+
+
+With 100 iterations
+
+```{r}
+runCase("Case A",P = 100, Q = 500, 100)
+```
+
+With 1000 iterations
+
+```{r}
+runCase("Case A",P = 100, Q = 500, 1000)
+```
+
+- **Case B**
+
+With 10 iterations
+
+```{r}
+runCase("Case B",P = 200, Q = 500, 10)
+```
+
+With 100 iterations
+
+```{r}
+runCase("Case B",P = 200, Q = 500, 100)
+```
+
+With 500 iterations
+
+```{r}
+runCase("Case B",P = 200, Q = 500, 500)
+```
+
+- **Case C**
+
+With 10 iterations
+
+```{r}
+runCase("Case C",P = 100, Q = 600, 10)
+```
+
+With 100 iterations
+
+```{r}
+runCase("Case C",P = 100, Q = 600, 100)
+```
+
+With 500 iterations
+
+```{r}
+runCase("Case C",P = 100, Q = 600, 500)
+```
+
+- **Case D**
+
+With 10 iterations
+
+```{r}
+runCase("Case D",P = 100, Q = 400, 10)
+```
+
+With 100 iterations
+
+```{r}
+runCase("Case D",P = 100, Q = 400, 100)
+```
+
+With 500 iterations
+
+```{r}
+runCase("Case D",P = 100, Q = 400, 500)
+```
+
+In conclusion, we can state that in this model, the equilibrium point is not stable.
+
+# END.
