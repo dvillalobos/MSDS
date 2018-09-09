@@ -1,0 +1,197 @@
+---
+title: "Homework 02"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "September 9, 2018"
+output:
+  pdf_document: default
+  html_document: default
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+subtitle: CUNY MSDS DATA 609
+---
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+type <- 'latex'
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+library(knitr)
+library(data.table)
+library(xtable)
+library(plotly)
+
+```
+
+# Problems
+
+The below problems are taken from the text book:
+
+A First Course in Mathematical Modeling, 5th Edition. Frank R. Giordano, William P. Fox, Steven B. Horton. ISBN-13: 9781285050904.
+
+## Exercise \#12 Page Page 69.
+
+A company with a fleet of trucks faces increasing maintenance costs as the age and mileage of the trucks increase.
+
+### Solution
+
+**Question:** What will be the total maintenance cost for a truck? 
+
+**List the variables that affect the behavior you have identified.**
+
+The variables that affect the behavior from the given sentence are:
+
+[MAINTENANCE_COST, YEAR_BUILD, TRUCK_MILAGE]
+
+Also, we could consider some other variables that could affect the maintenance costs, such as:
+
+[DRIVER_EXPERTISE, TRAFFIC_CONDITIONS, ROAD_CONDITIONS, ROUTE_HAS_STEEP_HILLS, TRUCK_TYPE, TRUCK_WEIGHT, NUMBER_OF_GEARS, NUMBER_OF_AXES, OIL_CHANGE_FREQUENCY, BREAKING_FREQUENCY, TIRE_CONDITION, N_DAYS_FROM_LAST_MAINTENANCE, MAINTENANCE_PARTS_COST, MAINTENANCE_JOB_DESCRIPTION, MAINTENANCE_LABOR_COST, N_HOURS_MAINTENANCE_LABOR]
+
+**Which variables will be neglected completely?**
+
+I consider that the following variables will be neglected.
+
+[DRIVER_GENDER, DRIVER_AGE, MAX_LOAD]
+
+**Which might be considered as constants initially?**
+
+The variables that I would consider as constants in an initial form will be:
+
+[DRIVER_EXPERTISE, TRAFFIC_CONDITIONS, ROAD_CONDITIONS, OIL_CHANGE_FREQUENCY, MAINTENANCE_LABOR_COST, N_HOURS_MAINTENANCE_LABOR]
+
+**Can you identify any submodels you would want to study in detail?**
+
+I believe that we could construct some sub models as follows:
+
+BREAKING_FREQUENCY = f(ROAD_CONDITIONS, ROUTE_HAS_STEEP_HILLS, NUMBER_OF_GEARS)
+
+OIL_CHANGE_FREQUENCY = f(YEAR_BUILD, TRUCK_MILAGE, NUMBER_OF_GEARS)
+
+TIRE_CONDITION = f(DRIVER_EXPERTISE, BREAKING_FREQUENCY, ROAD_CONDITIONS, ROUTE_HAS_STEEP_HILLS, NUMBER_OF_AXES)
+
+MAINTENANCE_LABOR_COST = f(N_HOURS_MAINTENANCE_LABOR)
+
+**Identify any data you would want collected.**
+
+I would like to collect:
+
+[YEAR_BUILD, TRUCK_MILAGE, DRIVER_EXPERTISE, TRAFFIC_CONDITIONS, ROAD_CONDITIONS, ROUTE_HAS_STEEP_HILLS, TRUCK_TYPE, TRUCK_WEIGHT, NUMBER_OF_GEARS, NUMBER_OF_AXES, N_DAYS_FROM_LAST_MAINTENANCE, MAINTENANCE_PARTS_COST, MAINTENANCE_JOB_DESCRIPTION, MAINTENANCE_LABOR_COST, N_HOURS_MAINTENANCE_LABOR]
+
+## Exercise \#11 Page Page 79.
+
+Determine whether the data set supports the stated proportionality model.
+
+$y \propto x^3$
+
+```{r, echo=FALSE}
+y <- c(0, 1, 2, 6, 14, 24, 37, 58, 82, 114)
+x <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+
+t.df <- data.frame(y, x)
+```
+
+```{r, echo=FALSE, results='asis'}
+print(xtable(t.df, caption='', digits=0), hline.after=c(0,10), include.rownames=FALSE, type=type, comment=FALSE)
+```
+
+### Solution
+
+In order to support a proportionality model; it must satisfy as follows:
+
+$y = kx^3$ for a constant $k$.
+
+Let's plot our given data as it is:
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+pdf <- plot(t.df$y~t.df$x,
+            type="p", 
+            col="blue",
+            main='Given data',
+            xlab="x", 
+            ylab="y")
+pdf
+```
+
+Now, let's calculate $x^3$.
+
+```{r, echo=FALSE}
+t.df$`x^3` <- (t.df$x)^3
+```
+
+```{r, echo=FALSE, results='asis'}
+print(xtable(t.df, caption='', digits=0), hline.after=c(0,10), include.rownames=FALSE, type=type, comment=FALSE)
+```
+
+Now, let's plot again and see it's behavior.
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+pdf <- plot(t.df$y~t.df$`x^3`,
+            type="p", 
+            col="blue",
+            main='Given data but with x^3',
+            xlab="x", 
+            ylab="y")
+pdf
+```
+
+As we can see, there now seems to be some sort of linearity; hence we could calculate our slope as follows:
+
+$k = \frac{114 - 0}{1000 - 1} = \frac{114}{999}$
+
+From here, we could deduce that our model will be something similar to:
+
+$y = \frac{114}{999} x^3$
+
+Let's plot our linear model and see if it actually follows the points.
+
+```{r, echo=FALSE}
+plot(t.df$y~t.df$`x^3`,
+            type="p", 
+            col="blue",
+            main='Given data but with x^3',
+            xlab="x", 
+            ylab="y")
+lines(t.df$`x^3`, 114/999 * t.df$`x^3`, col="red", type="l", pch=17)
+legend("topleft", 
+       c("y","linear model"),
+       fill=c("blue","red")
+       )
+```
+
+From the above visual it seems that our linear model follows all points very accurate.
+
+Now, I will find the predicted $y$ value rounded to two decimals and compare them to our given data in order to obtain an Error difference.
+
+```{r, echo=FALSE}
+t.df$`predicted y` <- round(114/999 * t.df$`x^3`,2)
+t.df$Error <- t.df$`predicted y` - t.df$y
+```
+
+```{r, echo=FALSE, results='asis'}
+print(xtable(t.df, caption='Error shows no decimals, but calculations made to two decimals.', digits=0), hline.after=c(0,10), include.rownames=FALSE, type=type, comment=FALSE)
+```
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+plot(t.df$Error~t.df$`x^3`,
+            type="p", 
+            col="red",
+            main='Error difference',
+            xlab="x", 
+            ylab="predicted 'y' - y")
+abline(h=0, col='blue')
+```
+
+
+```{r, echo=FALSE}
+max_error = max(abs(t.df$Error))
+```
+
+From the above graph, we can find out that our maximum error difference is about `r max_error`.
+
+# END.
