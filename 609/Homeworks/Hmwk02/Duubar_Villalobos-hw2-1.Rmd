@@ -1,0 +1,171 @@
+---
+title: "Homework 2.1"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "September 16, 2018"
+output:
+  pdf_document: default
+  html_document: default
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+subtitle: CUNY MSDS DATA 609
+---
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+type <- 'latex'
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+library(knitr)
+library(data.table)
+library(xtable)
+library(plotly)
+
+```
+
+# Problems
+
+The below problems are taken from the text book:
+
+A First Course in Mathematical Modeling, 5th Edition. Frank R. Giordano, William P. Fox, Steven B. Horton. ISBN-13: 9781285050904.
+
+## Exercise \#2 Page 113.
+
+The following table gives the elongation $e$ in inches per inc(in./in.) for a given stress $S$ on a steel wire measured in pounds per square in (lb/in.$^2$). Test the model $e=c_1S$ by plotting the data. Estimate $c1$ graphically.
+
+```{r, echo=FALSE}
+S <- c(5,10,20,30,40,50,60,70,80,90,100)
+e <- c(0,19,57,94,134,173,216,256,297,343,390)
+t.df <- data.frame(S = S, e = e)
+```
+
+
+```{r, echo=FALSE, results='asis'}
+print(xtable(t.df, caption='Elongation $e$ with $S(x10^{-3})$ and $e(x10^5)$.', digits=0), hline.after=c(0,11), include.rownames=FALSE, type=type, comment=FALSE)
+```
+
+### Solution
+
+Let's plot our original data and see how it looks.
+
+```{r, echo=FALSE}
+plot(t.df$e~t.df$S,
+      type="p", 
+      col="blue",
+      main='Elongation data',
+      xlab="S", 
+      ylab="e")
+```
+
+From the above, we can appreciate that the data is fairly linear. Hence, we could express it in the form $e= c_1S$ as provided above.
+
+Where $c_1 = \frac{390 - 0}{100 - 5} = 4.105263$
+
+thus, it returns the following model $e=4.105263S$
+
+```{r, echo=FALSE}
+plot(t.df$e~t.df$S,
+        type="p", 
+        col="blue",
+        main='Elongation data',
+        xlab="S", 
+        ylab="e")
+lines(t.df$S, 4.105263 * t.df$S, col="red", type="l", pch=17)
+legend("topleft", 
+       c("given data","linear model"),
+       fill=c("blue","red")
+       )
+```
+
+From what we can see, our linear model is not very accurate but it is beyond our current problem.
+
+
+
+## Exercise \#2.a Page 121.
+
+For each of the following data sets, formulate the mathematical model that minimizes the largest deviation between the data and the line $y=ax+b$. If a computer is available, solve for the estimates of $a$ and $b$.
+
+```{r, echo=FALSE}
+x <- c(1.0,2.3,3.7,4.2,6.1,7.0)
+y <- c(3.6,3.0,3.2,5.1,5.3,6.8)
+t.df <- data.frame(y,x)
+```
+
+
+```{r, echo=FALSE, results='asis'}
+print(xtable(t.df, caption='Problem 2.a data set.', digits=1), hline.after=c(0,6), include.rownames=FALSE, type=type, comment=FALSE)
+```
+
+### Solution
+
+Let's have a visual representation of the data set.
+
+```{r, echo=FALSE}
+plot(t.df$y~t.df$x,
+      type="p", 
+      col="blue",
+      main='Given data set',
+      xlab="x", 
+      ylab="y")
+```
+
+The idea here is to minimize our largest deviation in our data set and predicted values; hence, we could perform as follows:
+
+**Using Chebyshev criterion**
+
+That is:
+
+$r - (3.6 - (1.0 a + b)) \ge 0$,
+$r + (3.6 - (1.0 a + b)) \ge 0$
+
+$r - (3.0 - (2.3 a + b)) \ge 0$,
+$r + (3.0 - (2.3 a + b)) \ge 0$
+
+$r - (3.2 - (3.7 a + b)) \ge 0$,
+$r + (3.2 - (3.7 a + b)) \ge 0$
+
+$r - (5.1 - (4.2 a + b)) \ge 0$,
+$r + (5.1 - (4.2 a + b)) \ge 0$
+
+$r - (5.3 - (6.1 a + b)) \ge 0$,
+$r + (5.3 - (6.1 a + b)) \ge 0$
+
+$r - (6.8 - (7.0 a + b)) \ge 0$,
+$r + (6.8 - (7.0 a + b)) \ge 0$
+
+The above, is the formulation of the mathematical model that minimizes the largest deviation between the data and the line $y = ax + b$.
+
+
+**Finding the estimates of $a$ and $b$.**
+
+Using least squares criterion.
+
+```{r}
+lm.y <- lm(t.df$y~t.df$x)
+summary(lm.y)
+```
+
+From th above, we can conclude that our function employing the $R^2$ method is:
+
+$y = 2.2149 + 0.5642x$
+
+```{r, echo=FALSE}
+plot(t.df$y~t.df$x,
+        type="p", 
+        col="blue",
+        main='Given data',
+        xlab="x", 
+        ylab="y")
+lines(t.df$x, 2.2149 + 0.5642 * t.df$x,  col="red", type="l", pch=17)
+legend("topleft", 
+       c("given data","linear model"),
+       fill=c("blue","red")
+       )
+```
+
+# END.
