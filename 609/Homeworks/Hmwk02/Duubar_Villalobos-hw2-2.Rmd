@@ -1,0 +1,221 @@
+---
+title: "Homework 2.2"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "September 23, 2018"
+output:
+  pdf_document: default
+  html_document: default
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+subtitle: CUNY MSDS DATA 609
+---
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+library(knitr)
+
+```
+
+# Problems
+
+The below problems are taken from the text book:
+
+A First Course in Mathematical Modeling, 5th Edition. Frank R. Giordano, William P. Fox, Steven B. Horton. ISBN-13: 9781285050904.
+
+## Exercise \#3 Page 191.
+
+Using Monte Carlo simulation, write an algorithm to calculate an approximation to $\pi$ by considering the number of random points selected inside the quarter circle
+
+$$Q: x^2 + y^2 = 1, \: x \ge 0, \: y \ge 0$$
+
+where the quarter circle is taken to be inside the square
+
+$$ S: 0 \le x \le 1 \: and \: 0 \le y \le 1$$
+
+Use the equation $\pi/4 = area \: Q / area \: S$
+
+### Solution:
+
+The below is the single simulation program for a given number of n values.
+
+```{r}
+# FUNCTION THAT APPROXIMATES PI
+approximate_pi <- function(n){
+
+  # Defining original values   
+  M <- 1
+  a <- 0
+  b <- 1
+  
+  # Generating random values
+  x <- runif(n,0,1)
+  y <- runif(n,0,1)
+  
+  # Evaluating the function to compare
+  y_eval <- (1 - x^2)^(1/2)
+  
+  xy.df <- data.frame(y_eval,y,x)
+  
+  # Assigning values if condition is met, 1 = Yes, 0 = No
+  xy.df$`Under Curve` <- 0
+  xy.df$`Under Curve`[which(xy.df$y <= xy.df$y_eval)] <- 1
+  
+  COUNTER <- sum(xy.df$`Under Curve`)
+  AreaS <- M * (b - a)
+  AreaQ <- AreaS * COUNTER / n
+  approxPi <- 4 * AreaQ
+  
+  return(approxPi)
+  
+}
+```
+
+In order to create a visualize a pattern, I will call the individual simulation 100 times for different incremental values.
+
+```{r}
+# PROCESS TO RUN MULTIPLE SIMULATIONS
+n <- c()
+spi <- c()
+
+simulation <- data.frame(n = n, 'Simul_pi' = spi)
+
+# Let's run 100 simulations for different n values
+for (i in 1:100){
+  
+  # The multiplier is to create increments of 1000 for each n
+  nmultiplier <- 1000 * i
+  temp <- data.frame(n = nmultiplier, 'Simul_pi' = approximate_pi(nmultiplier))
+  
+  simulation <- rbind(simulation, temp)
+
+}
+
+simulation$Real_pi <- pi
+simulation$Error <- simulation$Real_pi - simulation$Simul_pi
+```
+
+Let's have a visual representation of the Error pattern for the comparison.
+
+```{r}
+plot(x = simulation$n / 1000,
+     y = simulation$Error, 
+     type = "h",
+     xlab = 'Number of tests, n value x 1000',
+     ylab = 'Error')
+```
+
+Something interesting to note is that it seems that the bigger the n, the lower the Error. In other words this method tends to approximate the real value of $\pi$.
+
+Let's see a single simulation with n = 100 M.
+
+```{r}
+approximate_pi(100000000)
+```
+
+
+Lets' see a table of values generated.
+
+```{r, echo=FALSE}
+simulation
+```
+
+## Exercise \#1 Page 194.
+
+
+```{r}
+# FUNCTION THAT EXTRACT THE 'RANDOM' VALUE FROM A SEED
+generate_random_middle_square <- function(x0){
+  
+  # Need to figure the lenght for leading zero if needed.
+  nlength <- 8
+  nstart <- 3
+  nend <- 6
+ 
+  if (x0 > 9999){
+    nlength <- 12
+    nstart <- 4
+    nend <- 9
+  }
+  
+  # Find square value
+  x2 <- x0^2
+  
+  # Need to add leading zero if needed.
+  x2_lenght <- nchar(x2)
+  while (x2_lenght < nlength){
+    
+    x2 <- toString(x2)
+    x2 <- paste(0, x2, sep='')
+    x2_lenght <- nchar(x2)
+    
+  }
+  
+  # Extract middle number
+  x0 <- as.numeric(substr(x2, nstart, nend))
+
+  return(x0)
+
+}
+```
+
+```{r}
+# FUNCTION THAT CREATE A TABLE LIST OF "RANDOM" VALUES FROM A SEED
+random_middle_square_list <- function(x0, n){
+  
+  xn.table <- data.frame('n' = 0, 'xn' = x0)
+  
+  for (i in 1:n){
+    
+    x0 <- generate_random_middle_square(x0)
+    temp.df <- data.frame('n' = i, 'xn' = x0)
+    
+    xn.table <- rbind(xn.table, temp.df)
+    
+  }
+  
+  xn.table
+  
+}
+```
+
+Use the middle-square method to generate
+
+### a. 10 random numbers using $x_0 = 1009$.
+
+```{r}
+random_middle_square_list(x0 = 1009, n = 10)
+```
+
+### b. 20 random numbers using $x_0 = 653217$.
+
+```{r}
+random_middle_square_list(x0 = 653217, n = 20)
+```
+
+### c. 15 random numbers using $x_0 = 3043$.
+
+```{r}
+random_middle_square_list(x0 = 3043, n = 15)
+```
+
+### d. Comment about the result of each sequence. Was there cycling? Did each sequence degenerate rapidly?
+
+In the first sequence with $x_0 = 1009$ the sequence did not present cycling, however the sequence degenerate quickly.
+
+In the second sequence, there seems to be some "randomness" since it doesn't seems to degenerate nor does it seems to cycle.
+
+In the third sequence, the sequence did not degenerate quickly, however there's cycling involved since we see a repetitive pattern after a few iterations.
+
+
+
+
+# END.
