@@ -1,0 +1,195 @@
+---
+title: "Homework 3.1"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "September 30, 2018"
+output:
+  pdf_document: default
+  html_document: default
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+subtitle: CUNY MSDS DATA 609
+---
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+library(knitr)
+library(data.table)
+library(xtable)
+library(markovchain)
+library(diagram)
+
+```
+
+# Problems
+
+The below problems are taken from the text book:
+
+A First Course in Mathematical Modeling, 5th Edition. Frank R. Giordano, William P. Fox, Steven B. Horton. ISBN-13: 9781285050904.
+
+## Exercise \#1 Page 228.
+
+Consider a model for the long-term dining behavior of the students at College USA. It is found that 25\% of the students who eat at the college's Grease Dining Hall return to eat there again, whereas those who eat at Sweet Dining Hall have a 93\% return rate. These are the only two dining halls available on campus, and assume that all students eat at one of these halls. Formulate a model to solve for the long-term percentage of students eating at each hall.
+
+### Solution
+
+**Problem identification** Can we find the long-term behavior of students who eat in campus?
+
+**Assumption** The data provide the following transition matrix provided below.
+
+```{r, echo=FALSE}
+names <- c('Grease', 'Sweet')
+G <- c(0.25, 0.75)
+S <- c(0.07, 0.93)
+
+dining.df <- transpose(data.frame(G,S))
+
+colnames(dining.df) <- names
+row.names(dining.df) <- names
+
+```
+
+```{r, echo=FALSE, results='asis', message=FALSE}
+print(xtable(dining.df),hline.after=c(0,2), comment=FALSE)
+```
+
+```{r, echo=FALSE}
+h <- c(0.25, 0.07,
+       0.75, 0.93)
+
+MChain <- matrix(h,
+             2,2, byrow=TRUE)
+row.names(MChain) <- names
+colnames(MChain) <- names
+
+plotmat(MChain,
+        lwd = 1, box.lwd = 1,
+        cex.txt = 0.8,
+        box.size = 0.07,
+        box.type = "circle",
+        box.prop = 0.6,
+        box.col = "yellow",
+        arr.length=.05,
+        arr.width=.15,
+        self.cex = .5,
+        self.shifty = -.010,
+        self.shiftx = -.099,
+        main = "Visualization of probabilities")
+
+```
+
+
+**Model Formulation** Let's define the following variables:
+
+$G_n$ = the percentage of students who eat at Grease Dining Hall in period $n$.
+
+$S_n$ = the percentage of students who eat at Sweet Dining Hall in period $n$.
+
+Using the previous data and the ideas of discrete dynamical systems, we can formulate the following system of equations given the percentage of students who eat at Grease Dining Hall or eat at Sweet Dining Hall at each period.
+
+$G_{n+1} = 0.25G_n + 0.07S_n$
+
+$S_{n+1} = 0.75G_n + 0.93S_n$
+
+**Model Solution** Let's assume that initially 1/2 of the students eat on each Dining Hall. We then obtain the numerical results shown below for the percentage of students in each dining hall at each period $n$.
+
+```{r, echo=FALSE}
+G0 <- 1/2
+S0 <- 1/2
+n <- 20
+
+dining.hall <- data.frame('n' = 0, "Grease"= G0, "Sweet" = S0)
+
+for (i in 1:n){
+  G <- 0.25 * dining.hall$Grease[i] + 0.07 * dining.hall$Sweet[i]
+  S <- 0.75 * dining.hall$Grease[i] + 0.93 * dining.hall$Sweet[i]
+  
+  temp <- data.frame('n' = i, "Grease"= G, "Sweet" = S)
+  dining.hall <- rbind(dining.hall, temp)
+}
+dining.hall
+```
+
+And rounded to two decimals, we observe that after 3 days the system stabilize itself with 9\% of the students eating at Grease Dining Hall and 91\% of students eating at Sweet Dining Hall for period $n$.
+
+```{r, echo=FALSE}
+head(round(dining.hall,2),5)
+```
+
+Let's visualize the long-term tendency.
+
+```{r, echo=FALSE}
+plot(x = dining.hall$n,
+     y = dining.hall$Sweet,
+      type="b", 
+      col="blue",
+      main='Dining Hall long-term eating behavior',
+      xlab="n", 
+      ylab="Percentage",
+      ylim=c(0,1)
+     )
+lines(x = dining.hall$n,
+      y = dining.hall$Grease, 
+      type="b",
+      col="red")
+legend("topright", 
+       c("Sweet","Grease"),
+       fill=c("blue","red")
+       )
+```
+
+\newpage
+
+## Exercise \#1 Page 232.
+
+Consider a stereo with CD player, FM-AM radio tuner, speakers (dual) and power amplifier (PA) components, as displayed with the reliabilities shown in Figure 1. Determine the system's reliability. What assumptions are required in the model?
+
+![Reliability of stereo components.](/home/mydvtech/Dropbox/CUNY/Courses/DATA609/Assignments/Hmwk-3.1/figures/Data621-Figure611.png)
+
+### Solution
+
+Let's define the reliabilities as follows:
+
+$R_{PA}(t) = 0.95$
+
+$R_{CD}(t) = 0.98$
+
+$R_{Radio}(t) = 0.97$
+
+$R_{Speaker1}(t) = 0.99$
+
+$R_{Speaker2}(t) = 0.99$
+
+From the above figure, we can deduce as follows:
+
+**CD and Radio** are a parallel system; hence, we could represent as follows:
+
+$R_{Sound}(t) = R_{CD}(t) + R_{Radio}(t) -  R_{CD}(t) R_{Radio}(t) =  0.98 + 0.97 - 0.98 \cdot 0.97 = 0.9994$
+
+**Speaker1 and Speaker2** are a parallel system, hence we can represented as follows:
+
+$R_{Speaker}(t) = R_{Speaker1}(t) + R_{Speaker1}(t) -  R_{Speaker1}(t) R_{Speaker1}(t) = 0.99 + 0.99 - 0.99 \cdot 0.99 = 0.9999$
+
+The final system will be a **"series" system** and we can represent it as follows:
+
+$R_S(t) = R_{PA}(t) R_{Sound}(t) R_{Speaker}(t) = 0.95 \cdot 0.9994 \cdot 0.9999 = 0.9493351$
+
+### Answer
+
+The system's reliability will be $R_S(t) = 0.9493351$
+
+**Assumptions:**
+
+- **CD and Radio** are a parallel system.
+
+- **Speaker1 and Speaker2** are a parallel system.
+
+- **PA, "Sound" and Speakers** are a series system. 
