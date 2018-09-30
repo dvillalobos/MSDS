@@ -1,0 +1,1041 @@
+---
+title: "Homework 01"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "September 30, 2018"
+output:
+  pdf_document: default
+  html_document: default
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+subtitle: CUNY MSDS DATA 621
+---
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+library(knitr)
+library(random)
+library(corrplot)
+library(PerformanceAnalytics)
+library(psych)
+
+```
+
+# Homework #1
+
+## Overview
+
+In this homework assignment, you will explore, analyze and model a data set containing approximately 2200 records. Each record represents a professional baseball team from the years 1871 to 2006 inclusive. Each record has the performance of the team for the given year, with all of the statistics adjusted to match the performance of
+a 162 game season.
+
+Your objective is to build a multiple linear regression model on the training data to predict the number of wins for the team. You can only use the variables given to you (or variables that you derive from the variables provided).
+
+## Deliverables:
+
+- A write-up submitted in PDF format. Your write-up should have four sections. Each one is described below. You may assume you are addressing me as a fellow data scientist, so do not need to shy away from technical details.
+
+- Assigned predictions (the number of wins for the team) for the evaluation data set.
+
+- Include your R statistical programming code in an Appendix.
+
+# 1. DATA EXPLORATION
+
+## Data acquisition
+
+First, we need to explore our given data set. For reproducibility purposes, I have put the original data sets in my git-hub account and then I will read them from there.
+
+```{r}
+git_user <- 'https://raw.githubusercontent.com/dvillalobos/'
+git_dir <- 'MSDS/master/621/Homeworks/assignment-01/data/'
+baseball.train = read.csv(paste(git_user, git_dir, "moneyball-training-data.csv", sep = "")) 
+baseball.eval = read.csv(paste(git_user, git_dir, "moneyball-evaluation-data.csv", sep = ""))
+```
+
+## Simple Example
+
+This example will help determine the ideas to follow in order to solve our problem; this is for explanatory purposes on how this problem will be approached.
+
+```{r}
+lm.tr <- lm(baseball.train$TARGET_WINS ~ baseball.train$TEAM_BATTING_H)
+summary(lm.tr)
+```
+
+Since, this is just an example, I would not describe much to it at this point in time.
+
+```{r, echo=FALSE}
+plot(baseball.train$TARGET_WINS ~ baseball.train$TEAM_BATTING_H,
+      type="p", 
+      col="blue",
+      main=paste('Wins vs TEAM_BATTING_H'),
+      xlab='TEAM_BATTING_H', 
+      ylab="Wins")
+abline(lm.tr, col="red")
+legend("topleft", 
+       c("given data","linear model"),
+       fill=c("blue","red")
+       )
+```
+
+Let's see a more detailed box plot from our original given data.
+
+```{r}
+boxplot(baseball.train$TEAM_BATTING_H, 
+      data=baseball.train,
+      main=paste('Box Plot - TEAM_BATTING_H'),
+      xlab='TEAM_BATTING_H')
+```
+
+Let's see how the residuals histogram plot from our linear model data look like.
+
+```{r}
+hist(lm.tr$residuals, freq = FALSE, 
+   main = paste('Residuals Histogram - TEAM_BATTING_H'), 
+   xlab = 'Residuals', 
+   ylab = 'Density')
+lines(density(lm.tr$residuals), col="red")
+lines(seq(-400, 500, by=.5), 
+    dnorm(seq(-400, 500, by=.5),
+          mean(lm.tr$residuals), 
+          sd(lm.tr$residuals)), 
+    col="blue")
+lnames <- c('Empirical density', 'Normal density')
+legend('topleft', lnames, col = c('red','blue'), lty = 1) 
+```
+
+Let's plot our residuals data in order to visualize Homoscedasticity or Heteroscedasticity.
+
+```{r}
+plot(lm.tr$residuals ~ baseball.train$TEAM_BATTING_H,
+      type="p", 
+      col="blue",
+      main='Homoscedasticity or Heteroscedasticity',
+      xlab='TEAM_BATTING_H', 
+      ylab="Fitted Residuals")
+abline(h=0, col="red")
+```
+
+Let's plot and visualize a Q-Q Plot to determine normality.
+
+```{r}
+qqnorm(resid(lm.tr))
+qqline(resid(lm.tr), col='red')
+```
+
+As you can see, from our previous example, we can deduce a few things, in particular, that in this case a single predictor variable might not be enough to predict the **TARGET_WINS**.
+
+## General exploration
+
+The below process will help obtain insights from the data.
+
+### Dimensions
+
+Let's see the dimensions of our data set.
+
+```{r}
+dim(baseball.train)
+```
+
+As we can notice, the training data set has a total of 17 different variables. The total number or records available are 2276.
+
+### Structure
+
+The below structure is currently present in the data, for simplicity purposes, I have loaded and treated this data set as a data frame in which all the variables are integers.
+
+```{r}
+str(baseball.train)
+```
+
+### Summary
+
+The below is a summary extracted from our given training data.
+
+```{r}
+train.summary <- data.frame(unclass(summary(baseball.train[2:17])), 
+                          check.names = FALSE, 
+                          row.names = NULL,
+                          stringsAsFactors = FALSE)
+train.summary
+```
+
+From the summary statistics, we can identify the need to work with some **NA's** in diverse columns. There's no clear answer as to why these values are not available or included in the data set, each variable needs to be analyzed individually and find the best approach.
+
+```{r}
+train.summary$TEAM_BATTING_SO[7]
+```
+
+```{r}
+train.summary$TEAM_BASERUN_SB[7]
+```
+
+```{r}
+train.summary$TEAM_BASERUN_CS[7]
+```
+
+```{r}
+train.summary$TEAM_BATTING_HBP[7]
+```
+
+```{r}
+train.summary$TEAM_PITCHING_SO[7]
+```
+
+```{r}
+train.summary$TEAM_FIELDING_DP[7]
+```
+
+Also, there's a need to find out a little bit more information related to **ZERO** values, these are reported in the minimum value for some of the columns. Need to verify if it is feasible to have such values, could these values considered as entry errors? we need to analyze them in more detail with hopes of avoid possible misconceptions for the model.
+
+```{r}
+train.summary$` TARGET_WINS`[1]
+```
+
+```{r}
+train.summary$TEAM_BATTING_3B[1]
+```
+
+```{r}
+train.summary$TEAM_BATTING_HR[1]
+```
+
+```{r}
+train.summary$TEAM_BATTING_BB[1]
+```
+
+```{r}
+train.summary$TEAM_BATTING_SO[1]
+```
+
+```{r}
+train.summary$TEAM_BASERUN_SB[1]
+```
+
+```{r}
+train.summary$TEAM_BASERUN_CS[1]
+```
+
+```{r}
+train.summary$TEAM_PITCHING_HR[1]
+```
+
+```{r}
+train.summary$TEAM_PITCHING_BB[1]
+```
+
+```{r}
+train.summary$TEAM_PITCHING_SO[1]
+```
+
+```{r}
+train.summary$TEAM_PITCHING_HR[1]
+```
+
+```{r}
+train.summary$TEAM_PITCHING_BB[1]
+```
+
+```{r}
+train.summary$TEAM_PITCHING_SO[1]
+```
+
+### Visualizations
+
+Let's compare the various relationships, in particular we will focus on the first row since that row represent the **y_axis = TARGET_WINS** vs the other variable on the **x_axis**. The idea is to imagine some sort of linearity in between **TARGET_WINS** vs the other related variable on a one by one cases. 
+
+#### Correlation matrix
+
+Let's do some visualizations for the correlation matrix.
+
+```{r}
+my_matrix <- baseball.train[c(2:17)]
+cor_res <- cor(my_matrix, use = "na.or.complete")
+```
+
+```{r, warning =FALSE}
+corrplot(cor_res, 
+         type = "upper", 
+         order = "original", 
+         tl.col = "black", 
+         tl.srt = 45, 
+         tl.cex = 0.55)
+```
+
+Let's read the correlations respective values:
+
+```{r, echo=FALSE}
+cor_res.df <- data.frame(cor_res)
+cor_res.df[1]
+```
+
+In particular, is important to note some very strong positive correlations represented in the graph above among themselves.
+
+some of them are:
+
+- **TEAM_BATTING_H** is strongly correlated in a positive way with **TEAM_PITCHING_H**.
+
+- **TEAM_BATTING_HR** is strongly correlated in a positive way with **TEAM_PITCHING_HR**.
+
+- **TEAM_BATTING_BB** is strongly correlated in a positive way with **TEAM_PITCHING_BB**.
+
+- **TEAM_BATTING_SO** is strongly correlated in a positive way with **TEAM_PITCHING_SO**.
+
+In particular, I will extract the correlation values for the strong correlations identified above.
+
+
+```{r}
+cor_res.df['TEAM_BATTING_H','TEAM_PITCHING_H']
+```
+
+```{r}
+cor_res.df['TEAM_BATTING_HR','TEAM_PITCHING_HR']
+```
+
+```{r}
+cor_res.df['TEAM_BATTING_BB','TEAM_PITCHING_BB']
+```
+
+```{r}
+cor_res.df['TEAM_BATTING_SO','TEAM_PITCHING_SO']
+```
+
+If we think about the process, those correlations make sense since this is a dual process in which one action tracks a response. **PITCHING** is correlated to **BATTING**.
+
+From the above results, we could take one variable in function of the other one.
+
+Something interesting to note is that in effect, the above identified correlations have very similar correlations as well with **TARGET_WINS**.
+
+**TEAM_BATTING_H	0.46994665** &   
+TEAM_PITCHING_H	0.47123431
+
+**TEAM_BATTING_HR	  0.42241683** &   
+TEAM_PITCHING_HR	0.42246683   
+
+TEAM_BATTING_BB	  0.46868793 &   
+**TEAM_PITCHING_BB	0.46839882**
+
+TEAM_BATTING_SO	  -0.22889273	&   
+**TEAM_PITCHING_SO	-0.22936481**
+
+So, basically our initial table will be reduced as follows:
+
+**Original Table: Predictor elimination due to "repeated" value.**
+
+    TARGET_WINS			<- To predict
+    TEAM_BATTING_H		<- Correlated to TEAM_PITCHING_H <- Discard
+    TEAM_BATTING_2B			
+    TEAM_BATTING_3B			
+    TEAM_BATTING_HR		<- Correlated to TEAM_PITCHING_HR <- Discard
+    TEAM_BATTING_BB		<- Correlated to TEAM_PITCHING_BB <- Keep
+    TEAM_BATTING_SO		<- Correlated to TEAM_PITCHING_SO <- Keep
+    TEAM_BASERUN_SB			
+    TEAM_BASERUN_CS			
+    TEAM_BATTING_HBP
+    TEAM_PITCHING_H		<- Correlated to TEAM_BATTING_H <- Keep	
+    TEAM_PITCHING_HR	<- Correlated to TEAM_BATTING_HR <- Keep
+    TEAM_PITCHING_BB	<- Correlated to TEAM_BATTING_BB <- Discard
+    TEAM_PITCHING_SO	<- Correlated to TEAM_BATTING_SO <- Discard		
+    TEAM_FIELDING_E			
+    TEAM_FIELDING_DP
+
+
+Since these correlations are related among themselves and are also related to **TARGET_WINS**, I will exclude the variables that have the smallest correlation related to **TARGET_WINS**.
+
+
+**New Reduced Table: Predictor eliminated due to "repeated" value.**
+
+    TARGET_WINS			<- To predict
+    TEAM_BATTING_2B			
+    TEAM_BATTING_3B			
+    TEAM_BATTING_BB		
+    TEAM_BATTING_SO		
+    TEAM_BASERUN_SB			
+    TEAM_BASERUN_CS			
+    TEAM_BATTING_HBP
+    TEAM_PITCHING_H		
+    TEAM_PITCHING_HR	
+    TEAM_FIELDING_E			
+    TEAM_FIELDING_DP
+    
+```{r}
+exclude <- c('INDEX', 'TEAM_BATTING_H', 'TEAM_BATTING_HR', 'TEAM_PITCHING_BB', 'TEAM_PITCHING_SO')
+newvars <- names( baseball.train) %in% exclude
+reduced.train <- baseball.train[!newvars]
+```
+
+### Primary insigths
+
+Based on the above data exploration, we could note the following:
+
+- **Missing values**
+
+It is confirmed the presence of missing values and these need to be address in a case by case.
+
+- **Zero values**
+
+It is confirmed the presence of Zero values as minimum entries in the data. Need to verify and accept or reject the feasibility of such values for some of the variables.
+
+- **Correlations**
+
+There seems to be very strong correlations to the target variable.
+
+In regards to correlations related to other variables, it is confirmed that such correlation exist and those 'duplicate' correlated variables among themselves were removed.
+
+# 2. DATA PREPARATION
+
+The following steps and/or assumptions will be considered. The idea is to make our given training data set more homogeneous and workable. The final goal is to be able to predict the **TARGET_WINS** with our data.
+
+## Missing values **NA's**
+
+Previously, we identified the need to analyze in more detail these variables. The below is a list of variables that include NA's.
+
+- **TEAM_BATTING_SO**
+- TEAM_BASERUN_SB
+- TEAM_BASERUN_CS
+- TEAM_BATTING_HBP
+- **TEAM_PITCHING_SO** <- Discarded
+- TEAM_FIELDING_DP
+
+From the above NA list, we previously identifies that **TEAM_BATTING_SO** and **TEAM_PITCHING_SO** were correlated among themselves and I have already eliminated the one with the lowest correlation of the two compared to **TARGET_WINS**.
+
+Hence, our list of variables presenting **missing** values has been reduced to:
+
+- TEAM_BATTING_SO
+- TEAM_BASERUN_SB
+- TEAM_BASERUN_CS
+- TEAM_BATTING_HBP
+- TEAM_FIELDING_DP
+
+### Proportionalities
+
+Let's see the proportion of missing values in order to determine the best approach for these variables.
+
+```{r}
+TEAM_BATTING_SO.p <- round(sum(is.na(reduced.train$TEAM_BATTING_SO))/dim(reduced.train)[1]*100,2)
+TEAM_BASERUN_SB.p <- round(sum(is.na(reduced.train$TEAM_BASERUN_SB))/dim(reduced.train)[1]*100,2)
+TEAM_BASERUN_CS.p <- round(sum(is.na(reduced.train$TEAM_BASERUN_CS))/dim(reduced.train)[1]*100,2)
+TEAM_BATTING_HBP.p <- round(sum(is.na(reduced.train$TEAM_BATTING_HBP))/dim(reduced.train)[1]*100,2)
+TEAM_FIELDING_DP.p <- round(sum(is.na(reduced.train$TEAM_FIELDING_DP))/dim(reduced.train)[1]*100,2)
+```
+
+The below table display the respective missing value percentages for each variable.
+
+- TEAM_BATTING_SO = `r TEAM_BATTING_SO.p` % missing data.
+- TEAM_BASERUN_SB = `r TEAM_BASERUN_SB.p` % missing data.
+- TEAM_BASERUN_CS = `r TEAM_BASERUN_CS.p` % missing data.
+- **TEAM_BATTING_HBP = `r TEAM_BATTING_HBP.p` % missing data.**
+- TEAM_FIELDING_DP = `r TEAM_FIELDING_DP.p` % missing data.
+
+From the above results and by analyzing the given data, we could "discard" the **TEAM_BATTING_HBP** due to the high percentage of missing data; particularly, replacing it by "ZERO" should not be advisable since the minimum value recorded is 29 and replacing it with a median value won't be advisable neither due to the high percentage of missing values. From my perspective, is best not to consider that variable due to low impact and high inaccuracy.
+
+```{r}
+exclude <- c('TEAM_BATTING_HBP')
+newvars <- names( reduced.train) %in% exclude
+reduced.train <- reduced.train[!newvars] 
+```
+
+From here onward, I will try to obtain the best predictors in order to predict our **TARGET_WINS**.
+
+### Eliminating low correlated values
+
+From our correlations table, we found strong correlations among our data; let's run a new correlation data but with the reduced amount of data.
+
+```{r}
+my_matrix1 <- reduced.train
+cor_res1 <- cor(my_matrix1, use = "na.or.complete")
+```
+
+```{r, warning =FALSE}
+corrplot(cor_res1, 
+         type = "upper", 
+         order = "original", 
+         tl.col = "black", 
+         tl.srt = 45, 
+         tl.cex = 0.55)
+```
+
+Let's read the correlations respective values:
+
+```{r, echo=FALSE}
+cor_res1.df <- data.frame(cor_res1)
+cor_res1.df[1]
+```
+
+From the correlation visuals and the above table, we could eliminate a few more predictor variables, and the reason is due to it's low correlated value.
+
+For example, we could eliminate the values whose absolute value is below 0.10, leaving the ones that are considered some how important to our model.
+
+```{r}
+cor_res1.df <- cor_res1.df[which(abs(cor_res1.df$TARGET_WINS) > 0.10),]
+cor_res1.df[1]
+```
+
+
+```{r}
+exclude <- c('TEAM_BATTING_3B', 'TEAM_BATTING_SO', 'TEAM_BASERUN_CS', 'TEAM_FIELDING_DP')
+newvars <- names( reduced.train) %in% exclude
+reduced.train <- reduced.train[!newvars] 
+```
+
+From here moving forward, we could look at the data composition with a little bit more detail.
+
+```{r, echo=FALSE}
+par(mfrow=c(3,2)) 
+plot(reduced.train$TEAM_BATTING_2B, reduced.train$TARGET_WINS, ylab='TARGET_WINS', xlab = 'TEAM_BATTING_2B')
+plot(reduced.train$TEAM_BATTING_BB, reduced.train$TARGET_WINS, ylab='TARGET_WINS', xlab = 'TEAM_BATTING_BB')
+plot(reduced.train$TEAM_BASERUN_SB, reduced.train$TARGET_WINS, ylab='TARGET_WINS', xlab = 'TEAM_BASERUN_SB')
+plot(reduced.train$TEAM_PITCHING_H, reduced.train$TARGET_WINS, ylab='TARGET_WINS', xlab = 'TEAM_PITCHING_H')
+plot(reduced.train$TEAM_PITCHING_HR, reduced.train$TARGET_WINS, ylab='TARGET_WINS', xlab = 'TEAM_PITCHING_HR')
+plot(reduced.train$TEAM_FIELDING_E, reduced.train$TARGET_WINS, ylab='TARGET_WINS', xlab = 'TEAM_FIELDING_E')
+```
+
+From the above graphs, it seems that we have a need to reduce some excessive large values from our predictor variables in order o make our reduced table of predictors more workable.
+
+A possible transformation is to use the square root on both sides of the model, this is advised since all the variables have the same units and also all of them are counts.
+
+That is if we have a model:
+
+$y = b_0 + b_1 x_1 + b_2 x_2 + b_3 x_3 + b_4 x_4 + b_5 x_5 + e$
+
+We could transform to:
+
+$y^{'} = b^{'}_0 + b^{'}_1 x^{'}_1 + b^{'}_2 x^{'}_2 + b^{'}_3 x^{'}_3 + b^{'}_4 x^{'}_4 + b^{'}_5 x^{'}_5 + e^{'}$
+
+where $y^{'} = \sqrt{y}$ and each $x^{'}_i = \sqrt{x_i}$ with $b^{'}_i$ and $e^{'}$ are new constants obtained due to the transformation process.
+
+```{r, echo=FALSE}
+par(mfrow=c(3,2)) 
+plot(sqrt(reduced.train$TEAM_BATTING_2B), sqrt(reduced.train$TARGET_WINS), ylab='TARGET_WINS', xlab = 'TEAM_BATTING_2B')
+plot(sqrt(reduced.train$TEAM_BATTING_BB), sqrt(reduced.train$TARGET_WINS), ylab='TARGET_WINS', xlab = 'TEAM_BATTING_BB')
+plot(sqrt(reduced.train$TEAM_BASERUN_SB), sqrt(reduced.train$TARGET_WINS), ylab='TARGET_WINS', xlab = 'TEAM_BASERUN_SB')
+plot(sqrt(reduced.train$TEAM_PITCHING_H), sqrt(reduced.train$TARGET_WINS), ylab='TARGET_WINS', xlab = 'TEAM_PITCHING_H')
+plot(sqrt(reduced.train$TEAM_PITCHING_HR), sqrt(reduced.train$TARGET_WINS), ylab='TARGET_WINS', xlab = 'TEAM_PITCHING_HR')
+plot(sqrt(reduced.train$TEAM_FIELDING_E), sqrt(reduced.train$TARGET_WINS), ylab='TARGET_WINS', xlab = 'TEAM_FIELDING_E')
+```
+
+From the above graphs, we can notice how our given data follows what seems to be linear, the only exception is the **TEAM_PITCHING_H**. We noticed how it has some very large values with low **TARGET_WINS**. Also, we noticed that the correlation of **TEAM_PITCHING_H** with **TARGET_WINS** is positive but our theoretical effect is that it should produce a negative impact on wins, thus contradicting our hypothesis; based on that and with the low distribution with large outliers, I will remove this variable as well.
+
+
+```{r}
+exclude <- c('TEAM_PITCHING_H')
+newvars <- names( reduced.train) %in% exclude
+reduced.train <- reduced.train[!newvars] 
+```
+
+# 3. BUILD MODELS
+
+## a) Build linear model with raw data.
+
+In this section I will build a linear model utilizing the raw data, with no transformation and no changes whatsoever in order to have it as starting point and compare it's results with a more refined model down the road.
+
+```{r}
+raw.lm <- lm(TARGET_WINS ~ . - INDEX,
+             data = baseball.train)
+
+summary(raw.lm)
+```
+
+From the above, we notice how only 2 predictors are statistically significant in the calculation prediction of the target variable; also, we can notice how the $R^2$ value is 0.55; also, some of the standard errors are very high; something interesting to note is the numbers of degrees of freedom equals to 175; which means that this model could be improved.
+
+```{r}
+par(mfrow=c(2,2)) 
+plot(raw.lm)
+```
+
+Even though it seems that the Normal Q-Q plot follows the data, we noticed the tails on both ends, this caused due to outliers most likely. The Residuals vs Fitted values plot, shows what seems to be a good homoscedastic pattern, that means with no variance nor a visible pattern; but yet again this is debatable due to the fact of the existence of high p-values in our given model.
+
+## b) Build linear model with excluded data.
+
+I will create a model as follows:
+
+    TARGET_WINS			<- To predict
+    TEAM_BATTING_2B
+    TEAM_BATTING_BB
+    TEAM_BASERUN_SB
+    TEAM_PITCHING_HR
+    TEAM_FIELDING_E
+
+```{r}
+model1.lm <- lm(TARGET_WINS ~ .,
+             data = reduced.train)
+
+summary(model1.lm)
+```
+
+Now, if we compare this model to our original model, we see a tremendous difference in terms of p values; now our **model1** shows that all predictors are statistically significant; our degrees of freedom increased dramatically; our standard errors are much better; however, we noticed how our $R^2$ has lowered compared to our previous results; in the mean time I would not worry too much about it, since I will try to refine this model from now on.
+
+```{r}
+par(mfrow=c(2,2)) 
+plot(model1.lm)
+```
+
+Something nice to look is that with this model, it seems that we actually seem to approach a very good linear regression given by the Q-Q plot with a very nice looking randomly plot of Residuals vs fitted values. The current downside with this model is that there seems to be some leverage and outliers still present and that **TEAM_PITCHING_HR** contradicts the theoretical effect since currently seems to project positive values instead of negative.
+
+Let's remove that predictor and see what happens:
+
+## c) Build linear model with excluded data.
+
+```{r}
+exclude <- c('TEAM_PITCHING_HR')
+newvars <- names( reduced.train) %in% exclude
+reduced.train <- reduced.train[!newvars] 
+```
+
+```{r}
+model2.lm <- lm(TARGET_WINS ~ .,
+             data = reduced.train)
+
+summary(model2.lm)
+```
+
+
+For this new model in which **TEAM_PITCHING_HR** got excluded, we can notice not may significant changes.
+
+
+```{r}
+par(mfrow=c(2,2)) 
+plot(model2.lm)
+```
+
+From this model, we can still notice that there are some problems with the residuals, it seems that some variability is still present.
+
+## c) Build linear model more refined from above.
+
+In order to refine the above model, I will create a model as follows:
+
+Let's transform the values in our data frame by calculating the square root on both sides of the linear relationship; this is due to all predictor variables having the same units and are basically counts.
+
+```{r}
+reduced.train$TARGET_WINS <- sqrt(baseball.train$TARGET_WINS)
+reduced.train$TEAM_BATTING_2B <- sqrt(baseball.train$TEAM_BATTING_2B)
+reduced.train$TEAM_BATTING_BB <- sqrt(baseball.train$TEAM_BATTING_BB)
+reduced.train$TEAM_BASERUN_SB <- sqrt(baseball.train$TEAM_BASERUN_SB)
+reduced.train$TEAM_FIELDING_E <- sqrt(baseball.train$TEAM_FIELDING_E)
+```	
+
+```{r}
+model3.lm <- lm(TARGET_WINS ~ . ,
+             data = reduced.train)
+
+summary(model3.lm)
+```
+
+Now, as you can see, the performance has increased tremendously, the residuals have decreased dramatically, the median is near zero and all the p-values indicate that the current predictor variables are statistically significant, the standard errors are low; but once again, we noticed how the residual standard error has decreased and also, we noticed that the median is more considerable near zero with what seems to be a good fit. The current down side is that there seems to be some variability still present in the data.
+
+
+```{r}
+par(mfrow=c(2,2)) 
+plot(model3.lm)
+```
+
+By looking at the plots, we noticed how the fitted values vs the residuals are presenting some sort of variability, also we can notice how the tails on the Q-Q plot tend to deviate on both extremes and the leverage graph is showing the presence of what seem to be outliers.
+
+## d) Build linear model with identified leverage and outliers
+
+In order to find values that will be considered as leverage; I will create a function that find leverage and outlier points.
+
+```{r}
+IsOutlier <- function(target, variable){
+      
+  l.mean <- mean(variable, na.rm = TRUE)
+  l.n <- length(variable)
+  
+  x_minus_xhat_sqrd <- (variable - l.mean)^2
+  l.sum <- sum(x_minus_xhat_sqrd)
+  
+  # Obtaining leverage formula for each value
+  leverage_manual <- round(1/l.n + x_minus_xhat_sqrd/l.sum,3)
+  
+  # Identifiying leverage points
+  leverage <- data.frame(leverage = leverage_manual)
+  leverage$is_leverage <- 0
+  leverage$is_leverage[which(leverage$leverage > 4/l.n)] <- 1
+  
+  # Obtaining regular unchanged linear model in order to obtain original residuals
+  leverage.lm <- lm(target ~ variable)
+  #summary(leverage.lm)
+  
+  # Extracting residuals
+  leverage$residuals <- round(leverage.lm$residuals,3)
+  
+  # Obtaining standardize residuals
+  
+  leverage.sd <- (1/(l.n - 2) * sum(leverage$residuals^2))^(1/2)
+  leverage$r <- round(leverage.lm$residuals / (leverage.sd *(1 - leverage$leverage)^(1/2)),3)
+  
+  # Identifying outliers
+  leverage$outlier <- 0
+  leverage$outlier[which(abs(leverage$r) > 2)] <- 1
+  
+  return(leverage$outlier)
+}
+```
+
+Let's identify outliers from the given model and let's see if we could use those inputs into our model.
+
+```{r}
+reduced.train$TEAM_BATTING_2B_Outlier <- IsOutlier(reduced.train$TARGET_WINS, 
+                                                   reduced.train$TEAM_BATTING_2B)
+
+reduced.train$TEAM_BATTING_BB_Outlier <- IsOutlier(reduced.train$TARGET_WINS, 
+                                                   reduced.train$TEAM_BATTING_BB)
+
+reduced.train$TEAM_FIELDING_E_Outlier <- IsOutlier(reduced.train$TARGET_WINS, 
+                                                   reduced.train$TEAM_FIELDING_E)
+```
+
+Something to note from **TEAM_BASERUN_SB** is that it currently shows a small number of NAs. Previously, I made note that if we need to work with NA's we need to find a way to solve this "problem". Also, it was identified that the percentage of missing values for **TEAM_BASERUN_SB** = `r TEAM_BASERUN_SB.p` \%; hence, due to the low percentage of missing values compared to our given data, I consider that it's safe to replace those missing values with randomly generated values. Let's see what's the current distribution.
+
+```{r}
+hist(reduced.train$TEAM_BASERUN_SB, 
+     main = 'TEAM_BASERUN_SB', 
+     xlab = 'TEAM_BASERUN_SB')
+```
+
+Since the current distribution seems to follow a somehow normal curve, I will replace the missing NAs with randomly generated values from `r min(reduced.train$TEAM_BASERUN_SB, na.rm = TRUE)` to `r max(reduced.train$TEAM_BASERUN_SB, na.rm = TRUE)`.
+
+```{r}
+set.seed(123)
+rand_values <- sample(0:max(reduced.train$TEAM_BASERUN_SB, na.rm = TRUE),
+                      size=sum(is.na(reduced.train$TEAM_BASERUN_SB)), 
+                      replace = TRUE)
+
+reduced.train$TEAM_BASERUN_SB[is.na(reduced.train$TEAM_BASERUN_SB)] <- rand_values
+
+reduced.train$TEAM_BASERUN_SB_Outlier <- IsOutlier(reduced.train$TARGET_WINS, 
+                                                   reduced.train$TEAM_BASERUN_SB)
+```
+
+Let's see the current results by incorporating values related to outliers; that is creating "dummy" predictors with a value of 0 (is not outlier) or 1 (is outlier).
+
+```{r}
+model4.lm <- lm(TARGET_WINS ~ . ,
+             data = reduced.train)
+
+summary(model4.lm)
+```
+
+From the above model, we can notice how by introducing 'new variables' related to outlier info, our model has changed dramatically once again. Let's remove the non statistically significant predictors from our model. Something interesting is that **TEAM_FIELDING_E_Outlier** shows a positive relationship but this contradicts the theoretical hypothesis as well.
+
+```{r}
+par(mfrow=c(2,2)) 
+plot(model4.lm)
+```
+
+## e) Linear model with removed TEAM_FIELDING_E, TEAM_FIELDING_E_Outlier and TEAM_BATTING_BB_Outlier
+
+Let's remove those predictor variables and see what happens.
+
+```{r}
+exclude <- c('TEAM_FIELDING_E', 'TEAM_FIELDING_E_Outlier', 'TEAM_BATTING_BB_Outlier')
+newvars <- names( reduced.train) %in% exclude
+reduced.train <- reduced.train[!newvars] 
+```
+
+```{r}
+model6.lm <- lm(TARGET_WINS ~ . ,
+             data = reduced.train)
+
+summary(model6.lm)
+```
+
+
+```{r}
+par(mfrow=c(2,2)) 
+plot(model6.lm)
+```
+
+## f) Linear model with extra TEAM_BATTING_2B_Outlier taken off
+
+Since this model still seems to behave oddly, due to some variability in the data, I will remove **TEAM_BATTING_2B_Outlier** since it contradicts some of the hypothesis and rules of the game.
+
+
+```{r}
+exclude <- c('TEAM_BATTING_2B_Outlier')
+newvars <- names( reduced.train) %in% exclude
+reduced.train <- reduced.train[!newvars] 
+```
+
+```{r}
+model7.lm <- lm(TARGET_WINS ~ . ,
+             data = reduced.train)
+
+summary(model7.lm)
+```
+
+```{r}
+par(mfrow=c(2,2)) 
+plot(model7.lm)
+```
+
+Something interesting to visualize is the recurring outlier 1211; this value is off limits from the Cook's distance and also is far away from the fitted values plots.
+
+Let's see what's going on with that specific record.
+
+```{r}
+baseball.train[1211,]
+```
+
+By looking at that specific record, we noticed that some sort of odd behavior happened with that entry. Not sure if it is a mistake or if it was a penalization; either way, I believe that will be safe not to include this record into the training data set.
+
+Let's see if there are more values related to **TARGET_WINS** with zero value.
+
+```{r}
+baseball.train[which(baseball.train$TARGET_WINS == 0),]
+```
+
+From that, we have confirmed that this is a very odd entry and I will exclude that data entry from the training set.
+
+```{r}
+reduced.train <- subset(reduced.train, TARGET_WINS > 0)
+```
+
+## g) Linear model excluding outlier 1211
+
+
+```{r}
+model8.lm <- lm(TARGET_WINS ~ . ,
+             data = reduced.train)
+
+summary(model8.lm)
+```
+ 
+ Something significant to point is what I consider to be a low $R^2$, but based on the distribution of the data this might be expected since a lot of points are presenting a linear trend but not necessarily near the regression line; so that's understandable. In terms of the other indicators, it seems to be a good fit; and the reason is due to the low p-values, and low residual standard errors and the high number of degrees of freedom basically means that almost all data points were captured in order to create this linear model. Another indicator is the Median value which is near zero with the 1Q and 3Q centering zero; the only value that will be more concerning will be the Max value but this is expected due to outlier presence in the data set.
+
+```{r}
+#par(mfrow=c(2,2)) 
+plot(model8.lm)
+```
+
+# 4. SELECT MODELS
+
+From the above models, the one that I will pick **is the last one (model8.lm)**; this is due to:
+
+- it follows a linear model for most of the time, just deviating a few points towards the top right.
+- also the outlier 1211 was removed and not included.
+- this model offers a good understanding of what happen if an excessive action is performed in the game; it might actually hurt the team by loosing games, this is the case of **TEAM_BASERUN_SB_Outlier**. 
+
+I believe that the mix of predictors including a dummy outlier, is a great indicator that need to be included along the other variables and transformations.
+
+As I mentioned before, my only concerns will be the $R^2$; but based on the quantity of data points and linearity seeing in the plot along the transformation; it seems that this could be explained as to the distribution of points not being near the regression line. 
+
+Another great indicator is the low median value, even though other models offered a lower value but the high p-value made me not accept it.
+
+## Predict
+
+### First trial
+
+In order to predict our raw data, I need to prepare the data as follows:
+
+```{r}
+myvars <- c("INDEX", "TEAM_BATTING_2B", "TEAM_BATTING_BB", "TEAM_BASERUN_SB")
+reduce.predict <- baseball.eval[myvars]
+
+reduce.predict$TEAM_BATTING_2B <- sqrt(reduce.predict$TEAM_BATTING_2B)
+reduce.predict$TEAM_BATTING_BB <- sqrt(reduce.predict$TEAM_BATTING_BB)
+reduce.predict$TEAM_BASERUN_SB <- sqrt(reduce.predict$TEAM_BASERUN_SB)
+```
+
+Since there's no way to indicate if the new values are considered outliers or not, I will assign a zero instead; then I will re-evaluate with the given values.
+
+```{r}
+reduce.predict$TEAM_BASERUN_SB_Outlier <- 0
+```
+
+Let's predict our **PREDICTED_WINS** and see the results. Keep in mind that I am elevating to a quadratic due to previously applying the square root to the **TARGET_WINS** variable; hence, we need to apply the inverse function in order to obtain an approximation to our predicted value. No decimals are placed due to round counts.
+
+```{r}
+reduce.predict$PREDICTED_WINS <- round((predict(model8.lm, newdata=reduce.predict))^2,0)
+summary(reduce.predict$PREDICTED_WINS)
+```
+
+Something interesting to note is the presence of **NA's**; this is something to be on the look out. Why is there a presence of NAs in our predicted values?
+
+Let's compare our training data set with our given data set, in particular, let's focus on the **TEAM_BASERUN_SB** predictor variable.
+
+Let's see our evaluation data set.
+
+```{r}
+summary(reduce.predict[2:4])
+```
+
+Let's see our training data set.
+
+```{r}
+summary(reduced.train[2:4])
+```
+
+If we look at the previous results, we noticed how the **TEAM_BASERUN_SB** present a total of 13 NAs. Let's plot this data and see it's behavior and compare it to our training data set.
+
+```{r}
+hist(reduce.predict$TEAM_BASERUN_SB, freq = FALSE, 
+   main = paste('Histogram - PREDICT TEAM_BASERUN_SB'), 
+   xlab = 'PREDICT TEAM_BASERUN_SB', 
+   ylab = 'Density')
+lines(density(reduce.predict$TEAM_BASERUN_SB, na.rm = TRUE), col="red")
+lines(seq(-400, 500, by=.5), 
+    dnorm(seq(-400, 500, by=.5),
+          mean(reduce.predict$TEAM_BASERUN_SB, na.rm = TRUE), 
+          sd(reduce.predict$TEAM_BASERUN_SB, na.rm = TRUE)), 
+    col="blue")
+lnames <- c('Empirical density', 'Normal density')
+legend('topright', lnames, col = c('red','blue'), lty = 1) 
+```
+
+```{r}
+hist(reduced.train$TEAM_BASERUN_SB, freq = FALSE, 
+   main = paste('Histogram - TRAIN TEAM_BASERUN_SB'), 
+   xlab = 'TRAIN TEAM_BASERUN_SB', 
+   ylab = 'Density')
+lines(density(reduced.train$TEAM_BASERUN_SB, na.rm = TRUE), col="red")
+lines(seq(-400, 500, by=.5), 
+    dnorm(seq(-400, 500, by=.5),
+          mean(reduced.train$TEAM_BASERUN_SB, na.rm = TRUE), 
+          sd(reduced.train$TEAM_BASERUN_SB, na.rm = TRUE)), 
+    col="blue")
+lnames <- c('Empirical density', 'Normal density')
+legend('topright', lnames, col = c('red','blue'), lty = 1) 
+```
+
+From the above, we could conclude that the distributions follow some sort of similar normality; hence, I will replace the missing NA's that represent a total of `r round(sum(is.na(reduce.predict$TEAM_BASERUN_SB))/dim(reduce.predict)[1] * 100,2)` \% of missing values with random generated values instead.
+
+```{r}
+rand_values <- sample(0:max(reduce.predict$TEAM_BASERUN_SB, na.rm = TRUE),
+                      size=sum(is.na(reduce.predict$TEAM_BASERUN_SB)), replace = TRUE)
+
+reduce.predict$TEAM_BASERUN_SB[is.na(reduce.predict$TEAM_BASERUN_SB)] <- rand_values
+```
+
+It is noted, that previously this same procedure was performed while preparing our data in our training data set.
+
+Now, that I have taken care of NA's, let's try another run.
+
+### Second trial
+
+Let's predict our **PREDICTED_WINS** and see the results. Keep in mind that I am elevating to a quadratic due to previously applying the square root to the **TARGET_WINS** variable; hence, we need to apply the inverse function in order to obtain an approximation to our predicted value. No decimals are placed due to round counts.
+
+```{r}
+reduce.predict$PREDICTED_WINS <- round((predict(model8.lm, newdata=reduce.predict))^2,0)
+summary(reduce.predict$PREDICTED_WINS)
+```
+
+Since previously; I entered the Outlier value as zero, I will rerun once again in order to identify some possible outliers and hopefully refine our given prediction values.
+
+```{r}
+reduce.predict1 <- reduce.predict[c('INDEX', 
+                                    'PREDICTED_WINS', 
+                                    'TEAM_BATTING_2B', 
+                                    'TEAM_BATTING_BB', 
+                                    'TEAM_BASERUN_SB')]
+
+reduce.predict1$PREDICTED_WINS <- sqrt(reduce.predict1$PREDICTED_WINS)
+```
+
+
+```{r}
+reduce.predict1$TEAM_BASERUN_SB_Outlier <- IsOutlier(reduce.predict1$PREDICTED_WINS, 
+                                                     reduce.predict1$TEAM_BASERUN_SB)
+```
+
+After re-running our previous fit with the procedure to identify possible outliers, it was concluded that `r sum(reduce.predict1$TEAM_BASERUN_SB_Outlier)` outliers were identified; based on that, I will run the predictive model once again but this including the identified outliers.
+
+### Final prediction
+
+```{r}
+reduce.predict1$FINAL_PREDICTED_WINS <- round((predict(model8.lm, newdata=reduce.predict1))^2,0)
+final.answer <- reduce.predict1[1]
+final.answer$PREDICTED_WINS_NO <- reduce.predict$PREDICTED_WINS
+final.answer$PREDICTED_WINS_WO <- reduce.predict1$FINAL_PREDICTED_WINS
+```
+
+## Compare final predictions
+
+Let's see our training data set.
+
+```{r}
+summary(baseball.train$TARGET_WINS)
+```
+
+Let's see our predicted values data set.
+
+```{r}
+summary(final.answer[2:3])
+```
+
+Please note that I am presenting two columns; one with ouliers re-evaluation and the other one with no consideration for outliers.
+
+Let's visualize the results.
+
+This first histogram is the repreentation of the training data set.
+
+```{r}
+hist(baseball.train$TARGET_WINS, freq = FALSE, 
+   main = paste('Histogram - TRAINING TARGET_WINS'), 
+   xlab = 'TRAINING TARGET_WINS', 
+   ylab = 'Density')
+lines(density(baseball.train$TARGET_WINS, na.rm = TRUE), col="red")
+lines(seq(-400, 500, by=.5), 
+    dnorm(seq(-400, 500, by=.5),
+          mean(baseball.train$TARGET_WINS, na.rm = TRUE), 
+          sd(baseball.train$TARGET_WINS, na.rm = TRUE)), 
+    col="blue")
+lnames <- c('Empirical density', 'Normal density')
+legend('topright', lnames, col = c('red','blue'), lty = 1) 
+```
+
+This second histogram is the repreentation of the predicted wins data set with NO outliers identified.
+
+```{r}
+hist(final.answer$PREDICTED_WINS_NO, freq = FALSE, 
+   main = paste('Histogram - PREDICTED TARGET_WINS N-O'), 
+   xlab = 'PREDICTED TARGET_WINS N-O', 
+   ylab = 'Density')
+lines(density(final.answer$PREDICTED_WINS_NO, na.rm = TRUE), col="red")
+lines(seq(-400, 500, by=.5), 
+    dnorm(seq(-400, 500, by=.5),
+          mean(final.answer$PREDICTED_WINS_NO, na.rm = TRUE), 
+          sd(final.answer$PREDICTED_WINS_NO, na.rm = TRUE)), 
+    col="blue")
+lnames <- c('Empirical density', 'Normal density')
+legend('topleft', lnames, col = c('red','blue'), lty = 1) 
+```
+
+This second histogram is the repreentation of the predicted wins data set with outliers identified.
+
+```{r}
+hist(final.answer$PREDICTED_WINS_WO, freq = FALSE, 
+   main = paste('Histogram - PREDICTED TARGET_WINS W-O'), 
+   xlab = 'PREDICTED TARGET_WINS W-O', 
+   ylab = 'Density')
+lines(density(final.answer$PREDICTED_WINS_WO, na.rm = TRUE), col="red")
+lines(seq(-400, 500, by=.5), 
+    dnorm(seq(-400, 500, by=.5),
+          mean(final.answer$PREDICTED_WINS_WO, na.rm = TRUE), 
+          sd(final.answer$PREDICTED_WINS_WO, na.rm = TRUE)), 
+    col="blue")
+lnames <- c('Empirical density', 'Normal density')
+legend('topleft', lnames, col = c('red','blue'), lty = 1) 
+```
+
+By comparing the above summaries and looking at the graphs, I decided that the best table of **TARGET_WINS** generated from the last model in which I recalculate values by considering some values considered as outliers, provide a "better"" table of results. Thus it only could possible affect `r sum(reduce.predict1$TEAM_BASERUN_SB_Outlier)` \% of values from our predicted values which is manageable considering the low number of possible errors.
+
+```{r}
+baseball.eval$TARGET_WINS <- final.answer$PREDICTED_WINS_WO
+
+#write.csv(baseball.eval, file = "moneyball-my-evaluated-data.csv",row.names=FALSE)
+```
+
+# APENDIX
+
+Final table: **TARGET WINS**
+
+```{r}
+baseball.eval[c('INDEX','TARGET_WINS')]
+```
+
