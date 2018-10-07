@@ -1,0 +1,271 @@
+---
+title: "Homework 3.2"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "October 07, 2018"
+output:
+  pdf_document: default
+  html_document: default
+  prettydoc::html_pretty:
+    highlight: github;l'
+    theme: leonids
+    toc: yes
+subtitle: CUNY MSDS DATA 609
+---
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+library(knitr)
+
+```
+
+# Problems
+
+The below problems are taken from the text book:
+
+A First Course in Mathematical Modeling, 5th Edition. Frank R. Giordano, William P. Fox, Steven B. Horton. ISBN-13: 9781285050904.
+
+## Exercise \#6 Page 264
+
+Solve using graphical analysis.
+
+Maximize $10x + 35y$
+
+subject to
+
+$8x + 6y \le 48$ (board-feet of lumber)
+
+$4x + y  \le 20$ (hour of carpentry)
+
+$y \ge 5$ (demand)
+
+$x,y \ge 0$ (non-negativity)
+
+
+### Solution
+
+
+```{r, echo=FALSE}
+f1 <- function(x){(48 - 8*x)/6}
+f2 <- function(x){20 - 4*x}
+f <- function(x,y){10*x + 35*y}
+
+x <- c(-1, 6)
+y <- c(-1, 25)
+
+plot(f1, 
+     type='h',
+     ylab = 'y',
+     xlab = 'x',
+     xlim=x,
+     ylim=y,
+     col='red')
+abline(v=0)
+plot(f2, 
+     type='h',
+     ylab = 'y',
+     xlab = 'x',
+     xlim=x,  
+     ylim=y,
+     col='blue',
+     add=TRUE)
+abline(h=5, col='green')
+polygon(c(0,0,18/8),c(5,8,5),col="gray")
+lnames <- c('8x + 6y = 48', '4x + y = 20', 'y =5')
+legend('topright', lnames, col = c('red','blue', 'green'), lty = 1) 
+```
+
+From the above graph, we can see that we have 3 main points in the y axis as follows $A(0,8)$, $B(0,20)$, $E(0,5)$ and then two more intersections with $y=5$ as follows $C(\frac{15}{4},5)$ and $D(\frac{18}{8},5)$ and by evaluating such points on the objective function, we obtain the following results:
+
+```{r}
+x <- c(0,0,18/8)
+y <- c(48/6,5,5)
+f.df <- data.frame(x,y) 
+f.df$`10x + 35y` <- 10*f.df$x + 35*f.df$y
+
+f.df
+```
+
+From the above table, after evaluating our critic points in $10x + 35y$, we found out that the maximum value is 280.
+
+```{r, echo=FALSE}
+fmax <- function(x){(280 - 10*x)/35}
+
+x <- c(-1, 5)
+y <- c(-1, 22)
+
+plot(f1, 
+     type='l',
+     ylab = 'y',
+     xlab = 'x',
+     xlim=x,
+     ylim=y)
+abline(v=0)
+plot(f2, 
+     type='l',
+     ylab = 'y',
+     xlab = 'x',
+     xlim=x,  
+     ylim=y,
+     add=TRUE)
+abline(h=5)
+plot(fmax, 
+     type='S',
+     ylab = 'y',
+     xlab = 'x',
+     xlim=x,  
+     ylim=y,
+     col='red',
+     add=TRUE)
+polygon(c(0,0,18/8),c(5,8,5),col="gray")
+text(x = 0.1, 
+     y = 8.5,
+     labels = 'A(0,8)',
+     adj = 0)
+text(x = 0.1, 
+     y = 20.5,
+     labels = 'B(0,20)',
+     adj = 0)
+text(x = 3.85, 
+     y = 5.5,
+     labels = 'C(3.75,5)',
+     adj = 0)
+text(x = 2.35, 
+     y = 5.5,
+     labels = 'D(2.25,5)',
+     adj = 0)
+text(x = 0.1, 
+     y = 5.5,
+     labels = 'E(0,5)',
+     adj = 0)
+text(x = 3.855, 
+     y = 9.5,
+     labels = '10x + 35y = 280',
+     col='red',
+     adj = 0)
+```
+
+## Exercise \#6 Page 264
+
+Solve using the method of Algebraic Solutions.
+
+Maximize $10x + 35y$
+
+subject to
+
+$8x + 6y \le 48$ (board-feet of lumber)
+
+$4x + y  \le 20$ (hour of carpentry)
+
+$y \ge 5$ (demand)
+
+$x,y \ge 0$ (non-negativity)
+
+
+### Solution
+
+First, we convert the inequalities to equations by adding new necessary non negative "slack" variables $z_1$, $z_2$ and $z_3$. If either $z_1$, $z_2$ or $z_3$ is negative, then the constrain is not satisfied. Thus the problem becomes:
+
+Maximize $10x_1 + 35y_1$
+
+subject to
+
+$8x_1 + 6y_1 + z_1 = 48$
+
+$4x_1 + y_1 + z_2 = 20$
+
+$y_1 + z_3 = 5$
+
+$x_1, y_2, z_1, z_2, z_3 \ge 0$ (non-negativity)
+
+We now consider the entire set of 5 variables ${x_1, y_1, z_1, z_2, z_3}$ to determine the possible intersection point in the $x_1 x_2$ plane.
+
+Let's begin by assigning the variables $x_1$ and $x_2$ the value of zero; resulting in the following set of equations:
+
+$z_1 = 48$
+
+$z_2 = 20$ 
+
+Which is could be a feasible intersection point $A(0,0)$ because all four variables are non negative; but the second constrain is violated by 5 units, indicating that the intersection point $A(0,0)$ is infeseable.
+
+For the second intersection point we choose the variable $x_1$ and $z_1$ and set them to zero, yielding the system:
+
+$6y_1 = 48$
+
+$y_1 + z_2 = 20$
+
+
+That has solution $y_1 = 8$ and $z_2 = 12$, which is feasible intersection point $B(0,8)$.
+
+For the third intersection point we choose $x_1$ and $z_2$ and set them to zero, yielding the system:
+
+$6y_1 + z_1 = 48$
+
+$y_1 = 20$
+
+That has solution $y_1 = 20$ and $z_1 = -72$. Thus, the first constrain is violated by 72 units and the second constrain is violated by 77 units, indicating that the intersection point $C(0,20)$ is infeseable.
+
+In a similar fashion choosing $z_1$ and $z_2$ and setting to zero, yielding the system:
+
+$8x_1 + 6y_1 = 48$
+
+$4x_1 + y_1 = 20$
+
+That has solution $x_1 = \frac{9}{2}$ and $y_1 = 2$ Thus, the second constrain is violated by 3 units, indicating that the intersection point $D(\frac{9}{2},2)$ is infeseable.
+
+For the fourth intersection point we choose $y_1 = 5$ and $z_1 = 0$, yielding the system:
+
+$8x_1 + 30 = 48$
+
+$5 + z_3 = 5$
+
+That has solution $x_1 = \frac{18}{8}$ and $z_3 = 0$ which is feasible intersection point $E( \frac{18}{8},5)$.
+
+For the fifth intersection point we choose $y_1 = 5$ and $z_2 = 0$, yielding the system:
+
+$4x_1 + 5 = 20$
+
+$5 + z_3 = 5$
+
+That has solution $x_1 = \frac{15}{4}$ and $z_3 = 0$ which is feasible intersection point $F( \frac{15}{4},5)$.
+
+For the sixth intersection point we choose, $x_1 = 0$ and $y_1 = 5$, yielding the system:
+
+$30 + z_1 = 48$
+
+$5 + z_2 = 20$
+
+$z_3 = 5$
+
+That has solution $z_1 = 18$, $z_2 = 15$ and $z_3 = 5$ which is feasible intersection point $G(0,5)$.
+
+In summary, of the six possible intersection points in the $x_1 x_2$ plane, the following were found to be feasible.
+
+$B(0,8)$
+
+$E( \frac{18}{8}, 5)$
+
+$F( \frac{15}{4}, 5)$
+
+$G(0,5)$
+
+
+```{r}
+x <- c(0,18/8, 15/4, 0)
+y <- c(8,5,5,5)
+f.df <- data.frame(x,y) 
+f.df$`10x + 35y` <- 10*f.df$x + 35*f.df$y
+
+f.df
+```
+
+**Answer** The maximum generated will be with $x=0$ and $y=8$.
+
+#  End.
+
