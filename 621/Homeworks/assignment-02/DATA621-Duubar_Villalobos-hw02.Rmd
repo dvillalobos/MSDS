@@ -1,0 +1,579 @@
+---
+title: "Homework 02"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "October 14, 2018"
+output:
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+  html_document: default
+  pdf_document: default
+subtitle: CUNY MSDS DATA 621
+---
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+library(knitr)
+library(caret)
+library(pROC)
+library(dplyr)
+library(reshape)
+
+```
+
+# Homework #2
+
+## Overview
+
+In this homework assignment, you will work through various classification metrics. You will be asked to create functions in R to carry out the various calculations. You will also investigate some functions in packages that will let you obtain the equivalent results. Finally, you will create graphical output that also can be used to evaluate the output of classification models, such as binary logistic regression.
+
+## Deliverables:
+
+Upon following the instructions below, use your created R functions and the other packages to generate the classification metrics for the provided data set. A write-up of your solutions submitted in PDF format.
+
+
+## Instructions
+
+Complete each of the following steps as instructed:
+
+### 1.
+**Download the classification output data set (attached in Blackboard to the assignment).**
+
+#### Steps
+
+For reproducibility purposes, I have put the original data sets in my git-hub account and then I will read it as a data frame from that location.
+
+```{r}
+git_user <- 'https://raw.githubusercontent.com/dvillalobos/'
+git_dir <- 'MSDS/master/621/Homeworks/assignment-02/data/'
+classification.df = read.csv(paste(git_user, 
+                                   git_dir, 
+                                   "classification-output-data.csv", 
+                                   sep = "")) 
+```
+
+### 2.
+**The data set has three key columns we will use:**
+
+- **class:** the actual class for the observation
+- **cored.class:** the predicted class for the observation (based on a threshold of 0.5)
+- **cored.probability:** the predicted probability of success for the observation
+
+Use the *table()* function to get the raw confusion matrix for this scored dataset. Make sure you understand the output. In particular, do the rows represent the actual or predicted class? The columns?
+
+#### Steps
+
+**table()** uses the cross-classifying factors to build a contingency table of the counts at each combination of factor levels [1].
+
+First, let's visualize the counts by creating individual reports.
+
+- **Actual class for the observations**
+
+```{r}
+table(classification.df$class, dnn = "Actual class for the observations")
+```
+
+- **Predicted class for the observations**
+
+```{r}
+table(classification.df$scored.class, dnn = "Predicted class for the observations")
+```
+
+- **Raw confusion matrix for this scored dataset**
+
+```{r}
+table(classification.df$scored.class,
+      classification.df$class,
+      dnn = c("Predicted", "Target"))
+```
+
+A confusion matrix shows the number of correct and incorrect predictions made by the classification model compared to the actual outcomes (target value) in the data [2].
+
+From the above table, we can describe as follows:
+
+- **Columns** represent the true values **= Target**.
+
+- **Rows** represent the predicted values **= Model**.
+
+An easy way to corroborate the above assertion, is by performing as follows:
+
+**Column 1:** Represents "0", if we add $119 + 5 = 124$ as seeing in the first summary report for the actual class for the observations.
+
+**Column 2:** Represents "1", if we add $30 + 27 = 57$ as seeing in the first  summary report for the actual class for the observations.
+
+Also, from the above table, we can see the **predicted values in the rows** as follows:
+
+**Row 1:** Represents "0", if we add $119 + 30 = 149$ as seeing in the second  summary report for the predicted class for the observations.
+
+**Row 2:** Represents "1", if we add $5 + 27 = 32$ as seeing in the second  summary report for the predicted class for the observations.
+
+
+### 3.
+**Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the accuracy of the predictions.**
+
+$$Accuracy = \frac{TP + TN}{TP + FP + TN + FN}$$
+
+#### Steps
+
+Below, you will find the R function that will take the data set as a data frame with actual and predicted classifications identified and will return the accuracy of the predictions.
+
+```{r}
+getAccuracy <- function(df){
+  
+  confusion_matrix <- table(df$scored.class,
+                            df$class,
+                            dnn = c("Predicted", "Target"))
+  
+  a <- confusion_matrix[2,2]
+  b <- confusion_matrix[2,1]
+  c <- confusion_matrix[1,2]
+  d <- confusion_matrix[1,1]
+  
+  Accuracy <-  (a+d)/(a+b+c+d)
+  
+  return(Accuracy)
+}
+```
+
+Let's run the above function in order to obtain our model's accuracy.
+
+```{r}
+getAccuracy(classification.df)
+```
+
+From the above results, we obtained that the accuracy is about 80.7\% accurate.
+
+### 4. 
+**Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the classification error rate of the predictions.**
+
+$$Classification \: Error \: Rate = \frac{FP + FN}{TP + FP + TN + FN}$$
+**Verify that you get an accuracy and an error rate that sums to one.**
+
+#### Steps
+
+Below, you will find the R function that will take the data set as a data frame with actual and predicted classifications identified and will return the classification error rate of the predictions.
+
+```{r}
+getClassificationErrorRate <- function(df){
+  
+  confusion_matrix <- table(df$scored.class,
+                            df$class,
+                            dnn = c("Predicted", "Target"))
+  
+  a <- confusion_matrix[2,2]
+  b <- confusion_matrix[2,1]
+  c <- confusion_matrix[1,2]
+  d <- confusion_matrix[1,1]
+  
+  ClassificationErrorRate <-  (b+c)/(a+b+c+d)
+  
+  return(ClassificationErrorRate)
+}
+```
+
+Let's run the above function in order to obtain our model's classification error rate.
+
+```{r}
+getClassificationErrorRate(classification.df)
+```
+
+From the above results, we obtained that the classification error rate is about 19.3\%.
+
+**Observation**
+
+Something interesting to note is that the sum of the two previous results equals 1, that is:
+
+```{r}
+0.8066298 + 0.1933702
+```
+
+Or, just by running our previously build functions as well we can see that our final result equals to 1.
+
+```{r}
+getAccuracy(classification.df) + getClassificationErrorRate(classification.df)
+```
+
+### 5. 
+**Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the precision of the predictions.**
+
+$$Precision = \frac{TP}{TP + FP}$$
+
+#### Steps
+
+Please note that the **Precision** is the same as the **Positive Predictive Value**.
+
+Below, you will find the R function that will take the data set as a data frame with actual and predicted classifications identified and will return the precision of the predictions.
+
+```{r}
+getPrecision <- function(df){
+  
+  confusion_matrix <- table(df$scored.class,
+                            df$class,
+                            dnn = c("Predicted", "Target"))
+  
+  a <- confusion_matrix[2,2]
+  b <- confusion_matrix[2,1]
+  c <- confusion_matrix[1,2]
+  d <- confusion_matrix[1,1]
+  
+  Precision <-  a/(a+b)
+  
+  return(Precision)
+}
+```
+
+Let's run the above function in order to obtain our model's Positive Predictive Value.
+
+```{r}
+getPrecision(classification.df)
+```
+
+From the above results, we obtained that the Positive Predictive Value is about 84.4\%.
+
+### 6. 
+**Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the sensitivity of the predictions. Sensitivity is also known as recall.**
+
+$$Sensitivity = \frac{TP}{TP + FN}$$
+
+#### Steps
+
+Below, you will find the R function that will take the data set as a data frame with actual and predicted classifications identified and will return the sensitivity of the predictions.
+
+```{r}
+getSensitivity <- function(df){
+  
+  confusion_matrix <- table(df$scored.class,
+                            df$class,
+                            dnn = c("Predicted", "Target"))
+  
+  a <- confusion_matrix[2,2]
+  b <- confusion_matrix[2,1]
+  c <- confusion_matrix[1,2]
+  d <- confusion_matrix[1,1]
+  
+  Sensitivity <-  a/(a+c)
+  
+  return(Sensitivity)
+}
+```
+
+Let's run the above function in order to obtain our model's Sensitivity.
+
+```{r}
+getSensitivity(classification.df)
+```
+
+From the above results, we obtained that the Sensitivity is about 47.4\%.
+
+### 7.
+***Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the specificity of the predictions.**
+
+
+$$Specificity = \frac{TN}{TN + FP}$$
+
+#### Steps
+
+Below, you will find the R function that will take the data set as a data frame with actual and predicted classifications identified and will return the Specificity of the predictions.
+
+```{r}
+getSpecificity <- function(df){
+  
+  confusion_matrix <- table(df$scored.class,
+                            df$class,
+                            dnn = c("Predicted", "Target"))
+  
+  a <- confusion_matrix[2,2]
+  b <- confusion_matrix[2,1]
+  c <- confusion_matrix[1,2]
+  d <- confusion_matrix[1,1]
+  
+  Specificity <-  d/(b+d)
+  
+  return(Specificity)
+}
+```
+
+Let's run the above function in order to obtain our model's Specificity.
+
+```{r}
+getSpecificity(classification.df)
+```
+
+From the above results, we obtained that the Specificity is about 95.9\%.
+
+### 8.
+**Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the $F1$ score of the predictions.**
+
+$$F1 \: Score = \frac{2 \times Precision \times Sensitivity}{Precision + Sensitivity}$$
+
+#### Steps
+
+Below, you will find the R function that will take the data set as a data frame with actual and predicted classifications identified and will return the F1 score of the predictions.
+
+```{r}
+getF1Score <- function(df){
+  
+  confusion_matrix <- table(df$scored.class,
+                            df$class,
+                            dnn = c("Predicted", "Target"))
+  
+  a <- confusion_matrix[2,2]
+  b <- confusion_matrix[2,1]
+  c <- confusion_matrix[1,2]
+  d <- confusion_matrix[1,1]
+  
+  Precision <-  a/(a+b)
+  Sensitivity <-  a/(a+c)
+  
+  F1Score <- (2 * Precision * Sensitivity)/(Precision + Sensitivity)
+  
+  return(F1Score)
+}
+```
+
+Let's run the above function in order to obtain our model's F1 score.
+
+```{r}
+getF1Score(classification.df)
+```
+
+From the above results, we obtained that the F1 score is about 60.7\%.
+
+
+### 9. 
+**Before we move on, let's consider a question that was asked: What are the bounds on the $F1$ score? Show that the $F1$ score will always be between $0$ and $1$. (Hint: If $0 < a < 1$ and $0 < b < 1$ then $ab < a$.)**
+
+#### Steps
+
+In order to show that the bounds on the $F1$ score are always between 0 and 1, I will proceed to solve it as follows:
+
+For simplicity reasons, let's define as follows:
+
+P = Precision
+
+S = Sensitivity
+
+Hence, we can rewrite our given formula as follows:
+
+$$F1 \: Score = \frac{2 \times P \times S}{P + S}$$
+
+From previous results, it has been demonstrated that $0 \le P \le 1$ and $0\le S \le 1$; hence we could conclude that $PS \le S$ and $PS \le P$, this implies that $0 \le PS \le P \le 1$ and $0 \le PS \le S \le 1$; from this result and given that we have a numerator in the $[0,1]$, the resulting division by any number will result in a value pertaining to the $[0,1]$ range.
+
+Another way of performing these calculations, will be by employing calculus as follows:
+
+First, let's rearrange our equation as follows:
+
+$$F1 \: Score = \frac{2 \times P \times S}{P + S}$$
+
+We could rewrite it as follows:
+
+$$F1 \: Score = \frac{\frac{2}{1}}{\frac{P + S}{P S}}$$
+
+From here, we could rewrite our equation as follows:
+
+$$F1 \: Score = \frac{\frac{2}{1}}{\frac{P}{P S} + \frac{S}{P S}}$$
+
+And by simplifying, we obtain:
+
+$$F1 \: Score = \frac{2}{\frac{1}{S} + \frac{1}{P}}$$
+
+In order to determine the values, we could calculate as follows:
+
+$$a) \: \: lim_{P->0} \left( lim_{S->0}  \left( \frac{2}{\frac{1}{S} + \frac{1}{P}} \right) \right)$$
+
+$$b) \: \: lim_{P->0} \left( lim_{S->1}  \left( \frac{2}{\frac{1}{S} + \frac{1}{P}} \right) \right)$$
+
+$$c) \: \: lim_{P->1} \left( lim_{S->0}  \left( \frac{2}{\frac{1}{S} + \frac{1}{P}} \right) \right)$$
+
+$$d) \: \: lim_{P->1} \left( lim_{S->1}  \left( \frac{2}{\frac{1}{S} + \frac{1}{P}} \right) \right)$$
+
+By solving the above limits, we conclude as follows:
+
+$$a) \: \: \frac{2}{\infty + \infty }  = 0$$
+
+$$b) \: \: \frac{2}{1 + \infty} = 0$$
+
+$$c) \: \: \frac{2}{\infty + 1} = 0$$
+
+$$d) \: \: \frac{2}{1 + 1} = 1$$
+
+From the above results, is demonstrated that the $F1$ Score will always be between $0$ and $1$.
+
+### 10.
+**Write a function that generates an ROC curve from a data set with a true classification column (class in our example) and a probability column (scored.probability in our example). Your function should return a list that includes the plot of the ROC curve and a vector that contains the calculated area under the curve (AUC). Note that I recommend using a sequence of thresholds ranging from 0 to 1 at 0.01 intervals.**
+
+#### Steps
+
+Let's group and count how many classes are in each 0.01 threshold intervals calculated by rounding to 2 decimals the scored.probability column, if a threshold interval is missing from the list, we will assume that the number of classes for both 0 and 1 in that missing interval is non existent.
+
+```{r}
+reduced.df <- classification.df[c('class','scored.probability')]
+reduced.df$scored.probability <- round(reduced.df$scored.probability,2)
+
+table <- data.frame(table(reduced.df$class, reduced.df$scored.probability))
+table$Var1 <- as.numeric(levels(table$Var1))
+```
+
+Let's visualize our given table in the defined thresholds:
+```{r}
+names(table) <- c('class', 'threshold', 'counts')
+table
+```
+Let's reshape this table in order to have respective group counts by column for 0 and for 1.
+```{r}
+table <- reshape(table, timevar = "class", idvar = "threshold", direction = 'wide')
+table
+```
+
+Let's do some calculations for specificity and sensitivity.
+```{r}
+table$specificity <- cumsum(table$counts.0)/sum(table$counts.0)
+table$sensitivity <- cumsum(table$counts.1)/sum(table$counts.1)
+table
+```
+
+Let's plot our Receiver Operating Characteristic (ROC) Curve for our true classification model.
+```{r}
+plot(1 - table$specificity, table$sensitivity, type = 'l',
+     xlab = '1 - specificity',
+     ylab = 'sensitivity')
+```
+
+Let's create a function that return the Area Under the Curve (AUC). For this process, I will employ Riemann approximation approach in order to calculate the area [3].
+```{r}
+table$x <- 0
+table$y <- 0
+table$auc <- 0
+table$`1 - specificity` <- 1 - table$specificity
+for(i in 1:(dim(table)[1]-1)){
+  table$x[i] <- abs(table$`1 - specificity`[i+1] - table$`1 - specificity`[i])
+  table$y[i] <- abs(table$sensitivity[i+1] - table$sensitivity[i]) 
+  table$auc[i] <- table$x[i] * (table$sensitivity[i] + table$sensitivity[i+1])/2
+  #table$auc[i] <- table$x[i] * table$sensitivity[i] + (table$x[i] * table$y[i])/2 # Alternate
+}
+```
+
+Let's see what's the AUC result.
+```{r}
+sum(table$auc)
+```
+
+As you can see our calculated AUC is about 0.1495.
+
+### 11.
+**Use your created R functions and the provided classification output data set to produce all of the classification metrics discussed above.**
+
+#### Steps
+
+All have been answered on a one by one basis; please review the previous answers.
+
+### 12.
+**Investigate the caret package. In particular, consider the functions confusionMatrix, sensitivity, and specificity. Apply the functions to the data set. How do the results compare with your own functions?**
+
+#### Steps
+
+Let's compare our previous results with the use of the function **confusionMatrix()** from the **caret** library.
+```{r}
+cMatrix <- confusionMatrix(data = as.factor(classification.df$scored.class),
+                           reference = as.factor(classification.df$class),
+                           positive = '1')
+cMatrix
+```
+
+In particular, let's expand the class:
+```{r}
+data.frame(cMatrix$byClass)
+```
+
+
+From the above function, we can notice that all our results and setups match accordingly with our individual results from all previous questions; that is:
+
+- Confusion matrix generated with the **table()** function looks the same .
+- The accuracy match.
+- The classification error also match since the accuracy match.
+- The Pos Pred Value also known as precision also match.
+- The sensitivity also match.
+- The specificity also match.
+- The F1 Score also match.
+
+Now, let's compare sensitivity and specificity.
+```{r}
+sensitivity(data = as.factor(classification.df$scored.class),
+            reference = as.factor(classification.df$class),
+            positive = '1')
+```
+
+As we can see this sensitivity result also match our previous results.
+```{r}
+specificity(data = as.factor(classification.df$scored.class),
+            reference = as.factor(classification.df$class),
+            negative = '0')
+```
+
+Also, if we compare the values, we notice that the results match accordingly.
+
+### 13.
+**Investigate the pROC package. Use it to generate an ROC curve for the data set. How do the results compare with your own functions?**
+
+#### Steps
+
+First, let's prepare our function
+```{r}
+rocCurve <- roc(classification.df$class, classification.df$scored.probability)
+```
+
+Let's see the area under the curve.
+```{r}
+auc(rocCurve)
+```
+
+Let's see the confidence interval.
+```{r}
+ci(rocCurve)
+```
+
+Let's plot our RCO curve.
+```{r}
+plot(rocCurve, print.auc=TRUE, legacy.axes = TRUE)
+```
+
+
+
+#### Notes
+
+Something interesting to note from above, is that our manually provided ROC curve and graph are not aligned with our pROC plot; after some research, I have noticed that the **sensitivity** values generated by the ROC function seem to be **1 - sensitivity** values generated from the manual form; thus making both graphs and areas not matching; however; below is the modification for the manually created chart by adjusting the sensitivity value for **1 - sensitivity**.
+
+```{r}
+plot(1 - table$specificity, 1 - table$sensitivity, type = 'l',
+     xlab = '1 - specificity',
+     ylab = '1 - sensitivity')
+```
+
+Thus producing the following AUC result that matches up to three decimals with our automatically generated values from the pROC function.
+```{r}
+1 - sum(table$auc)
+```
+
+```{r}
+par(mfrow=c(2,2)) 
+plot(rocCurve, print.auc=TRUE, legacy.axes = TRUE)
+plot(1 - table$specificity, 1 - table$sensitivity, type = 'l',
+     xlab = '1 - specificity',
+     ylab = '1 - sensitivity')
+```
+
+## References
+
+[1] https://www.rdocumentation.org/packages/base/versions/3.5.1/topics/table
+
+[2] http://www.saedsayad.com/model_evaluation_c.htm
+
+[3] https://en.wikipedia.org/wiki/Riemann_sum
