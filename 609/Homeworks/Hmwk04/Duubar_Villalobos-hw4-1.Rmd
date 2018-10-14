@@ -1,0 +1,143 @@
+---
+title: "Homework 4.1"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "October 14, 2018"
+output:
+  pdf_document: default
+  html_document: default
+  prettydoc::html_pretty:
+    highlight: github;l'
+    theme: leonids
+    toc: yes
+subtitle: CUNY MSDS DATA 609
+---
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, fig.pos = 'H')
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+library(knitr)
+library(png) 
+
+```
+
+# Problems
+
+The below problems are taken from the text book:
+
+A First Course in Mathematical Modeling, 5th Edition. Frank R. Giordano, William P. Fox, Steven B. Horton. ISBN-13: 9781285050904.
+
+## Exercise \#2 Page 304
+
+The bridges and land masses of a certain city can be modeled with graph G as follows:
+
+```{r, echo=FALSE, out.width = "30%"}
+include_graphics('/home/mydvtech/Dropbox/CUNY/Courses/DATA609/Assignments/Hmwk-4.1/problem2-page304.png') 
+```
+
+### a.
+**Is G Eularian? Why or why not?**
+
+#### Answer
+
+First, let's count how many edges (degrees) each vertex has:
+
+- Vertex 1: has 2 edges.
+- Vertex 2: has 3 edges.
+- Vertex 3: has 4 edges.
+- Vertex 4: has 4 edges.
+- Vertex 5: has 3 edges.
+- Vertex 6: has 2 edges.
+
+Now, in order for the graph to be Eularian, by definition it must be necessary as follows:
+
+- The edges must be connected.
+- Each vertex must have an even degree (number of edges).
+
+As previously noted; there are two vertex that are not even, that is: Vertex 2 and Vertex 5, hence **this graph is not Eularian**.
+
+### b.
+**Supposed we relax the requirements of the walk so that the walker need not to start and end at the same land mass but still must traverse every bridge exactly once. Is this type of walk possible in a city modeled by the grap in the above figure? If so, how? if not, why not?**
+
+#### Answer
+
+This type of walk is **possible**.
+
+In effect, with the relaxed restriction, now is now possible to cross all the bridges exactly one.
+
+One way of crossing will be as follows:
+
+- 1) Cross bridge 2 to 3
+- 2) Cross bridge 3 to 4
+- 3) Cross bridge 4 to 5
+- 4) Cross bridge 5 to 6
+- 5) Cross bridge 6 to 4
+- 6) Cross bridge 4 to 2
+- 7) Cross bridge 2 to 1
+- 8) Cross bridge 1 to 3
+- 9) Cross bridge 3 to 5
+
+Total bridges crossed only once = 9.
+
+From the above, we started in 2 and ended in 5.
+
+Since is demonstrated that at least one way of crossing all bridges exactly once is possible, we concluded that the relaxed requirement makes the assertion possible.
+
+## Exercise \#1 Page 307
+
+Consider the following graph .
+
+```{r, echo=FALSE, out.width = "30%"}
+include_graphics('/home/mydvtech/Dropbox/CUNY/Courses/DATA609/Assignments/Hmwk-4.1/problem1-page307.png') 
+```
+
+### a. 
+**Write down the set of edges $E(G)$.**
+
+#### Answer
+
+$E(G) = \{ ab,bc,cd,de,ef,af,ae,bd,df \}$
+
+### b.
+**Which edges are incident with vertex b?**
+
+#### Answer
+
+$E_b(G) = \{ ba, bc, bd \}$
+
+### c. 
+**Which vertices are adjacent to vertex c?**
+
+#### Answer
+
+Vertex $b$ and vertex $d$ are adjacent to vertex $c$.
+
+### d.
+**Compute $deg(a)$.**
+
+#### Answer
+
+$deg(a) = 3$ 
+
+Since 3 is the number of incidences between a and an edge.
+
+### e.
+**Compute $|E(G)|$.**
+
+#### Answer
+
+Since  $|E(G)|$ represents the number of elements in $E(G)$, and since we have that $E(G) = \{ ab,bc,cd,de,ef,af,ae,bd,df \}$ if we count them, we reach the number of 9.
+
+```{r}
+EG <- c('ab','bc','cd','de','ef','af','ae','bd','df')
+length(EG)
+```
+
+ $|E(G)| = 9$ 
+
+# END
