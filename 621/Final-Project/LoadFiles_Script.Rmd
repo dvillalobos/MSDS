@@ -1,0 +1,34 @@
+---
+title: "Load Files from GitHub Script"
+output: html_notebook
+---
+
+Load files from gitHub script.
+
+```{r}
+github <- 'https://raw.githubusercontent.com/dvillalobos/MSDS/master/621/Final-Project/data/NY_all_assistance_prime_transactions_'
+file_name <- c('10012006-09302007.csv',
+               '10012007-09302008.csv',
+               '10012008-09302009.csv',
+               '10012009-09302010.csv',
+               '10012010-09302011.csv',
+               '10012011-09302012.csv',
+               '10012012-09302013.csv',
+               '10012013-09302014.csv',
+               '10012014-09302015.csv',
+               '10012015-09302016.csv',
+               '10012016-09302017.csv',
+               '10012017-09302018.csv')
+
+in_bool <- 1
+for (file in file_name){
+  temp <- read.csv(paste(github,file, sep = ""))
+  if (in_bool == 1){dset <- temp; in_bool <- 0}
+  else{
+    dset <- rbind(dset, temp)
+  }
+}
+
+head(dset)
+```
+
