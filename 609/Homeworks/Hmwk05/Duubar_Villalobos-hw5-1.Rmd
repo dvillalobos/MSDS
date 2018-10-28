@@ -1,0 +1,85 @@
+---
+title: "Homework 5.1"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "October 28, 2018"
+output:
+  pdf_document:
+      toc: true
+      toc_depth: 3
+      df_print: kable
+      highlight: tango
+      pandoc_args: ["--variable=fontsize: 12pt"]
+  html_document: default
+  prettydoc::html_pretty:
+    highlight: github;l'
+    theme: leonids
+    toc: yes
+subtitle: CUNY MSDS DATA 609
+---
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, fig.pos = 'H')
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+library(knitr)
+library(png) 
+
+```
+
+# Problems
+
+The below problems are taken from the text book:
+
+A First Course in Mathematical Modeling, 5th Edition. Frank R. Giordano, William P. Fox, Steven B. Horton. ISBN-13: 9781285050904.
+
+## Exercise \#1.a Page 385
+
+Using the definition provided for the movement diagram, determine whether the following zero-sum game have a pure strategy Nash Equilibrium. If the game does have a pure strategy Nash Equilibrium, state the Nash equilibrium. Assume the row player is maximizing his payoff which are shown in the matrices below.
+
+```{r, echo=FALSE, out.width = "40%"}
+include_graphics('/home/mydvtech/Dropbox/CUNY/Courses/DATA609/Assignments/Hmwk-5.1/Exercise01-a-Page385.png') 
+```
+
+### Solution:
+
+Let's see the following definitions and notes:
+
+```{r, echo=FALSE, out.width = "100%"}
+include_graphics('/home/mydvtech/Dropbox/CUNY/Courses/DATA609/Assignments/Hmwk-5.1/Nash-Equilibrium-Definition.png') 
+```
+
+Let's have a visual representation from the above matrix.
+
+```{r, echo=FALSE, out.width = "100%"}
+include_graphics('/home/mydvtech/Dropbox/CUNY/Courses/DATA609/Assignments/Hmwk-5.1/Solution-01-a.png') 
+```
+
+From the above image, we can notice how the arrows on the R1 point left and right.
+
+Since, by definition a Nash Equilibrium is an outcome where neither player can benefit by departing unilaterally from it's strategy associated with an outcome. We could conclude that even though the outcome is about the same, just by the fact that one of the players can leave the outcome, makes this zero-sum game not to have a pure strategy Nash Equilibrium.
+
+
+## Exercise \#1.c Page 385
+
+Using the definition provided for the movement diagram, determine whether the following zero-sum game have a pure strategy Nash Equilibrium. If the game does have a pure strategy Nash Equilibrium, state the Nash equilibrium. Assume the row player is maximizing his payoff which are shown in the matrices below.
+
+```{r, echo=FALSE, out.width = "60%"}
+include_graphics('/home/mydvtech/Dropbox/CUNY/Courses/DATA609/Assignments/Hmwk-5.1/Exercise01-c-Page385.png') 
+```
+
+### Solution:
+
+Let's have a visual representation from the above matrix.
+
+```{r, echo=FALSE, out.width = "100%"}
+include_graphics('/home/mydvtech/Dropbox/CUNY/Courses/DATA609/Assignments/Hmwk-5.1/Solution-01-c.png') 
+```
+
+In this particular case, it is a pure strategy Nash Equilibrium but in a particular randomnization over a players pure strategies named **mixed strategy**.
+
+In this case, in order for the pitcher to increase one percent, the batter has to fail 1 percent, and in order to do so, a player can improve by switching outcomes.
