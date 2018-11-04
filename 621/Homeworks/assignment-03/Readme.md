@@ -13,20 +13,20 @@ variables that you derive from the variables provided).
 
 Below is a short description of the variables of interest in the data set:
 
-  zn: proportion of residential land zoned for large lots (over 25000 square feet) (predictor variable).
-  indus: proportion of non-retail business acres per suburb (predictor variable).
-  chas: a dummy var. for whether the suburb borders the Charles River (1) or not (0) (predictor variable).
-  nox: nitrogen oxides concentration (parts per 10 million) (predictor variable).
-  rm: average number of rooms per dwelling (predictor variable).
-  age: proportion of owner-occupied units built prior to 1940 (predictor variable)
-dis: weighted mean of distances to five Boston employment centers (predictor variable).
-rad: index of accessibility to radial highways (predictor variable).
-tax: full-value property-tax rate per $10,000 (predictor variable).
-ptratio: pupil-teacher ratio by town (predictor variable).
-black: 1000(B_k - 0.63)^2 where B k is the proportion of blacks by town (predictor variable).
-lstat: lower status of the population (percent) (predictor variable).
-medv: median value of owner-occupied homes in $1000s (predictor variable).
-target: whether the crime rate is above the median crime rate (1) or not (0) (response variable).
+  - zn: proportion of residential land zoned for large lots (over 25000 square feet) (predictor variable).
+  - indus: proportion of non-retail business acres per suburb (predictor variable).
+  - chas: a dummy var. for whether the suburb borders the Charles River (1) or not (0) (predictor variable).
+  - nox: nitrogen oxides concentration (parts per 10 million) (predictor variable).
+  - rm: average number of rooms per dwelling (predictor variable).
+  - age: proportion of owner-occupied units built prior to 1940 (predictor variable)
+  - dis: weighted mean of distances to five Boston employment centers (predictor variable).
+  - rad: index of accessibility to radial highways (predictor variable).
+  - tax: full-value property-tax rate per $10,000 (predictor variable).
+  - ptratio: pupil-teacher ratio by town (predictor variable).
+  - black: 1000(B_k - 0.63)^2 where B k is the proportion of blacks by town (predictor variable).
+  - lstat: lower status of the population (percent) (predictor variable).
+  - medv: median value of owner-occupied homes in $1000s (predictor variable).
+  - target: whether the crime rate is above the median crime rate (1) or not (0) (response variable).
 
 
 See the attached instructions.
