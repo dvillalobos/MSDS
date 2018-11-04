@@ -1,0 +1,785 @@
+---
+title: "Homework 03"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "November 04, 2018"
+output:
+  pdf_document:
+      highlight: tango
+      toc: true
+      toc_depth: 4
+      number_sections: true
+      df_print: kable
+      
+  html_document: default
+  prettydoc::html_pretty:
+    highlight: github
+    theme: leonids
+    toc: yes
+subtitle: CUNY MSDS DATA 621
+fontsize: 10pt
+geometry: margin=1in
+---
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+library(knitr)
+library(random)
+library(corrplot)
+library(car)
+library(caret)
+library(lmtest)
+library(PerformanceAnalytics)
+library(pROC)
+library(psych)
+library(dplyr)
+library(reshape)
+library(stringr)
+library(tibble)
+
+```
+
+# HOMEWORK \#3
+
+## Overview
+
+In this homework assignment, you will explore, analyze and model a data set containing information on crime for various neighborhoods of a major city. Each record has a response variable indicating whether or not the crime rate is above the median crime rate (1) or not (0).
+
+## Objective
+
+Your objective is to build a binary logistic regression model on the training data set to predict whether the neighborhood will be at risk for high crime levels.
+
+You will provide classifications and probabilities for the evaluation data set using your binary logistic regression model. You can only use the variables given to you (or variables that you derive from the variables provided).
+
+## Description
+
+Below is a short description of the variables of interest in the data set:
+
+```{r, echo=FALSE}
+
+git_user <- 'https://raw.githubusercontent.com/dvillalobos/'
+git_dir <- 'MSDS/master/621/Homeworks/assignment-03/data/'
+
+crime.desc <- read.csv(paste(git_user, git_dir, "hmwrk3-vardesc.csv", sep = "")) 
+crime.desc
+```
+
+## Deliverables
+
+Upon following the instructions below, use your created R functions and the other packages to generate the classification metrics for the provided data set. A write-up of your solutions submitted in PDF format.
+
+# DATA EXPLORATION
+
+## Data acquisition
+
+For reproducibility purposes, I have included the original data sets in my GitHub account, I will read it as a data frame from that location.
+
+```{r}
+
+train.data <- paste(git_user, git_dir, "crime-training-data.csv", sep = "")
+eval.data <- paste(git_user, git_dir, "crime-evaluation-data.csv", sep = "")
+
+```
+
+```{r}
+
+crime.train <- read.csv(train.data) 
+crime.eval <- read.csv(eval.data)
+
+```
+
+## Simple Example
+
+This example will help determine the ideas to follow in order to solve our problem; this is for explanatory purposes on how this problem will be approached. This example will predict the `target` based on the `ptratio`.
+
+```{r}
+
+glm.tr <- glm(target ~ ptratio, data = crime.train)
+summary(glm.tr)
+
+```
+
+Since this is just a very simple example, I would not describe much to it at this point in time; other that the predicted model will include $\beta_0 = -0.55998$ for the intercept and $\beta_1 = 0.05715$ for the rate of change.
+
+Let's visualize this example:
+
+```{r, echo=FALSE}
+
+plot(crime.train$target ~ crime.train$ptratio,
+      type = "p", 
+      col = "blue",
+      main = paste("'High crime' vs 'Pupil-teacher ratio by town'"),
+      xlab = 'Pupil-teacher ratio by town', 
+      ylab = "High crime")
+
+```
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+
+boxplot(ptratio ~ target, 
+        data = crime.train, 
+        notch = FALSE,
+        col = (c("lightgreen","red")),
+        main = "Pupil-teacher ratio by town", 
+        xlab ="High crime")
+
+```
+
+From that simple example we could make some inferences such as it seems that the higher the *Pupil-teacher ratio by town* could influence in *High crime*; this could make sense in the real world since teachers aren't able to provide more individualized education techniques when group sizes are bigger, thus reducing quality education time per student. But yet again, this is just an example on how one predictor could influence in this particular case.
+
+
+## General exploration
+
+The below process will help us obtain insights from the data.
+
+### Dimensions
+
+Let's see the dimensions of our training data set.
+
+```{r, echo=FALSE}
+
+dimensions <- dim(crime.train)
+dimensions <- data.frame('Records' = dimensions[1],
+                         'Variables' = dimensions[2])
+dimensions
+
+```
+
+As we can notice, the training data set has a total of `r dimensions$Records[1]` different records and `r dimensions$Variables[1]` variables including the **target** variable corresponding to *high crime*.
+
+### Structure
+
+The below structure is currently present in the data, for simplicity purposes, I have previously loaded and treated this data set as a data frame in which all the variables with decimals are numeric.
+
+```{r, echo=FALSE}
+
+str(crime.train)
+
+```
+
+### Summary
+
+Let's find some summary statistics about our given data.
+
+```{r, echo=FALSE}
+
+crime.summary <- data.frame(unclass(summary.default(crime.train)))
+crime.summary
+
+```
+
+Let's get a little bit more insights for all the columns including the *target* variable.
+
+```{r, echo=FALSE}
+
+crime.summary <- data.frame(unclass(summary(crime.train)), 
+                          check.names = FALSE, 
+                          row.names = NULL,
+                          stringsAsFactors = FALSE)
+
+# Let's transpose the resulting data frame
+crime.summary <- data.frame(t(crime.summary))
+
+# Let's rename the columns
+colnames(crime.summary) <- c('Min', '1st Qu', 'Median', 'Mean', '3rd Qu', 'Max')
+
+# Let's extract numeric values
+crime.summary$Min <- as.numeric(gsub('Min.   :', '', crime.summary$Min))
+crime.summary$`1st Qu` <- as.numeric(gsub('1st Qu.:', '', crime.summary$`1st Qu`))
+crime.summary$Median <- as.numeric(gsub('Median :', '', crime.summary$Median))
+crime.summary$Mean <- as.numeric(gsub('Mean   :', '', crime.summary$Mean))
+crime.summary$`3rd Qu` <- as.numeric(gsub('3rd Qu.:', '', crime.summary$`3rd Qu`))
+crime.summary$Max <- as.numeric(gsub('Max.   :', '', crime.summary$Max))
+
+crime.summary
+
+```
+
+### Missing data
+
+Fortunately from the above statistics summary, it seems that we don't need to worry about missing values or **NA**, since no reports are given for that category.
+
+### Visualizations
+
+In the below graphs, the colors indicate that any record not including a high crime shows a green circle, while a record indicating a high crime has been plot in a red triangle. The diagonal plots the empirical distribution for both classes.
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+
+scatterplotMatrix(~ zn + indus + chas + nox | target, data=crime.train,
+                  span=0.7, id.n=0, col =  c("darkgreen","red"))
+
+```
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+
+scatterplotMatrix(~ rm + age + dis + rad | target, data=crime.train,
+                  span=0.7, id.n=0, col =  c("darkgreen","red"))
+
+```
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+
+scatterplotMatrix(~ tax + ptratio + black + lstat + medv | target, data=crime.train,
+                  span=0.7, id.n=0, col =  c("darkgreen","red"))
+
+```
+
+Let's separate our data for visualization purposes.
+
+```{r, echo=FALSE}
+nrows <- 1
+ncols <- 4 
+boxcol <- c("lightgreen","red")
+
+par(mfrow=c(nrows,ncols))
+boxplot(crime.train[,1] ~ crime.train[,14], col = boxcol, main = colnames(crime.train)[1], xlab = 'Crime')
+boxplot(crime.train[,2] ~ crime.train[,14], col = boxcol, main = colnames(crime.train)[2], xlab = 'Crime')
+boxplot(crime.train[,3] ~ crime.train[,14], col = boxcol, main = colnames(crime.train)[3], xlab = 'Crime')
+boxplot(crime.train[,4] ~ crime.train[,14], col = boxcol, main = colnames(crime.train)[4], xlab = 'Crime')
+
+```
+
+```{r, echo=FALSE}
+nrows <- 1
+ncols <- 4 
+boxcol <- c("lightgreen","red")
+
+par(mfrow=c(nrows,ncols))
+boxplot(crime.train[,5] ~ crime.train[,14], col = boxcol, main = colnames(crime.train)[5], xlab = 'Crime')
+boxplot(crime.train[,6] ~ crime.train[,14], col = boxcol, main = colnames(crime.train)[6], xlab = 'Crime')
+boxplot(crime.train[,7] ~ crime.train[,14], col = boxcol, main = colnames(crime.train)[7], xlab = 'Crime')
+boxplot(crime.train[,8] ~ crime.train[,14], col = boxcol, main = colnames(crime.train)[8], xlab = 'Crime')
+
+```
+
+```{r, echo=FALSE}
+nrows <- 1
+ncols <- 5 
+boxcol <- c("lightgreen","red")
+
+par(mfrow=c(nrows,ncols))
+boxplot(crime.train[,9] ~ crime.train[,14], col = boxcol, main = colnames(crime.train)[9], xlab = 'Crime')
+boxplot(crime.train[,10] ~ crime.train[,14], col = boxcol, main = colnames(crime.train)[10], xlab = 'Crime')
+boxplot(crime.train[,11] ~ crime.train[,14], col = boxcol, main = colnames(crime.train)[11], xlab = 'Crime')
+boxplot(crime.train[,12] ~ crime.train[,14], col = boxcol, main = colnames(crime.train)[12], xlab = 'Crime')
+boxplot(crime.train[,13] ~ crime.train[,14], col = boxcol, main = colnames(crime.train)[13], xlab = 'Crime')
+
+```
+
+### Count values
+
+Let's have a small understanding on how many records were categorized as 0 and how many as 1.
+
+```{r, echo=FALSE}
+crime.count <- crime.train %>% group_by(target) %>% summarize(Counts=n())
+crime.count <- data.frame(crime.count)
+crime.count$Percent <- crime.count$Counts / sum(crime.count$Counts)
+round(crime.count,3)
+```
+
+From the above results, we could assume that in effect the values seems to be uniformly distributed since almost half the data represent 0 and almost half represent 1.
+
+### Mean values
+
+From the above graphs, we could notice how the means on both categories seem to have different values.
+
+Let's try to calculate their respective mean values.
+
+```{r, echo=FALSE}
+
+crime.mean <- crime.train %>% group_by(target) %>% summarise_at(vars(-target), funs(mean(., na.rm=TRUE)))
+crime.mean <- data.frame(t(crime.mean))
+
+# Need to rename columns
+colnames(crime.mean) <- c('Low Crime', 'High Crime')
+
+# Need to discard taget row.
+crime.mean <- crime.mean[-1, ] 
+
+crime.mean$Difference <- crime.mean$`Low Crime` - crime.mean$`High Crime`
+crime.mean$`% Impact` <- (1 -  crime.mean$`High Crime` / crime.mean$`Low Crime`) *100
+crime.mean$`% Impact` <- round(crime.mean$`% Impact`,0)
+
+crime.mean <- round(crime.mean,2)
+
+crime.mean$Insights[crime.mean$`% Impact` < 0 ] <- paste(abs(crime.mean$`% Impact`[crime.mean$`% Impact` < 0 ]), "% higher")
+crime.mean$Insights[crime.mean$`% Impact` >= 0 ] <- paste(abs(crime.mean$`% Impact`[crime.mean$`% Impact` >= 0 ]), "% lower")
+
+crime.mean[c('Low Crime', 'High Crime', 'Insights')]
+
+```
+
+From the above table, we can easily identify how the mean values for the respective categories differ from one another and by how much. Also, we can quickly identify how the respective percentages compare to one another. 
+
+### Correlations
+
+Let's create some visualizations for the correlation matrix.
+
+```{r, echo=FALSE}
+# Need to reorder by columns in order to set 'target' first
+crime.train <- crime.train[c(14,1:13)]
+
+```
+
+```{r,echo=FALSE}
+
+my_matrix <- crime.train
+cor_res <- cor(my_matrix, use = "na.or.complete")
+
+```
+
+#### Graphical visualization
+
+```{r, warning=FALSE, echo=FALSE}
+
+corrplot(cor_res, 
+         type = "upper", 
+         order = "original", 
+         tl.col = "black", 
+         tl.srt = 45, 
+         tl.cex = 0.75)
+
+```
+
+#### Numerical visualization
+
+```{r, echo=FALSE}
+chart.Correlation(crime.train,
+                  method="spearman",
+                  histogram=TRUE,
+                  pch=16)
+```
+
+From the above graphs, we can easily identify some strong correlations in between the response variable `target` and other variables.
+
+Let's read our correlations table to gain extra insights.
+
+```{r, echo=FALSE}
+cor_res <- data.frame(cor_res)
+cor_res[1]
+```
+
+As we can easily check the above results, there seems to have considerable correlations in between our `target` variable among other given variables.
+
+Something interesting to note from the above graph, is that we can easily visualize some sort of strong positive correlation in between variables; for example: `tax` seems to be strongly positively correlated to `ptratio`; in this case, their correlation values will be: `r cor_res['rad','tax']`; so I will keep this in mind in case of multivariate co-linearity.
+
+# DATA PREPARATION
+
+From the correlations table, we could focus on the variables that contain the strongest correlations related to our `target` variable; in this case, I will set my cut off at with any correlation in which the absolute value will be higher than 0.5.
+
+```{r, echo=FALSE}
+cor_res1 <- cor_res[which(abs(cor_res$target) > 0.50),]
+cor_res1[1]
+```
+
+As we can see, we have reduced our number of possible predictor in half. From now on, I will focus on these variables only. Notice how in this smaller table `ptratio` is not part of it? In this case, I will assume this to be correct avoiding co-linearity problems further down.
+
+
+```{r, echo=FALSE}
+
+include <- rownames(cor_res1)
+reduced.train <- crime.train[include] 
+
+```
+
+Let's recap our previous plots for those variables.
+
+```{r,echo=FALSE}
+nrows <- 1
+ncols <- 3 
+boxcol <- c("lightgreen","red")
+
+par(mfrow=c(nrows,ncols))
+boxplot(reduced.train[,2] ~ reduced.train[,1], col = boxcol, main = colnames(reduced.train)[2], xlab = 'Crime')
+boxplot(reduced.train[,3] ~ reduced.train[,1], col = boxcol, main = colnames(reduced.train)[3], xlab = 'Crime')
+boxplot(reduced.train[,4] ~ reduced.train[,1], col = boxcol, main = colnames(reduced.train)[4], xlab = 'Crime')
+
+```
+
+```{r,echo=FALSE}
+nrows <- 1
+ncols <- 3 
+boxcol <- c("lightgreen","red")
+
+par(mfrow=c(nrows,ncols))
+boxplot(reduced.train[,5] ~ reduced.train[,1], col = boxcol, main = colnames(reduced.train)[5], xlab = 'Crime')
+boxplot(reduced.train[,6] ~ reduced.train[,1], col = boxcol, main = colnames(reduced.train)[6], xlab = 'Crime')
+boxplot(reduced.train[,7] ~ reduced.train[,1], col = boxcol, main = colnames(reduced.train)[7], xlab = 'Crime')
+
+```
+
+Let's recap the structure of the remaining variables:
+
+```{r}
+str(reduced.train)
+```
+
+At this point, we are getting ready to start building models, however I would like to point out that in this case is a little bit difficult to determine what data transformation could be used in order to refine our models.
+
+## Binary Logistic Regression
+
+I would like to point that since this work requires **Binary Logistic Regression**, we are going to be using the **logit** function as our Likelihood link function for Logistic Regression by assuming that it follows a binomial distribution as follows:
+
+$$y_i | x_i \sim Bin(m_i,\theta(x_i))$$
+
+so that,
+
+$$P(Y_i=y_i | x_i)= \binom{m_i}{y_i} \theta(x_i)^{y_i}(1-\theta(x_i))^{m_i-y_i} $$
+
+Now, in order to solve our problem, we need to build a linear predictor model in which the individual predictors that compose the response $Y_i$ are all subject to the same $q$ predictors $(x_{i1}, …, x_{iq})$. Please note that the group of predictors, are commonly known as **covariate classess**. In this case, we need a model that describes the relationship of $x_1, …, x_q$ to $p$. In order to solve this problem, we will construct a linear predictor model as follows:
+
+$$\mathfrak{N}_i = \beta_0 + \beta_1x_{i1}+...+\beta_qx_{iq} $$
+
+## Logit link function
+
+In this case, since we need to set $\mathfrak{N}_i = p_i$; with $0 \le p_i \le 1$, I will use the *link function* $g$ such that $\mathfrak{N}_i = g(p_i)$ with $0 \le g^{-1}(\mathfrak{N}) \le 1$ for any $\mathfrak{N}$. In order to do so, I will pick the **Logit** link function $\mathfrak{N} = log(p/(1 - p))$.
+
+An alternate way will be by employing the $\chi^2$ Chi square distribution; for the purposes of this project, I will employ the use of the binomial distribution or the $\chi^2$ depending on which one is a better choice, also I will assume that all $Y_i$ are all independent of each other.
+
+# BUILD MODELS
+
+The following will be the methods employed in order to build our model.
+
+## NULL Model
+
+In this section I will build a **Binary Logistic Regression** Null model utilizing all the variables and data, please note that I won't do any transformations. This model will be considered to be valid and will be considered as we advance.
+
+```{r}
+
+Model_NULL <- glm(target ~ 1, 
+              data = crime.train, 
+              family = binomial(link ="logit"))
+
+summary(Model_NULL)
+
+```
+
+I will assume that this to be a valid model.
+
+\newpage
+
+
+## FULL Model
+
+In this section I will build a **Binary Logistic Regression** Full model utilizing all the variables and data, please note that I won't do any transformations. This model will be considered to be valid and will be considered as we advance.
+
+```{r}
+
+Model_FULL <- glm(target ~ ., 
+              data = crime.train, 
+              family = binomial(link ="logit"))
+
+summary(Model_FULL)
+
+```
+
+In this particular case, we notice how some variables are not statistically significant; for study purposes, I will assume that this is a valid model.
+
+## STEP Procedure
+
+In this case, I will create multiple models, let's see the results.
+
+```{r}
+Model_STEP <- step(Model_NULL,
+                   scope = list(upper=Model_FULL),
+                   direction="both",
+                   test="Chisq",
+                   data=crime.train)
+
+Model_STEP
+```
+
+From the above possible models, it was concluded that the Model with the lowest **Akaike's Information Criterion (AIC)** is the one containing the following variables: **nox, rad, tax, ptratio, black, medv, age, dis, zn, lstat**.
+
+\newpage
+
+### ANOVA results
+
+Let's check an ANOVA table based on the above testing results.
+
+```{r}
+Model_STEP$anova
+```
+
+**IMPORTANT** 
+
+If we check our theory, the **AIC** defines as follows: *the smaller the value for AIC the better the model*; in this case, we can easily observe how the by adding certain variables, our AIC values decrease making it a better model.
+
+## AIC Model
+
+From the above results and calculations, it was concluded that the best model is as follows:
+
+```{r}
+Model_AIC = glm(formula = target ~ 
+                nox + rad + tax + ptratio + black + medv + age + dis + zn + lstat, 
+                family = binomial(link = "logit"), 
+                data = crime.train)
+
+summary(Model_AIC)
+```
+
+From the above model, it is interesting to note how all of the predictor variables but `lstat` are statistically significant; also, we can notice how the Median is near zero and how the standard error could be considered low.
+
+## Modified AIC
+
+From the above results, i will create a new modified model by excluding `lstat` from the previous model.
+
+```{r}
+Model_AIC = glm(formula = target ~ 
+                nox + rad + tax + ptratio + black + medv + age + dis + zn,
+                family = binomial(link = "logit"), 
+                data = crime.train)
+
+summary(Model_AIC)
+```
+
+Is interesting to note that now, all predictors are statistically significant, the standard errors and the median are still small but it seems that actually increased alongside the AIC with a slight increase.
+
+## Intuition Model
+
+From the correlations analysis table, I concluded that some variables were more correlated to `target` than others. In this section, I will create a model based on that output by including the following variables only and I will use it in order to choose my best selected model.
+
+```{r,echo = FALSE}
+
+data.frame(Variables = row.names(cor_res1))
+
+```
+
+In this case, I will employ the following variables: **indus, nox, age, dis, rad, tax**.
+
+```{r}
+
+Model_INTUITION <- glm(target ~ indus + nox + age + dis + rad + tax, 
+                       data = crime.train, 
+                       family = binomial(link = logit))
+
+summary(Model_INTUITION)
+
+```
+
+From the above results, we can quickly identify the non statistical significance of `indus` and `dis`. Also, we notice how the AIC value has increased in a moderate way, along side the Residual Deviance.
+
+From here moving forward, I will try to "refine" this model.
+
+## Intuition Model Refined
+
+From the previous results, I will proceed to do backward elimination; in this case, I will exclude the variables `indus` and `dis`.
+
+```{r}
+
+Model_Refined <- glm(target ~ nox + age + rad + tax, 
+              data = crime.train, 
+              family = binomial(link = logit))
+
+summary(Model_Refined)
+
+```
+
+Finally, we notice how all the given predictors are statistically significant but also, we can notice how the AIC increased, the Median is higher than before and how the residual deviance increased as well.
+
+# MODEL SELECTION
+
+From the above possible models, I will select the model given with the lowest AIC; if it is true, it includes the highest number of variables, it is the model that provides better possible outcome in this particular case; hence my selected model will be the one containing the following variables: **nox, rad, tax, ptratio, black, medv, age, dis, zn, lstat**.
+
+```{r}
+Model_FINAL <- Model_AIC
+summary(Model_FINAL)
+```
+
+
+The reasons are explained below:
+
+- This model returned the lowest **Akaike's Information Criterion** AIC.
+
+- This model returned the nearest to zero median value.
+
+- This model included the most number of significant statistically predictive values.
+
+- This model displayed the smallest standard errors for the considered predictor variables.
+
+- This model present the smallest rate of change for all predictor variables.
+
+- This model returned the lowest residual deviance.
+
+- From the below table we can see how the probability of being higher than the $\chi^2$ are very low.
+
+```{r}
+Anova(Model_FINAL, type="II", test="Wald")
+```
+
+## Test model
+
+From the above chosen model, I will create a reduced data frame containing only the variables needed in order to run our model.
+
+```{r}
+
+select_var <- c('target', 'nox', 'rad', 'tax', 'ptratio', 'black', 
+                'medv', 'age', 'dis', 'zn', 'lstat')
+
+crime.train.final <- crime.train[select_var]
+
+```
+
+### Final Model Comparisons
+
+From here, I will define a null model with the chosen variables in order to compare results with the final model.
+
+```{r}
+
+Model_NULL = glm(target ~ 1,
+                 data=crime.train.final,
+                 family = binomial(link="logit"))
+
+summary(Model_NULL)
+
+```
+
+### Analysis of Deviance Table
+
+The below table, will display a Deviance analysis by employing the $\chi^2$ test.
+
+```{r}
+
+anova(Model_FINAL,
+      Model_NULL,
+      test="Chisq")
+
+```
+
+In the above results, we can easily compare our Residual Deviance in which our model has better results compared to the null model since the null model's deviance will increase in 453.31 units compared to our final model. 
+
+### Likelihood ratio test
+
+In order to do so, I will employ the **lrtest** function from the **lmtest** library; this is a generic function for carrying out likelihood ratio tests. The default method can be employed for comparing nested (generalized) linear models. 
+
+```{r}
+
+lrtest(Model_FINAL)
+
+```
+
+As you can see, in our Final Model, we obtain much better results compared to our NULL model, hence this corroborates that our Final Model has a much better Likelihood ratio compared to the NULL Model.
+
+### Plot of standardized residuals
+
+The below plot shows our fitted models vs the deviance r standardized residuals.
+
+```{r}
+
+plot(fitted(Model_FINAL),
+     rstandard(Model_FINAL),
+     main = 'Standarize residuals for binary data',
+     xlab = 'Fitted values',
+     ylab = 'Standarized Deviance Residuals',
+     col = 'blue')
+
+```
+
+### Simple plot of predictions
+
+The below plot is a visual representation of the predicted values versus the given values aka `target`.
+
+```{r}
+
+crime.train.final$predict = predict(Model_FINAL,
+                                    type="response")
+
+plot(target ~ predict,
+     data = crime.train.final,
+     pch = 16,
+     xlab="Predicted probability of 1 response",
+     ylab="Actual response",
+     col = 'blue')
+
+```
+
+## Evaluations
+
+In this section, I will proceed to evaluate my chosen final model in terms of (a) accuracy, (b) classification error rate, (c) precision, (d) sensitivity, (e) specificity, (f) F1 score, (g) AUC, and (h) confusion matrix. 
+
+In order to do so, I will need to perform a couple of "transformations"; that is to round the given probabilities to zero decimals.
+
+```{r}
+
+crime.train.final$predicted_target <- round(crime.train.final$predict,0)
+
+crime.train.table <- table(crime.train.final$predicted_target, 
+                           crime.train.final$target,   
+                           dnn = c("Predicted", "Target"))
+
+data.frame(crime.train.table)
+```
+
+### Confusion Matrix
+
+Let's start by building a confusion matrix in order to obtain valuable insights.
+
+```{r}
+cMatrix <- confusionMatrix(data = as.factor(crime.train.final$predicted_target),
+                           reference = as.factor(crime.train.final$target),
+                           positive = '1')
+cMatrix
+```
+
+From the above results, we obtain as follows:
+
+```{r, echo=FALSE}
+data.frame(Value = cMatrix$byClass)
+```
+
+### ROC and AUC
+
+As we know, the **Receiver Operating Characteristic Curves** (ROC) is a great quantitative assessment tool of the model. In order to quantify our model, I will employ as follows:
+
+
+```{r}
+# First, let's prepare our function
+rocCurve <- roc(target ~ predict, data = crime.train.final)
+
+# Let's plot our RCO curve.
+plot(rocCurve, print.auc=TRUE, legacy.axes = TRUE)
+```
+
+Let's see our confidence intervals.
+
+```{r, echo=FALSE}
+
+rownames_ci <- c('Lower bound', 'Estimated value', 'Higher bound')
+crime.ci <- data.frame(AUC = ci(rocCurve))
+rownames(crime.ci) <- rownames_ci
+crime.ci
+
+```
+
+\newpage
+
+# PREDICTIONS
+
+## Table
+
+In this section, I will predict the values on the **evaluation** data set employing the **training** data set.
+
+```{r, echo=FALSE}
+prob = predict(Model_FINAL, newdata=crime.eval, type = 'response')
+
+crime.eval$predicted <-round(prob,0)
+crime.eval[c(14,1:13)]
+```
+
+\newpage
+## Classification and probability
+
+In this section, I will provide a table in which the classification is reported alongside the probability for it.
+
+```{r, echo=FALSE}
+crime.eval$probability <- round(prob,3)
+crime.eval[c('predicted','probability')]
+```
+
+
