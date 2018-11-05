@@ -1,0 +1,196 @@
+---
+title: "Homework 5.2"
+author: "Duubar Villalobos Jimenez  mydvtech@gmail.com"
+date: "November 4, 2018"
+
+output:
+ pdf_document:
+   highlight: tango
+   toc: true
+   toc_depth: 4
+   number_sections: true
+   df_print: kable
+   
+ html_document: default
+ 
+ prettydoc::html_pretty:
+  highlight: github
+  theme: leonids
+  toc: yes
+  
+fontsize: 10pt
+geometry: margin=1in
+subtitle: CUNY MSDS DATA 609
+---
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, fig.pos = 'H')
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+library(knitr)
+library(png) 
+
+```
+
+# Problems
+
+The below problems are taken from the text book:
+
+A First Course in Mathematical Modeling, 5th Edition. Frank R. Giordano, William P. Fox, Steven B. Horton. ISBN-13: 9781285050904.
+
+## Exercise \#3 Page 469
+
+**The following data were obtained for the growth of a sheep population introduced into a new environment on the island of Tasmania (adapted from J. Davidson, "On the Growth of the Sheep Population in Tasmania," *Trans. R. Soc. S. Asutralia* 62(1938): 342-346).**
+
+```{r, echo = FALSE}
+t <- c(1814,1824,1834,1844,1854,1864)
+p <- c(125,275,830,1200,1750,1650)
+
+df <- data.frame(t, p)
+df <- data.frame(t(df))
+
+names(df) <- NULL
+rownames(df) <- c('t(year)','P(t)')
+df
+```
+
+### Estimates
+
+**Make an estimate of M by graphing $P(t)$.**
+
+#### Solution
+
+First, lets plot our data.
+
+```{r, echo=FALSE}
+df <- data.frame(t, p)
+plot(df$p ~ df$t, 
+   type ='o', 
+   col = 'blue',
+   xlab = 't(year)',
+   ylab = 'P(t)')
+```
+
+From the graph, we can observe how there seems to be a trend and the maximum value $M$ seems no to exceed $M = 1800$.
+
+### Plots
+
+**Plot $ln[P/(M-P)]$ against $t$. If a logistic curve seems reasonable, estimate $rM$ and $t^*$.**
+
+#### Solution
+
+Let's see our plot:
+
+```{r, echo=FALSE}
+M <- 1800
+df$ln <- log(df$p/(M - df$p))
+```
+
+
+```{r, echo=FALSE}
+plot(df$ln ~ df$t, 
+   type ='o', 
+   col = 'blue',
+   xlab = 't(year)',
+   ylab = 'ln[P/(M-P)]')
+abline(lm(df$ln ~ df$t), col = "red", lty = 3)
+```
+
+From the above plot, there series of values, seems not to be approximated by a linear model. Hence, a logistic curve seems to be appropriate.
+
+Now, since
+
+$$ln \frac{P}{M-P} = rMt + C$$
+
+We could estimate the slope $rM$ as follows:
+
+
+```{r, echo=FALSE}
+linear_model <- lm(df$ln ~ df$t)
+summary(linear_model)
+```
+
+From the above results, we have:
+
+$\beta_0 = -218.31833$
+
+$\beta_1 = 0.11891$
+
+Resulting in:
+
+$$ln \frac{P}{M-P} = \beta_0 + \beta_1t$$
+
+Which means that $\beta_0 = C$ and $\beta_1 = rM$
+
+$\therefore C = -218.31833$
+
+$\therefore rM = 0.11891$
+
+Now, in order to find $t^*$, we perform as follows:
+
+$$t^* = -\frac{C}{rM}$$
+
+$$t^* = -\frac{-218.31833}{0.11891}$$
+
+
+```{r, echo=FALSE}
+C <- linear_model$coefficients[[1]]
+rM <- linear_model$coefficients[[2]]
+t_star <- -C / rM
+
+```
+
+$t^*$ = `r t_star`.
+
+An alternative, will be by employing the following formula:
+
+$$t^* = t_0 - \frac{1}{rM} ln \frac{P_0}{M-P_0}$$
+
+$$t^* = 1814 - \frac{1}{0.11891} ln \frac{125}{1800-125}$$
+
+```{r, echo=FALSE}
+t_star1 <- t[1] - 1/rM * log(p[1]/(M-p[1]))
+```
+
+$t^*$ = `r t_star1`.
+
+
+```{r, echo=FALSE}
+e <- -rM * (t - t_star)
+df$lcurve <- M/(1+exp(e))
+```
+
+```{r, echo=FALSE}
+plot(df$lcurve ~ df$t, 
+   type ='o', 
+   lty = 3,
+   col = 'red',
+   xlab = 't(year)',
+   ylab = 'P(t)')
+par(new=TRUE)
+plot(df$p ~ df$t, 
+   type ='p', 
+   col = 'blue',
+   xlab = 't(year)',
+   ylab = 'P(t)')
+```
+
+## Exercise \#6 Page 478
+
+**Suggest other phenomena for which the model described in the text might be used.**
+
+### Solution
+
+Let's see what is our Problem identification:
+
+*How can the doses and the time between doses be adjusted to maintain a safe but effective concentration of the drug in the blood?*
+
+### Suggested phenomena
+
+In my case, I think that it could be used for colony of bacteria growing in an environment with limited resources; let's say with lack of food, or space constraints on the size of the colony. In this case, I believe that it is not reasonable to expect the colony to grow exponentially; making the colony unable to grow larger than some maximum population P.
+
