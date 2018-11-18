@@ -1,0 +1,469 @@
+---
+title: "Homework 6.1"
+author: "Duubar Villalobos Jimenez  mydvtech@gmail.com"
+date: "November 18, 2018"
+
+output:
+ pdf_document:
+   highlight: tango
+   toc: true
+   toc_depth: 4
+   number_sections: true
+   df_print: kable
+   
+ html_document: default
+ 
+ prettydoc::html_pretty:
+  highlight: github
+  theme: leonids
+  toc: yes
+  
+fontsize: 10pt
+geometry: margin=1in
+subtitle: CUNY MSDS DATA 609
+---
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, fig.pos = 'H')
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+library(knitr)
+library(png) 
+
+```
+
+# Problems
+
+The below problems are taken from the text book:
+
+A First Course in Mathematical Modeling, 5th Edition. Frank R. Giordano, William P. Fox, Steven B. Horton. ISBN-13: 9781285050904.
+
+## Exercise \#1 Page 529
+
+**In the following problem, verify that the given function pairs is a solution to the first-order system.**
+
+$x = -e^t, \:\:\: y = e^t$
+
+$\frac{dx}{dt} = -y, \:\:\: \frac{dy}{dt} = -x$
+
+### Solution
+
+#### Verifying for $x = -e^t$
+
+$\frac{dx}{dt} =\frac{d}{dt} \left( -e^t \right)$
+
+$\frac{dx}{dt} = - \frac{d}{dt} \left( e^t \right)$
+
+$\frac{dx}{dt} = - [e^t]$; since $y = e^t$
+
+$\therefore \frac{dx}{dt} = -y$
+
+#### Verifying for $y = e^t$
+
+
+$\frac{dy}{dt} =\frac{d}{dt} \left( e^t \right)$
+
+$\frac{dy}{dt} = e^t$
+
+Since $e^t = -[-e^t]$
+
+$\frac{dy}{dt} = -[-e^t]$; since $x = -e^t$
+
+$\therefore \frac{dy}{dt} = -x$
+
+
+## Exercise \#6 Page 529
+
+**In the following problem, find and classify the rest points of the given autonomous system.**
+
+$\frac{dx}{dt} = -(y - 1), \:\:\: \frac{dy}{dt} = x - 2$
+
+### Solution
+
+In order to find the rest points, we need to evaluate $f(x,y) = 0$ and $g(x,y) = 0$, where $\frac{dx}{dt} = f(x,y)$ and $\frac{dy}{dt} = g(x,y)$
+
+#### Evaluating $\frac{dx}{dt} = 0$
+
+$\frac{dx}{dt} = -y + 1$
+
+$0 = -y + 1$
+
+$\therefore y = 1$
+
+#### Evaluating $\frac{dy}{dt} = 0$
+
+$\frac{dy}{dt} = x - 2$
+
+$0 = x - 2$
+
+$\therefore x = 2$
+
+From the above, we have determined our point to be $x_0 = 2$ and $y_0 = 1$.
+
+The rest point is $(2,1)$
+
+#### Verification
+
+$f(x_0, y_0)$ and $g(x_0, y_0)$
+
+$f(x_0, y_0) = -(y_0 - 1)$ and $g(x_0, y_0) = x_0 - 2$
+
+$f(2, 1) = -(1 - 1)$ and $g(2, 1) = 2 - 2$
+
+$f(2, 1) = 0$ and $g(2, 1) = 0$
+
+#### Graphical visualization
+
+```{r, echo=FALSE, out.width = "100%"}
+include_graphics('/home/mydvtech/Dropbox/CUNY/Courses/DATA609/Assignments/Hmwk-6.1/problem6.png') 
+```
+
+The above graph was reproduced using a slope field tool located at: https://www.bluffton.edu/homepages/facstaff/nesterd/java/slopefields.html
+
+The above graph was obtained by selecting the Euler's method, with $\Delta t = 0.1$ and a starting point $x_1 = 2.01, y_1 = 1.01$.
+
+From the above graph, we can easily conclude that the rest point ins **unstable**; that is, due to the trajectory does not approach the the point $(x_0 = 2, y_0 = 1)$ as $t \rightarrow \infty^+$.
+
+
+## Exercise \#7 Page 536
+
+**Show that the two trajectories loading to $(m/n, a/b)$ shown in the following Figure are unique.**
+
+```{r, echo=FALSE, out.width = "100%"}
+include_graphics('/home/mydvtech/Dropbox/CUNY/Courses/DATA609/Assignments/Hmwk-6.1/Problem7.png') 
+```
+
+### a.
+
+From system (12.6) derive the following equation:
+
+$$\frac{dy}{dx} = \frac{(m-nx)y}{(a-by)x}$$
+
+#### Solution
+
+From (12.6) we have as follows:
+
+$\frac{dx}{dt} = (a-by)x$ and $\frac{dy}{dt} = (m-nx)y$.
+
+This implies as follows:
+
+$dt = \frac{dx}{(a-by)x}$ and $dt = \frac{dy}{(m-nx)y}$
+
+From there, we have as follows:
+
+$dt = dt$
+
+$\frac{dx}{(a-by)x} = \frac{dy}{(m-nx)y}$
+
+$\therefore \frac{dy}{dx} = \frac{(m-nx)y}{(a-by)x}$
+
+
+### b.
+
+Separate variables,integrate and exponentiate to obtain:
+
+$$y^a e^{-by} = K x^m e^{-nx}$$
+
+where $K$ is a constant of integration.
+
+#### Solution
+
+From 
+
+$$\frac{dy}{dx} = \frac{(m-nx)y}{(a-by)x}$$
+We have as follows:
+
+$(a-by) \frac{dy}{y} = (m-nx) \frac{dx}{x}$
+
+$\int (a-by) \frac{dy}{y} = \int (m-nx) \frac{dx}{x}$
+
+$\int \frac{a}{y}dy - \int b dy = \int \frac{m}{x}dx - \int n dx$
+
+$a \:ln|y| + K_1 - by + K_2 = m \: ln|x| + K_3 - nx + K_4$
+
+$e^{ln|y^a| - by + K_{12}} = e^{ln|x^m| - nx + K_{34}}$
+
+$e^{ln|y^a|} e^{- by} e^{K_{12}} = e^{ln|x^m|} e^{- nx} e^{K_{34}}$
+
+$y^a e^{- by} = x^m e^{- nx} \frac{e^{K_{34}}}{e^{K_{12}}}$
+
+Let $K = \frac{e^{K_{34}}}{e^{K_{12}}}$
+
+$\therefore y^a e^{- by} = K \: x^m e^{- nx}$
+
+### c.
+
+Let $f(y) = y^a / e^{by}$ and $g(x) = x^m / e^{nx}$. Show that $f(y)$ has a unique maximum of $M_y = (a/eb)^a$ when $y=a/b$ as shown in the following figure. Similarly, show that $g(x)$ has unique maximum $M_x = (m/en)^m$ when $x = m/n$, also shown in the following figure.
+
+**Please note that the text book has a typo in the problem description in which indicate "unique maximum $M_x = (x/en)^m$" but it should be "unique maximum $M_x = (m/en)^m$".
+
+```{r, echo=FALSE, out.width = "100%"}
+include_graphics('/home/mydvtech/Dropbox/CUNY/Courses/DATA609/Assignments/Hmwk-6.1/Problem7c.png') 
+```
+
+#### Solution
+
+In order to find our critical points, we need to find our first derivatives.
+
+##### Find first derivatives
+
+$f(y) = y^a / e^{by}$ implies that the first derivative is:
+
+$y^l = ay^{a-1} e^-{by} - y^a e^{-by}$
+
+$g(x) = x^m / e^{nx}$ implies that the first derivative is:
+
+$g^l = mx^{m-1} e^{m-1} - n x^m e^{-nx}$
+
+#### Find critical points
+
+From the above, we can do that by performing:
+
+$y^l = 0$ and $g^l = 0$
+
+Let's resolve for $y^l = 0$
+
+$$0 = \left[ \frac{a}{y} - b \right] y^a e^{-by}$$
+From the above the only part can could become zero is as follows:
+
+$0 = \left[ \frac{a}{y} - b \right]$
+
+Resulting in
+
+$y = \frac{a}{b}$
+
+Let's resolve for $g^l = 0$
+
+$$0 = \left[ \frac{m}{x} - n \right] x^m e^{-nx}$$
+From the above the only part can could become zero is as follows:
+
+$0 = \left[ \frac{m}{x} - n \right]$
+
+Resulting in
+
+$x = \frac{m}{n}$
+
+Hence, we have our critical point $(x = \frac{m}{n}, y = \frac{a}{b})$
+
+In order to know if this critical point is a maximum value, we need to evaluate it in the second derivative of the given functions.
+
+$$f^{ll} = a^2 y^{a - 2} e^{-b y} + b^2 y^a e^{-b y} - a y^{a - 2} e^{-b y} - 2 a b y^{a - 1} e^{-b y}$$
+By evaluating $y = \frac{a}{b}$ we obtain a negative value, indicating that this point is a maximum value. This evaluation process is rather complicated to write it down and it has been completed online by using https://www.wolframalpha.com.
+
+Now, by evaluating $y = \frac{a}{b}$ on the original function, we have as follows:
+
+$f(\frac{a}{b}) = e^{-a}\left(\frac{a}{b}\right)^a = \left(\frac{a}{eb} \right)^a$
+
+$$g^{ll} = m^2 x^{m - 2} e^{-n x} + n^2 x^m e^{-n x} - m x^{m - 2} e^{-n x} - 2 m n x^{m - 1} e^{-n x}$$
+
+By evaluating $x = \frac{m}{n}$ we obtain a negative value, indicating that this point is a maximum value. This evaluation process is rather complicated to write it down and it has been completed online by using https://www.wolframalpha.com.
+
+Now, by evaluating $x = \frac{m}{n}$ on the original function, we have as follows:
+
+$g(\frac{m}{n}) = e^{-m}\left(\frac{m}{n}\right)^m = \left(\frac{m}{en} \right)^m$
+
+### d. 
+
+Consider what happens as $(x,y)$ approaches $(m/n,a/b)$. Take limits in part (b) as $x \rightarrow m/n$ and $y \rightarrow a/b$ to show that
+
+$$ lim_{\substack{y\rightarrow a/b\\x\rightarrow m/n}} \left[ \left( \frac{y^a}{e^{by}} \right) \left(\frac{e^{nx}}{x^m} \right) \right] = K$$
+
+or $M_y/M_x = K$. Thus, any solution trajectory that approaches $(m/n, a/b)$ must satisfy
+
+$$\frac{y^a}{e^{by}} = \left( \frac{M_y}{M_x} \right) \left( \frac{x^m}{e^{nx}} \right)$$
+
+#### Solution
+
+In this case, I will proceed to calculate the limit as follows:
+
+$$ lim_{\substack{y\rightarrow a/b\\x\rightarrow m/n}} \left[ \left( \frac{y^a}{e^{by}} \right) \left(\frac{e^{nx}}{x^m} \right) \right] = \left[ \left( \frac{(a/b)^a}{e^{b(a/b)}} \right) \left(\frac{e^{n(m/n)}}{(m/n)^m} \right) \right]$$
+
+$$ lim_{\substack{y\rightarrow a/b\\x\rightarrow m/n}} \left[ \left( \frac{y^a}{e^{by}} \right) \left(\frac{e^{nx}}{x^m} \right) \right] =  \left( \frac{(a/b)^a}{e^{a}} \right) \left(\frac{e^{m}}{(m/n)^m} \right) $$
+
+$$ lim_{\substack{y\rightarrow a/b\\x\rightarrow m/n}} \left[ \left( \frac{y^a}{e^{by}} \right) \left(\frac{e^{nx}}{x^m} \right) \right] =  \left( \frac{a/b}{e} \right)^a \left(\frac{e}{m/n} \right)^m $$
+
+$$ lim_{\substack{y\rightarrow a/b\\x\rightarrow m/n}} \left[ \left( \frac{y^a}{e^{by}} \right) \left(\frac{e^{nx}}{x^m} \right) \right] =  \left( \frac{a}{eb} \right)^a \left(\frac{en}{m} \right)^m$$
+
+$$ lim_{\substack{y\rightarrow a/b\\x\rightarrow m/n}} \left[ \left( \frac{y^a}{e^{by}} \right) \left(\frac{e^{nx}}{x^m} \right) \right] =  \left( \frac{a}{eb} \right)^a \left(\frac{m}{en} \right)^{-m}$$
+
+$$ lim_{\substack{y\rightarrow a/b\\x\rightarrow m/n}} \left[ \left( \frac{y^a}{e^{by}} \right) \left(\frac{e^{nx}}{x^m} \right) \right] =  \frac{ \left( \frac{a}{eb} \right)^a }{ \left(\frac{m}{en} \right)^m}$$
+
+Since $M_y = (a/eb)^a$ and $M_x = (m/en)^m$, we have as follows:
+
+$$ lim_{\substack{y\rightarrow a/b\\x\rightarrow m/n}} \left[ \left( \frac{y^a}{e^{by}} \right) \left(\frac{e^{nx}}{x^m} \right) \right] =  \frac{ M_y }{ M_x}$$
+
+Hence
+
+$$ K =  \frac{ M_y }{ M_x}$$
+
+Now, from (b), we had $$y^a e^{-by} = K x^m e^{-nx}$$ or
+
+$$\frac{y^a}{e^{by}} = K \frac{x^m}{e^{nx}}$$
+We can replace K as follows:
+
+$$\frac{y^a}{e^{by}} = \frac{ M_y }{ M_x} \cdot \frac{x^m}{e^{nx}}$$
+
+
+## Exercise \#2 Page 576
+
+Consider a company that allows back ordering. That is, the company notifies customers that a temporary stock-out exist and that their order will be filled out shortly. What conditions might argue for such a policy? What effect does such a policy have on outage costs? Should costs be assigned to stock-outs? Why? How would you make such an assignment? What assumptions are implied by the model in the figure 13.7? Suppose a "loss of goodwill cost" of *w* dollars per unit per day is assigned to each stock-out. Compute the optimal order quantity $Q^*$ and interpret your model.
+
+
+### Solution
+
+#### What conditions might argue for such a policy?
+
+From my perspective, some conditions could be:
+
+- Custom made or specific products in which demand is not very high.
+
+- Products that require special handling and transportation.
+
+- New technologies not fully developed.
+
+- Products that have high demand with low fulfillment rate.
+
+#### What effect does such a policy have on outage costs?
+
+Definitely one of the main costs related to such a policy will be storage costs.
+
+#### Should costs be assigned to stock-outs? and Why?
+
+From my perspective, it all depends on the case. For example if it is a product that moves constant, then there should be a cost associated with it, since a stock-out will represent lost revenue. But, on the other hand, if it is a slow moving product in which not much demand is seeing; then, there should be an analysis to see if rush shipping costs could be attached.
+
+#### How would you make such an assignment? 
+
+It will all depends on the product demand's over time; if it is better to have the product stored for short periods of time vs long periods of time.
+
+#### What assumptions are implied by the model in Figure 13.7?
+
+The assumptions from the model figure are:
+
+- There are inventory cycles of an order quantity **q** consumed in **t** days that permits stock-outs.
+
+#### Suppose a "loss of goodwill cost" of *w* dollars per unit per day is assigned to each stock-out. Compute the optimal order quantity $Q^*$ and interpret your model.
+
+Model Formulation
+
+s = storage cost per day
+
+C = cost per cycle
+
+c = average daily cost
+
+d = delivery cost per delivery
+
+r = demand rate of product per day
+
+w = loss of goodwill cost
+
+q+ = quantity of product available
+
+q- = quantity of product as stock-out
+
+aq+ = average of daily inventory
+
+Q* = optimal order quantity of product
+
+t+ = time in days in which the product is available right away
+
+t- = time in days in order to get stock-outs
+
+T = time in days
+
+**From above, we have as follows:**
+
+Q* = q- + q+
+
+T = t+ + t-
+
+aq+ = q+ / 2
+
+C = d  + s \* t+ \* aq+
+
+and diving by t+, we obtain the average daily cost.
+
+$c = \frac{d}{t+} + s \cdot aq+$ 
+
+
+
+## Exercise \#2 Page 584
+
+Find the local minimum value value of the function:
+
+$$f(x,y) = 3x^2 + 6xy +7y^2 -2x +4y$$
+
+### Solution
+
+For this, we have to find as follows:
+
+$\frac{\partial f}{\partial x} = 0$ and $\frac{\partial f}{\partial y} = 0$
+
+Now,
+
+$\frac{\partial f}{\partial x} = 6x+6y-2$
+
+$\frac{\partial f}{\partial y} = 6x+14y+4$
+
+Since we have to solve
+
+$\begin{cases} 0 = 6x+6y-2 \\ 0 = 6x+14y+4 \end{cases}$
+
+We have $y=-\frac{3}{4},\:x=\frac{13}{12}$
+
+Just to verify if the above point is truly a minimum; lets evaluate the second derivative process.
+
+$\frac{\partial 6x+6y-2}{\partial x} = 6$
+
+$\frac{\partial 6x+6y-2}{\partial y} = 6$
+
+
+
+$\frac{\partial 6x+14y+4}{\partial x} = 6$
+
+$\frac{\partial 6x+14y+4}{\partial y} = 14$
+
+Since all resulting values are positive, we can conclude as follows:
+
+Our minimum value will be $(x=\frac{13}{12}, y=-\frac{3}{4})$
+
+\newpage
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+plotf <- function (x, y) {
+   return (3*x^2 + 6*x*y + 7*y^2 - 2*x + 4*y)
+}
+
+x <- seq(-20, 20, length= 50)
+y <- x
+z <- outer(x, y, plotf)
+z[is.na(z)] <- 1
+
+require(lattice)
+wireframe(z, drape=T, 
+          col.regions=rainbow(100), 
+          xlab = 'x', ylab = 'y', zlab = 'f(x,y)')
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
