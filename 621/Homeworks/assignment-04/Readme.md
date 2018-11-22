@@ -12,30 +12,30 @@ Your objective is to build multiple linear regression and binary logistic regres
 
 Below is a short description of the variables of interest in the data set:
 
-- INDEX	Identification Variable (do not use)
-- TARGET_FLAG	Was Car in a crash? 1=YES 0=NO
-- TARGET_AMT	If car was in a crash, what was the cost
-AGE	Age of Driver
-BLUEBOOK	Value of Vehicle
-CAR_AGE	Vehicle Age
-CAR_TYPE	Type of Car
-CAR_USE	Vehicle Use
-CLM_FREQ	# Claims (Past 5 Years)
-EDUCATION	Max Education Level
-HOMEKIDS	# Children at Home
-HOME_VAL	Home Value
-INCOME	Income
-JOB	Job Category
-KIDSDRIV	# Driving Children
-MSTATUS	Marital Status
-MVR_PTS	Motor Vehicle Record Points
-OLDCLAIM	Total Claims (Past 5 Years)
-PARENT1	Single Parent
-RED_CAR	A Red Car
-REVOKED	License Revoked (Past 7 Years)
-SEX	Gender
-TIF	Time in Force
-TRAVTIME	Distance to Work
-URBANICITY	Home/Work Area
-YOJ	Years on Job
+- **INDEX**	Identification Variable (do not use)
+- **TARGET_FLAG**	Was Car in a crash? 1=YES 0=NO
+- **TARGET_AMT**	If car was in a crash, what was the cost
+- **AGE**	Age of Driver
+- **BLUEBOOK**	Value of Vehicle
+- **CAR_AGE**	Vehicle Age
+- **CAR_TYPE**	Type of Car
+- **CAR_USE**	Vehicle Use
+- **CLM_FREQ**	# Claims (Past 5 Years)
+- **EDUCATION**	Max Education Level
+- **HOMEKIDS**	# Children at Home
+- **HOME_VAL**	Home Value
+- **INCOME**	Income
+- **JOB**	Job Category
+- **KIDSDRIV**	# Driving Children
+- **MSTATUS**	Marital Status
+- **MVR_PTS**	Motor Vehicle Record Points
+- **OLDCLAIM**	Total Claims (Past 5 Years)
+- **PARENT1**	Single Parent
+- **RED_CAR**	A Red Car
+- **REVOKED**	License Revoked (Past 7 Years)
+- **SEX**	Gender
+- **TIF**	Time in Force
+- **TRAVTIME**	Distance to Work
+- **URBANICITY**	Home/Work Area
+- **YOJ**	Years on Job
 
