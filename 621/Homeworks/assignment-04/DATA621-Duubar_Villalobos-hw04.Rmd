@@ -1,0 +1,1669 @@
+---
+title: "Homework 04"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "November 04, 2018"
+output:
+  pdf_document:
+      highlight: zenburn
+      toc: true
+      toc_depth: 4
+      number_sections: true
+      df_print: kable
+      
+  html_document:
+      df_print: paged
+      code_folding: hide
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+    toc: yes
+    df_print: paged
+subtitle: CUNY MSDS DATA 621
+fontsize: 10pt
+geometry: margin=1in
+---
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+library(knitr)
+library(dplyr)
+library(car)
+library(stringr)
+library(corrplot)
+library(PerformanceAnalytics)
+library(caret)
+library(pROC)
+#library(lmtest)
+#library(kableExtra)
+#library(random)
+#library(psych)
+#
+#library(caret)
+#library(lmtest)
+#library(PerformanceAnalytics)
+#library(pROC)
+#library(psych)
+
+#library(reshape)
+#
+#library(tibble)
+
+```
+
+\newpage
+# HOMEWORK
+
+## Overview
+
+In this homework assignment, you will explore, analyze and model a data set containing approximately $8000$ records representing a customer at an auto insurance company. Each record has two response variables. The first response variable, **TARGET_FLAG**, is a $1$ or a $0$. A "$1$" means that the person was in a car crash. A zero means that the person was not in a car crash. The second response variable is **TARGET_AMT**. This value is zero if the person did not crash their car. But if they did crash their car, this number will be a value greater than zero.
+
+## Objective
+
+Your objective is to build multiple linear regression and binary logistic regression models on the training data to predict the probability that a person will crash their car and also the amount of money it will cost if the person does crash their car. You can only use the variables given to you (or variables that you derive from the variables provided).
+
+
+## Dataset description
+
+```{r, echo=FALSE}
+
+git_user <- 'dvillalobos'
+git_user <- paste('https://raw.githubusercontent.com/',git_user,sep = "")
+git_dir <- '/MSDS/master/621/Homeworks/assignment-04/data/'
+
+data.desc <- read.csv(paste(git_user, git_dir, "hmwrk4-vardesc.csv", sep = "")) 
+data.desc$VARIABLE_NAME <- str_trim(data.desc$VARIABLE_NAME)
+data.desc$DEFINITION <- str_trim(data.desc$DEFINITION)
+data.desc$THEORETICAL_EFFECT <- str_trim(data.desc$THEORETICAL_EFFECT)
+```
+
+### Variable definitions
+
+The below list represent the definitions for each given variable.
+
+```{r, echo=FALSE}
+data.desc[,c("VARIABLE_NAME", "DEFINITION")]
+```
+
+
+### Theoretical effect of variables
+
+The below list represent the theoretical effects for each given variable.
+
+```{r, echo=FALSE}
+data.desc[,c("VARIABLE_NAME", "THEORETICAL_EFFECT")]
+```
+
+## Deliverables
+
+- A write-up submitted in PDF format. Your write-up should have four sections. Each one is described below. You may assume you are addressing me as a fellow data scientist, so do not need to shy away from technical details.
+
+- Assigned predictions (probabilities, classifications, cost) for the evaluation data set. Use $0.5$ threshold.
+
+- Include your R statistical programming code in an Appendix.
+
+\newpage
+# DATA EXPLORATION
+
+## Data acquisition
+
+For reproducibility purposes, I have included the original data sets in my Git Hub account, I will read it as a data frame from that location.
+
+```{r, echo=FALSE}
+get_data <- function(git_user, git_dir, file){
+
+  file_loc <- paste(git_user, git_dir, file, sep = "") 
+  data <- read.csv(file_loc, stringsAsFactors=TRUE)
+  return(data)
+  
+}
+```
+
+```{r}
+
+data.train <- get_data(git_user, git_dir, 'insurance_training_data.csv') 
+data.eval <- get_data(git_user, git_dir, 'insurance-evaluation-data.csv') 
+
+```
+
+## General exploration
+
+The below process will help us obtain insights from our given data.
+
+### Dimensions
+
+Let's see the dimensions of our training data set.
+
+```{r, echo=FALSE}
+
+dimensions <- dim(data.train)
+dimensions <- data.frame('Records' = dimensions[1],
+                         'Variables' = dimensions[2])
+dimensions
+
+```
+
+From the above table, we can see how the training data set has a total of `r dimensions$Records[1]` different records and `r dimensions$Variables[1]` variables including **INDEX, TARGET_FLAG** and **TARGET_AMT**. These variables do not represent much of the initial insights since they correspond to our response variables.
+
+For simplicity reasons, I will discard the **INDEX** column.
+
+```{r, echo=TRUE}
+
+remove_cols <- names(data.train) %in% c('INDEX')
+data.train <- data.train[!remove_cols]
+
+```
+
+
+### Structure
+
+The below structure is currently present in the data, for simplicity reasons, I have previously loaded and treated this data set as a data frame in which all the variables with decimals are numeric.
+
+
+```{r, echo=FALSE}
+# Taken from https://gist.github.com/jbryer/4a0a5ab9fe7e1cf3be0e
+
+# strtable that provides the information str.data.frame does but returns the results as a data.frame. 
+# This provides much more flexibility for controlling how the output is formatted. 
+# Specifically, it will return a data.frame with four columns: variable, class, levels, and examples.
+  
+strtable <- function(df, n=4, width=60, 
+					 n.levels=n, width.levels=width, 
+					 factor.values=as.character) {
+	stopifnot(is.data.frame(df))
+	tab <- data.frame(variable=names(df),
+					  class=rep(as.character(NA), ncol(df)),
+					  levels=rep(as.character(NA), ncol(df)),
+					  examples=rep(as.character(NA), ncol(df)),
+					  stringsAsFactors=FALSE)
+	collapse.values <- function(col, n, width) {
+		result <- NA
+		for(j in 1:min(n, length(col))) {
+			el <- ifelse(is.numeric(col),
+						 paste0(col[1:j], collapse=', '),
+						 paste0('"', col[1:j], '"', collapse=', '))
+			if(nchar(el) <= width) {
+				result <- el
+			} else {
+				break
+			}
+		}
+		if(length(col) > n) {
+			return(paste0(result, ', ...'))
+		} else {
+			return(result)
+		}
+	}
+	
+	for(i in seq_along(df)) {
+		if(is.factor(df[,i])) {
+			tab[i,]$class <- paste0('Factor w/ ', nlevels(df[,i]), ' levels')
+			tab[i,]$levels <- collapse.values(levels(df[,i]), n=n.levels, width=width.levels)
+			tab[i,]$examples <- collapse.values(factor.values(df[,i]), n=n, width=width)
+		} else {
+			tab[i,]$class <- class(df[,i])[1]
+			tab[i,]$examples <- collapse.values(df[,i], n=n, width=width)
+		}
+		
+	}
+	
+	class(tab) <- c('strtable', 'data.frame')
+	return(tab)
+}
+
+#' Prints the results of \code{\link{strtable}}.
+#' @param x result of code \code{\link{strtable}}.
+#' @param ... other parameters passed to \code{\link{print.data.frame}}.
+#' @export
+print.strtable <- function(x, ...) {
+	NextMethod(x, row.names=FALSE, ...)
+}
+```
+
+```{r, echo=FALSE}
+
+#str(data.train)
+str.data.train <- strtable(data.train)[,c(1:3)]
+str.data.train
+
+```
+
+From the above table, we can notice how we need to take care of certain strings that are seeing as factors but in reality they are representing numbers and should not be seeing as factors. This will be addressed in more detail as we advance.
+
+
+## Summaries
+
+Let's find some summary statistics about our given data, for that; I will get a little bit more insights for all the columns including the **TARGET_FLAG** and **TARGET_AMT** variables.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Function that extract summary values into a
+get_df_summary <- function(df){
+  df.summary <- data.frame(unclass(summary(df)), 
+                          check.names = FALSE, 
+                          row.names = NULL,
+                          stringsAsFactors = FALSE)
+  
+  # Let's transpose the resulting data frame
+  df.summary <- data.frame(t(df.summary))
+  
+  # Let's rename the columns
+  if ( length(colnames(df.summary)) > 6 ){
+    colnames(df.summary) <- c('Min', '1st Qu', 'Median', 'Mean', '3rd Qu', 'Max', 'Other')
+    df.summary$Other <- as.character(df.summary$Other)
+  } else {
+    colnames(df.summary) <- c('Min', '1st Qu', 'Median', 'Mean', '3rd Qu', 'Max')
+    
+  }
+  
+  # Let's extract numeric values
+  df.summary$Min <- as.numeric(gsub('Min.   :', '', df.summary$Min))
+  df.summary$`1st Qu` <- as.numeric(gsub('1st Qu.:', '', df.summary$`1st Qu`))
+  df.summary$Median <- as.numeric(gsub('Median :', '', df.summary$Median))
+  df.summary$Mean <- as.numeric(gsub('Mean   :', '', df.summary$Mean))
+  df.summary$`3rd Qu` <- as.numeric(gsub('3rd Qu.:', '', df.summary$`3rd Qu`))
+  df.summary$Max <- as.numeric(gsub('Max.   :', '', df.summary$Max))
+  
+  df.summary[is.na(df.summary)] <- ""
+  row.names(df.summary) <- str_trim(row.names(df.summary))
+  return(df.summary)
+
+}
+
+```
+
+### Combined Summary
+
+In this section, we will explore the combined results as introductory insights.
+
+```{r, ech0=FALSE, message=FALSE, warning=FALSE}
+
+data.train.summary <- get_df_summary(data.train)
+data.train.summary
+
+```
+
+Please note that this is for introductory insights and should not be considered as complete results.
+
+### TARGET_FLAG Summaries
+
+In the mean time I will split the data into two data-sets depending on the **TARGET_FLAG**. Let's see some summaries for each group.
+
+```{r, echo=TRUE}
+
+TARGET_FLAG_0 <- data.train[data.train$TARGET_FLAG == 0,]
+TARGET_FLAG_1 <- data.train[data.train$TARGET_FLAG == 1,]
+
+```
+
+#### Number of records by group
+
+The below table shows how many records each group has.
+
+```{r, echo=FALSE}
+
+dim_0 <-dim(TARGET_FLAG_0)[1]
+dim_1 <-dim(TARGET_FLAG_1)[1]
+dim_t <-dim(data.train)[1]
+
+dim_0.p <- round(dim_0[1] * 100 / dim_t[1],2)
+dim_1.p <- round(dim_1[1] * 100 / dim_t[1],2)
+
+dim_df <- t(data.frame("TARGET_FLAG_0" = c(dim_0, dim_0.p),
+                     "TARGET_FLAG_1" = c(dim_1, dim_1.p),
+                     "TOTAL"  = c(dim_t, dim_0.p+dim_1.p)))
+
+colnames(dim_df) <- c("Records", "Percentage")
+data.frame(dim_df)
+
+```
+
+#### TARGET_FLAG = 0
+
+Let's have a better look at the individualized summaries by having TARGET_FLAG = 0.
+
+```{r, ech0=FALSE, message=FALSE, warning=FALSE}
+
+data.train.summary_0 <- get_df_summary(TARGET_FLAG_0)
+data.train.summary_0
+
+```
+
+#### TARGET_FLAG = 1
+
+Let's have a better look at the individualized summaries by having TARGET_FLAG = 1.
+
+```{r, ech0=FALSE, message=FALSE, warning=FALSE}
+
+data.train.summary_1 <- get_df_summary(TARGET_FLAG_1)
+data.train.summary_1
+
+```
+
+
+From the above reports, we can notice how we need to "transform" our data in order to make it more workable. 
+
+In order to do so, I will start to prep the data. Graphical visualizations and correlations will be provided later on since we need to address a few things in order to make our data more workable.
+
+## Findings
+
+From the above table, is interesting to note as follows:
+
+- The training data-set shows the presence of missing values or **NAs** in some columns; that can be seeing in the **Other** column. This will be addressed as we prepare our data down the road.
+
+- **"(Other)"** means that there are factor values that could not be grouped accordingly.
+
+- Interesting to see that **CAR_AGE** shows a minimum value of -3. This needs to be investigated since it seems that it's not accurate.
+
+- The Maximum value for **TARGET_AMT** seems to be very far away from the mean and the median value. This needs to be evaluated and find out if this is accurate.
+
+
+
+
+\newpage
+# DATA PREPARATION
+
+In this section, I will prepare our given data-set. For that I will need to address a few things, like factors and missing data.
+
+## Data conversion
+
+In this section, I will describe the conversion of the data that is required in order to have a more manageable understanding of it.
+
+### FACTOR to NUMERIC
+
+This section explains the conversions of currency values in which the system interpreted as factors when in reality these should have been treated as numeric type.
+
+The variables that need to be converted are: **INCOME, HOME_VAL, BLUEBOOK** and **OLDCLAIM**.
+
+```{r, echo=FALSE}
+
+# Function that transform Factor variables to Numeric
+factor_to_numeric <- function(df){
+  
+  df$INCOME <- as.character(df$INCOME)
+  df$INCOME <- as.numeric(gsub('[$,]', '', df$INCOME))
+  
+  df$HOME_VAL <- as.character(df$HOME_VAL)
+  df$HOME_VAL <- as.numeric(gsub('[$,]', '', df$HOME_VAL))
+  
+  df$BLUEBOOK <- as.character(df$BLUEBOOK)
+  df$BLUEBOOK <- as.numeric(gsub('[$,]', '', df$BLUEBOOK))
+  
+  df$OLDCLAIM <- as.character(df$OLDCLAIM)
+  df$OLDCLAIM <- as.numeric(gsub('[$,]', '', df$OLDCLAIM))
+
+  return(df)
+}
+
+```
+
+```{r, echo=FALSE}
+
+data.train <- factor_to_numeric(data.train)
+
+```
+
+### FACTOR to "Dummy"
+
+In this section, I will transform the remaining factor variables into various binary "Dummy" variables with values 1 for "Yes" and 0 for "No". 
+
+The variables that need to be converted are: **PARENT1, MSTATUS, SEX, EDUCATION, JOB, CAR_USE, CAR_TYPE, RED_CAR, REVOKED** and **URBANICITY**.
+
+Please note that there will be a a new set of variables summarizing the above data as follows:
+
+- **IS_SINGLE_PARENT** will represent if **PARENT1** = "Yes" with a value of $1$; $0$ otherwise.
+
+- **IS_MARRIED** will represent if **MSTATUS** = "Yes"" with a value of $1$; $0$ otherwise.
+
+- **IS_FEMALE** will represent if **SEX** = "z_F" with a value of $1$; $0$ otherwise.
+
+- **EDUCATION** will represent diverse **EDUCATION** levels, "<High School" is the default and this column was not included.
+
+- **JOB** will represent diverse **JOB** levels, "Blank" is the default and this column was not included.
+
+- **IS_CAR_PRIVATE_USE** will represent if **CAR_USE** = "Private" with a value of $1$; $0$ otherwise.
+
+- **CAR_TYPE** will represent diverse **CAR_TYPE** levels, "Minivan" is the default and this column was not included.
+
+- **IS_CAR_RED** will represent if **RED_CAR** = "Yes" with a value of $1$; $0$ otherwise.
+
+- **IS_LIC_REVOKED** will represent if **REVOKED** = "Yes" with a value of $1$; $0$ otherwise.
+
+- **IS_URBAN** will represent if **URBANICITY** = "Highly Urban/ Urban" with a value of $1$; $0$ otherwise.
+
+
+```{r, echo=FALSE}
+# Function that transform Factor variables to Binary Dummy variables
+factor_to_dummy <- function(df){
+  
+  PARENT1 <- data.frame(model.matrix( ~ PARENT1 - 1, data=df )) 
+  MSTATUS <- data.frame(model.matrix( ~ MSTATUS - 1, data=df )) 
+  SEX <- data.frame(model.matrix( ~ SEX - 1, data=df ))
+  EDUCATION <- data.frame(model.matrix( ~ EDUCATION - 1, data=df ))
+  JOB <- data.frame(model.matrix( ~ JOB - 1, data=df ))
+  CAR_USE <- data.frame(model.matrix( ~ CAR_USE - 1, data=df ))
+  CAR_TYPE <- data.frame(model.matrix( ~ CAR_TYPE - 1, data=df ))
+  RED_CAR <- data.frame(model.matrix( ~ RED_CAR - 1, data=df ))
+  REVOKED <- data.frame(model.matrix( ~ REVOKED - 1, data=df ))
+  URBANICITY <- data.frame(model.matrix( ~ URBANICITY - 1, data=df )) 
+  
+  df <- cbind(df, "IS_SINGLE_PARENT" = PARENT1$PARENT1Yes)
+  df <- cbind(df, "IS_MARRIED" = MSTATUS$MSTATUSYes)
+  df <- cbind(df, "IS_FEMALE" = SEX$SEXz_F)
+  df <- cbind(df, EDUCATION[2:5]) # <High School is the default
+  df <- cbind(df, JOB[2:9]) # Other ("Blank") is the default
+  df <- cbind(df, "IS_CAR_PRIVATE_USE" = CAR_USE$CAR_USEPrivate)
+  df <- cbind(df, CAR_TYPE[2:6] ) # CAR_TYPEMinivan is the default
+  df <- cbind(df, "IS_CAR_RED" = RED_CAR$RED_CARyes)
+  df <- cbind(df, "IS_LIC_REVOKED" = REVOKED$REVOKEDYes)
+  df <- cbind(df, "IS_URBAN" = URBANICITY$URBANICITYHighly.Urban..Urban)
+  
+  remove_cols <- names(df) %in% c('PARENT1', 'MSTATUS', 'SEX', 
+                                        'EDUCATION', 'JOB', 'CAR_USE', 
+                                        'CAR_TYPE', 'RED_CAR', 'REVOKED', 
+                                        'URBANICITY')
+  df <- df[!remove_cols]
+  
+  return(df)
+  
+}
+```
+
+```{r, echo=FALSE}
+data.train <- factor_to_dummy(data.train)
+```
+
+Let's see our resulting table.
+
+```{r, echo=FALSE}
+data.frame("Column_Names" = colnames(data.train))
+```
+
+
+## NAs prep
+
+First, let's see how our values are represented after the above transformations.
+
+```{r, echo=FALSE}
+
+data.train.summary <- get_df_summary(data.train)
+data.train.summary
+
+```
+
+In order to work the missing values, I will proceed as follows.
+
+### Proportion findings
+
+Let's calculate the proportion of missing values in order to determine the best approach for these variables.
+
+```{r, echo=FALSE}
+
+get_missing_NA_p <- function(df){
+  AGE <- round(sum(is.na(df$AGE))/dim(df)[1]*100,2)
+  YOJ <- round(sum(is.na(df$YOJ))/dim(df)[1]*100,2)
+  INCOME <- round(sum(is.na(df$INCOME))/dim(df)[1]*100,2)
+  HOME_VAL <- round(sum(is.na(df$HOME_VAL))/dim(df)[1]*100,2)
+  CAR_AGE <- round(sum(is.na(df$CAR_AGE))/dim(df)[1]*100,2)
+  
+  df.p <- data.frame(AGE, YOJ, INCOME, HOME_VAL, CAR_AGE)
+  df.p <- data.frame(t(df.p))
+  colnames(df.p) <- c("% Total missing")
+  return(df.p)
+}
+
+missing_NA <- get_missing_NA_p(data.train)
+
+```
+
+The below list display the combined missing percentage values for each variable.
+
+```{r, echo=FALSE}
+missing_NA
+```
+
+
+#### NAs by TARGET_FLAG group
+
+For this, let's see how many records each group has.
+
+```{r, echo=FALSE}
+
+TARGET_FLAG_0 <- data.train[data.train$TARGET_FLAG == 0,]
+TARGET_FLAG_1 <- data.train[data.train$TARGET_FLAG == 1,]
+
+missing_NA$`% TARGET_FLAG = 0` <- get_missing_NA_p(TARGET_FLAG_0)[,1]
+missing_NA$`% TARGET_FLAG = 1` <- get_missing_NA_p(TARGET_FLAG_1)[,1]
+
+missing_NA
+
+```
+
+Since those values are considered low percentages compared to our data set; I will replace the missing NA values with randomly selected values in between the respective Min and Max value with the exception of CAR_AGE since it shows a negative value, hence I will select 0 to be the minimum value for that particular variable.
+
+```{r, echo=FALSE}
+# Function that fill out missing NA values.
+fill_missing_na <- function(df, df_summary){
+  set.seed(123)
+  rand_values_AGE <- sample(df_summary["AGE","Min"]:df_summary["AGE","Max"],
+                        size=sum(is.na(df$AGE)), 
+                        replace = TRUE)
+  rand_values_YOJ <- sample(df_summary["YOJ","Min"]:df_summary["YOJ","Max"],
+                        size=sum(is.na(df$YOJ)), 
+                        replace = TRUE)
+  rand_values_INCOME <- sample(df_summary["INCOME","Min"]:df_summary["INCOME","Max"],
+                        size=sum(is.na(df$INCOME)), 
+                        replace = TRUE)
+  rand_values_HOME_VAL <- sample(df_summary["HOME_VAL","Min"]:df_summary["HOME_VAL","Max"],
+                        size=sum(is.na(df$HOME_VAL)), 
+                        replace = TRUE)
+  rand_values_CAR_AGE <- sample(0:df_summary["CAR_AGE","Max"],
+                        size=sum(is.na(df$CAR_AGE)), 
+                        replace = TRUE)
+  
+  df$AGE[is.na(df$AGE)] <- rand_values_AGE
+  df$YOJ[is.na(df$YOJ)] <- rand_values_YOJ
+  df$INCOME[is.na(df$INCOME)] <- rand_values_INCOME
+  df$HOME_VAL[is.na(df$HOME_VAL)] <- rand_values_HOME_VAL
+  df$CAR_AGE[is.na(df$CAR_AGE)] <- rand_values_CAR_AGE
+
+  return(df)
+  
+}
+
+```
+
+```{r, echo=FALSE}
+
+data.train <- fill_missing_na(data.train, data.train.summary)
+
+```
+
+## New Structure
+
+In order to visualize our new structure, I will put together the new set of variables with the transformations. Let's see our structure once again, but this time after the transformation of the data.
+
+```{r, echo=FALSE}
+
+#str(data.train)
+str.data.train <- strtable(data.train)[,c(1:3)]
+str.data.train
+
+```
+
+
+## CAR_AGE investigation
+
+Let's find out why CAR_AGE has a minimum value of $-3$ which seems to be incorrect, for this I will select the records for **CAR_AGE < 0**, with the goal of identifying more possible unrealistic values.
+
+```{r, echo=FALSE}
+min_CAR_AGE <- data.frame(t(data.train[data.train$CAR_AGE < 0,]))
+colnames(min_CAR_AGE) <- c("Values")
+min_CAR_AGE
+```
+
+From the above results, there seems to be no apparent reason as to why this value was entered. A possible reason could be that the person who typed the record, entered a wrong number; it could be probably 3 or 0 or any other value. In order to keep data integrity, I will remove that record from our data set. 
+
+```{r, echo=FALSE}
+data.train <- data.train[data.train$CAR_AGE >= 0,]
+```
+
+## Visualizations
+
+From previous summary tables, we established that TARGET_FLAG groups have diverse values as means, from which we could start creating some hypothesis such as:
+
+$H_0$: The means for the divided data-set in which TARGET_FLAG = 1 and TARGET_FLAG = 0 are the same.
+
+$H_1$: The means for the divided data-set in which TARGET_FLAG = 1 and TARGET_FLAG = 0 are not the same.
+
+Let's create some visualizations and see how this data behave.
+
+### TARGET_FLAG vs other variables.
+
+In this case, I will compare our data by separating our **TARGET_FLAG** values. That is, the light-green color represent "0" and the color red represent "1", meaning that red was involved in a Car accident while blue or light green was not.
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+scatterplotMatrix(~ TARGET_AMT + KIDSDRIV + AGE | TARGET_FLAG, 
+                  data = data.train,
+                  use = "pairwise.complete.obs",
+                  span=0.7, id.n=0, 
+                  col =  c("blue","red"))
+
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+scatterplotMatrix(~ HOMEKIDS + YOJ + INCOME | TARGET_FLAG, 
+                  data = data.train,
+                  use = "pairwise.complete.obs",
+                  span=0.7, id.n=0, 
+                  col =  c("blue","red"))
+
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+scatterplotMatrix(~ HOME_VAL + TRAVTIME + BLUEBOOK | TARGET_FLAG, 
+                  data = data.train,
+                  use = "pairwise.complete.obs",
+                  span=0.7, id.n=0, 
+                  col =  c("blue","red"))
+
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+scatterplotMatrix(~ TIF + OLDCLAIM + CLM_FREQ | TARGET_FLAG, 
+                  data = data.train,
+                  use = "pairwise.complete.obs",
+                  span=0.7, id.n=0, 
+                  col =  c("blue","red"))
+
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+scatterplotMatrix(~ MVR_PTS + CAR_AGE | TARGET_FLAG, 
+                  data = data.train,
+                  use = "pairwise.complete.obs",
+                  span=0.7, id.n=0, 
+                  col =  c("blue","red"))
+
+```
+
+### Box plots
+
+From the previous visualizations, we can notice how some sort of relationship exist in between some of the variables. In order to create better understanding, let's visualize their behavior by analyzing individual cases.
+
+```{r, echo=FALSE}
+nrows <- 1
+ncols <- 4 
+boxcol <- c("lightgreen","red")
+```
+
+
+```{r, echo=FALSE}
+
+par(mfrow=c(nrows,ncols))
+boxplot(data.train[,2] ~ data.train[,1], col = boxcol, main = colnames(data.train)[2], xlab = 'Involved in an Accident')
+boxplot(data.train[,3] ~ data.train[,1], col = boxcol, main = colnames(data.train)[3], xlab = 'Involved in an Accident')
+boxplot(data.train[,4] ~ data.train[,1], col = boxcol, main = colnames(data.train)[4], xlab = 'Involved in an Accident')
+boxplot(data.train[,5] ~ data.train[,1], col = boxcol, main = colnames(data.train)[5], xlab = 'Involved in an Accident')
+
+```
+
+```{r, echo=FALSE}
+
+par(mfrow=c(nrows,ncols))
+boxplot(data.train[,6] ~ data.train[,1], col = boxcol, main = colnames(data.train)[6], xlab = 'Involved in an Accident')
+boxplot(data.train[,7] ~ data.train[,1], col = boxcol, main = colnames(data.train)[7], xlab = 'Involved in an Accident')
+boxplot(data.train[,8] ~ data.train[,1], col = boxcol, main = colnames(data.train)[8], xlab = 'Involved in an Accident')
+boxplot(data.train[,9] ~ data.train[,1], col = boxcol, main = colnames(data.train)[9], xlab = 'Involved in an Accident')
+
+```
+
+```{r, echo=FALSE}
+
+par(mfrow=c(nrows,ncols))
+boxplot(data.train[,10] ~ data.train[,1], col = boxcol, main = colnames(data.train)[10], xlab = 'Involved in an Accident')
+boxplot(data.train[,11] ~ data.train[,1], col = boxcol, main = colnames(data.train)[11], xlab = 'Involved in an Accident')
+boxplot(data.train[,12] ~ data.train[,1], col = boxcol, main = colnames(data.train)[12], xlab = 'Involved in an Accident')
+boxplot(data.train[,13] ~ data.train[,1], col = boxcol, main = colnames(data.train)[13], xlab = 'Involved in an Accident')
+
+```
+
+```{r, echo=FALSE}
+
+par(mfrow=c(nrows,ncols))
+boxplot(data.train[,14] ~ data.train[,1], col = boxcol, main = colnames(data.train)[14], xlab = 'Involved in an Accident')
+boxplot(data.train[,15] ~ data.train[,1], col = boxcol, main = colnames(data.train)[15], xlab = 'Involved in an Accident')
+
+```
+
+Now, If we compare our previous plots and compare them to our given theoretical effect, we can see as follows:
+
+- **AGE**: Definitely AGE seems to be an important factor, we can notice how the mean value on the data-set that had an accident has a considerable age difference, implying that younger people are more risky.
+
+- **BLUEBOOK**: Definitely, the values are considerable different for the means in terms of records having accidents vs the ones who do not. The BLUEBOOK mean value is lower when there's an accident, thus making sense for the data, since the car should have less value after an accident happens.
+
+- **CAR_AGE**: This is very interesting, it seems that newer cars are more involved in accidents than older cars.
+
+- **INCOME**: The provided data agree with the theoretical effect. That is, the mean income value of the people who are involved in accidents is lower than those who are not. From my perspective, this is something very interesting that could be studied in more detail.Perhaps this is a factor for economic growth, lower income individuals tend to have more accidents, hence limiting their income growth due to repair expenses, fees, fine, loss of time and insurance premiums hikes.
+
+- **MVR_PTS**: The data agree with this theoretical effect, it is noted how the mean of MVR_PTS is higher when accidents are reported.
+
+- **TIF**: This seems to be true, the data report a higher mean for those who do not have an accident.
+
+- **TRAVTIME**: Not much of a difference but the data seems to agree.
+
+
+## Correlations
+
+Let's create some visualizations for the correlation matrix.
+
+```{r, echo=FALSE}
+TARGET_FLAG_0 <- data.train[data.train$TARGET_FLAG == 0,]
+TARGET_FLAG_1 <- data.train[data.train$TARGET_FLAG == 1,]
+```
+
+Let's start with a combined correlation, that is, no difference in between TARGET_FLAG.
+
+```{r,echo=FALSE}
+
+my_matrix <- data.train
+cor_res <- cor(my_matrix, use = "na.or.complete")
+
+```
+
+### Combined Graphical visualization
+
+First, let's create a visual representation of correlations with a heatmap as a guide.
+
+```{r, warning=FALSE, echo=FALSE}
+
+corrplot(cor_res, 
+         type = "upper", 
+         order = "original", 
+         tl.col = "black", 
+         tl.srt = 45, 
+         tl.cex = 0.35)
+cor_res <- data.frame(cor_res)
+```
+
+Something interesting to note from the above graph is the existing moderate negative correlation in between `IS_FEMALE` and `IS_RED_CAR`, the value for this correlation is: `r round(cor_res["IS_FEMALE","IS_CAR_RED"],4)`. Now, at this point we should not make any inference from this data since `IS_FEMALE` means either "MALE" or "FEMALE" and `IS_RED_CAR` means either "Yes" or "No". Further analysis needs to be performed to attain any conclusion related to those two variables.
+
+Also, we can notice some moderate strong correlations from our given data set such as the relation ship in between `EDUCATIONPhD` and `JOBDoctor` with a correlation value of `r round(cor_res["EDUCATIONPhD","JOBDoctor"],4)`. Another moderate correlation noticed in the data set is between `EDUCATIONMasters` and `JOBLawyer` with a correlation value of `r round(cor_res["EDUCATIONMasters","JOBLawyer"],4)`.
+
+### Combined Numerical visualization
+
+From the above graph, we can easily identify some sort of correlations in between the response variables `TARGET_FLAG` and `TARGET_AMT` and other variables.
+
+Let's read our correlations table to gain extra insights.
+
+```{r, echo=FALSE}
+
+cor_res[c(1,2)]
+
+```
+
+### Combined Correlations histogram
+
+Something very interesting to note from the above table, is that the correlations in between the data-sets seems to be very low. We can notice that in the below density distributions for the respective correlations.
+
+```{r, echo=FALSE}
+
+par(mfrow=c(1,2))
+hist(cor_res$TARGET_FLAG, freq=FALSE, xlab = "TARGET_FLAG", main = "Correlations Histogram")
+hist(cor_res$TARGET_AMT, freq=FALSE, xlab = "TARGET_AMT", main = "Correlations Histogram")
+
+```
+
+## TARGET_FLAG = Accidents 
+
+Let's do a correlation analysis for the data set in which `TARGET_FLAG` = 1 (meaning it had an accident).
+
+```{r,echo=FALSE, warning=FALSE, message=FALSE}
+
+my_matrix <- TARGET_FLAG_1[2:39]
+cor_res <- cor(my_matrix, use = "na.or.complete")
+
+```
+
+### Accidents Graphical visualization
+
+Let's create a visual representation of correlations with a heatmap as a guide for all records in which `TARGET_FLAG` = 1.
+
+Please note that the row named `TARGET_FLAG` is not included since all records have `TARGET_FLAG` value of 1, making it redundant.
+
+```{r, warning=FALSE, echo=FALSE}
+
+corrplot(cor_res, 
+         type = "upper", 
+         order = "original", 
+         tl.col = "black", 
+         tl.srt = 45, 
+         tl.cex = 0.35)
+cor_res <- data.frame(cor_res)
+
+```
+
+Same as before, is interesting to note from the above graph, the existing moderate negative correlation in between `IS_FEMALE` and `IS_RED_CAR`, the value for this correlation is: `r round(cor_res["IS_FEMALE","IS_CAR_RED"],4)`. Now, at this point we should not make any inference from this data since `IS_FEMALE` means either "MALE" or "FEMALE" and `IS_RED_CAR` means either "Yes" or "No". Further analysis needs to be performed to attain any conclusion related to those two variables.
+
+Also, we can notice how new moderate correlations appeared that were not present before the split; that is:
+
+- `IS_FEMALE` seems to be moderately correlated to `CAR_TYPEz_SUV` with a value of `r round(cor_res["IS_FEMALE","CAR_TYPEz_SUV"],4)`.
+
+- `BLUEBOOK` seems to be moderately correlated to `CAR_TYPEPanel.Truck` with a value of `r round(cor_res["BLUEBOOK","CAR_TYPEPanel.Truck"],4)`.
+
+- `OLDCLAIM` seems to be moderately correlated to `IS_LIC_REVOKED` with a value of `r round(cor_res["OLDCLAIM","IS_LIC_REVOKED"],4)`.
+
+Now, if we think about the data and their correlations, some data points seem to make sense. I will not extrapolate too much into this since our main goal is to create a Model in which we could predict the probability that a person will crash their car and also how much money it will cost if the person does crash the car. Hence, I will continue but will keep this correlations in mind.
+
+### Accidents Numerical visualization
+
+From the above graph, we can easily identify some sort of correlations in between the response variables `TARGET_AMT` and the other variables.
+
+Let's read our correlations table to gain extra insights.
+
+```{r, echo=FALSE}
+
+cor_res["TARGET_AMT"]
+
+```
+
+### Accidents Correlations histogram
+
+Something very interesting to note from the above table, is that the correlations in between the data-sets seems to be very low. We can notice that behavior in the below density distribution for the respective correlations.
+
+```{r, echo=FALSE}
+
+hist(cor_res$TARGET_AMT, freq=FALSE, xlab = "TARGET_AMT", main = "Correlations Histogram")
+
+```
+
+
+## Comparing Means 
+
+The below table, compare the means for both records indicated in the `TARGET_FLAG` variable, that is 1 = Accident vs 0 = No Accident.
+
+```{r, echo=FALSE}
+
+compare_means <- function(df){
+  
+  TARGET_FLAG_0 <- df[df$TARGET_FLAG == 0,]
+  TARGET_FLAG_1 <- df[df$TARGET_FLAG == 1,]
+
+  data.train.summary_0 <- get_df_summary(TARGET_FLAG_0)
+  data.train.summary_1 <- get_df_summary(TARGET_FLAG_1)
+  
+  TARGET_FLAG_means <- data.frame("No" = round(data.train.summary_0$Mean,2),
+                                  "Yes" = round(data.train.summary_1$Mean,2), 
+                                  row.names = rownames(data.train.summary))
+  
+  
+  colnames(TARGET_FLAG_means) <- c("No Accident", "Accident")
+  
+  TARGET_FLAG_means$Difference <- TARGET_FLAG_means$Accident - TARGET_FLAG_means$`No Accident`
+  TARGET_FLAG_means$`% Impact` <- (TARGET_FLAG_means$Accident / TARGET_FLAG_means$`No Accident` - 1) * 100
+  TARGET_FLAG_means$`% Impact`  <- round(TARGET_FLAG_means$`% Impact` ,0)
+  
+  
+  
+  TARGET_FLAG_means$Insights[TARGET_FLAG_means$`% Impact` > 0 ] <- paste(abs(TARGET_FLAG_means$`% Impact`[TARGET_FLAG_means$`% Impact` > 0 ]), "% higher")
+  TARGET_FLAG_means$Insights[TARGET_FLAG_means$`% Impact` < 0 ] <- paste(abs(TARGET_FLAG_means$`% Impact`[TARGET_FLAG_means$`% Impact` < 0 ]), "% lower")
+  TARGET_FLAG_means$Insights[TARGET_FLAG_means$`% Impact` == 0 ] <- "No insights"
+  
+  TARGET_FLAG_means$Obs <- ""
+  TARGET_FLAG_means$Obs[TARGET_FLAG_means$`% Impact` < 0 ] <- '+'
+  TARGET_FLAG_means$Obs[TARGET_FLAG_means$`% Impact` > 0 ] <- '-'
+  
+  TARGET_FLAG_means$Level <- ""
+  TARGET_FLAG_means$Level[TARGET_FLAG_means$`% Impact` < 0 ] <- '.'
+  TARGET_FLAG_means$Level[TARGET_FLAG_means$`% Impact` <= -25 ] <- '*'
+  TARGET_FLAG_means$Level[TARGET_FLAG_means$`% Impact` <= -75 ] <- '**'
+  TARGET_FLAG_means$Level[TARGET_FLAG_means$`% Impact` <= -100 ] <- '***'
+  
+  TARGET_FLAG_means$Level[TARGET_FLAG_means$`% Impact` > 0 ] <- '.'
+  TARGET_FLAG_means$Level[TARGET_FLAG_means$`% Impact` >= 25 ] <- '*'
+  TARGET_FLAG_means$Level[TARGET_FLAG_means$`% Impact` >= 75 ] <- '**'
+  TARGET_FLAG_means$Level[TARGET_FLAG_means$`% Impact` >= 100 ] <- '***'
+  
+  return(TARGET_FLAG_means[c(1:2,5:7)])
+  
+}
+
+```
+
+```{r, echo=FALSE}
+
+compare_means(data.train)
+
+```
+
+It is very important to note how some insights are taken from the two data sets by comparing side by side. In order to identify those results, I have created two extra columns labeled `Obs` in which denotes how some variables could imply positive or negative outcomes related to accidents, the `Level` has four different indicators depending on the percentage increase as follows:
+
+- **Pos**: Two options "+" or "-" meaning, the data shows an increase or decrease in between comparisons.
+
+- **Level**: Has four level as follows:
+
+-- **"."**: Percentage of difference is less than $25\%$.
+
+-- **"\*"**: Percentage of difference is between $[25, 75[\%$.
+
+-- **"\*\*"**: Percentage of difference is between $[75, 100[\%$.
+
+-- **"\*\*\*"**: Percentage of difference is more or equal than $100\%$.
+
+
+
+Also, is important to note that some variables seem to have a beneficial role in avoiding accidents, and that can be seeing in the above table as well.
+
+Something worthy of mentioning is that our theoretical effect mentions: *"urban leyend says that women have less crashes than men"*. By looking at the above table, this legend could be answered as to be false, we could see a slight increase of FEMALES involved in car accidents in about $3\%$ to $4\%$ higher than not having accidents, that is an increase from about $0.53$ to about $0.55$. Also, we should expect a rate of about $50\%$ since is considered even for insured drivers in America.
+
+# BUILD MODELS
+
+At this point, we are getting ready to start building models, however I would like to point out that in this case is a little bit difficult to determine what data transformation could be used in order to refine our models.
+
+## Binary Logistic Regression Models
+
+I would like to point that since this work requires **Binary Logistic Regression**, we are going to be using the **logit** function as our Likelihood link function for Logistic Regression by assuming that it follows a binomial distribution as follows:
+
+$$y_i | x_i \sim Bin(m_i,\theta(x_i))$$
+
+so that,
+
+$$P(Y_i=y_i | x_i)= \binom{m_i}{y_i} \theta(x_i)^{y_i}(1-\theta(x_i))^{m_i-y_i} $$
+
+Now, in order to solve our problem, we need to build a linear predictor model in which the individual predictors that compose the response $Y_i$ are all subject to the same $q$ predictors $(x_{i1}, …, x_{iq})$. Please note that the group of predictors, are commonly known as **covariate classess**. In this case, we need a model that describes the relationship of $x_1, …, x_q$ to $p$. In order to solve this problem, we will construct a linear predictor model as follows:
+
+$$\mathfrak{N}_i = \beta_0 + \beta_1x_{i1}+...+\beta_qx_{iq} $$
+
+### Logit link function
+
+In this case, since we need to set $\mathfrak{N}_i = p_i$; with $0 \le p_i \le 1$, I will use the *link function* $g$ such that $\mathfrak{N}_i = g(p_i)$ with $0 \le g^{-1}(\mathfrak{N}) \le 1$ for any $\mathfrak{N}$. In order to do so, I will pick the **Logit** link function $\mathfrak{N} = log(p/(1 - p))$.
+
+An alternate way will be by employing the $\chi^2$ Chi square distribution; for the purposes of this project, I will employ the use of the binomial distribution or the $\chi^2$ depending on which one is a better choice, also I will assume that all $Y_i$ are all independent of each other.
+
+### Binomial NULL Model
+
+In this section I will build a **Binary Logistic Regression** Null model utilizing all the variables and data, please note that I won't do any transformations. This model will be considered to be valid and will be considered as we advance. In order to build this model, I will not include the **TARGET_AMT** variable since that will be employed in the next model build up.
+
+```{r, echo=FALSE}
+data.train.bin <- data.train[-c(2)]
+```
+
+```{r, echo =FALSE}
+
+bin_Model_NULL <- glm(TARGET_FLAG ~ 1, 
+              data = data.train.bin, 
+              family = binomial(link ="logit"))
+
+summary(bin_Model_NULL)
+
+```
+
+I will assume that this to be a valid model.
+
+### Binomial FULL Model
+
+In this section I will build a **Binary Logistic Regression** Full model utilizing all the variables and data, please note that I won't do any transformations. This model will be considered to be valid and will be considered as we advance.
+
+```{r, echo=FALSE}
+
+bin_Model_FULL <- glm(TARGET_FLAG ~ ., 
+              data = data.train.bin, 
+              family = binomial(link ="logit"))
+
+summary(bin_Model_FULL)
+
+```
+
+In this particular case, we notice how some variables are not statistically significant; for study purposes, I will assume that this is a valid model.
+
+### Binomial STEP Model
+
+In this case, I will create multiple models using the STEP function from R.
+
+```{r, echo=TRUE, results='hide', message=FALSE, warning=FALSE}
+bin_Model_STEP <- step(bin_Model_NULL,
+                   scope = list(upper=bin_Model_FULL),
+                   direction="both",
+                   test="Chisq",
+                   data=data.train.bin)
+
+```
+
+For simplicity reasons, I have decided not to include the automatic responses; instead I will present the final model results.
+
+#### ANOVA results
+
+Let's check an ANOVA table based on the above testing results.
+
+```{r, echo=FALSE}
+bin_Model_STEP$anova
+```
+
+
+From the above results and calculations, it was concluded that the best model is as follows:
+
+```{r, echo=FALSE}
+summary(bin_Model_STEP)
+```
+
+From the above results, we noticed how all the predictors are statistical significant, also, we notice how from the above model, the HOME_VAL and the INCOME are not as statistical significant compared to other variables.
+
+#### Plot of standardized residuals
+
+The below plot shows our fitted models vs the deviance standardized residuals.
+
+```{r, echo=FALSE}
+
+plot(fitted(bin_Model_STEP),
+     rstandard(bin_Model_STEP),
+     main = 'Standarize residuals for binary data',
+     xlab = 'Fitted values',
+     ylab = 'Standarized Deviance Residuals',
+     col = 'blue')
+
+```
+
+### Confusion Matrix
+
+Let's start by building a confusion matrix in order to obtain valuable insights.
+
+```{r, echo=FALSE}
+
+bin_Model_STEP.final <- data.train.bin
+bin_Model_STEP.final$Predict = predict(bin_Model_STEP,type="response")
+bin_Model_STEP.final$TARGET_FLAG_Predict <- round(bin_Model_STEP.final$Predict)
+
+```
+
+```{r, echo=FALSE}
+
+cMatrix <- confusionMatrix(data = as.factor(bin_Model_STEP.final$TARGET_FLAG_Predict),
+                           reference = as.factor(bin_Model_STEP.final$TARGET_FLAG),
+                           positive = '1')
+cMatrix
+
+```
+
+Is interesting to note that the reported Accuracy is `r cMatrix$overall[[1]]`.
+
+From the above results, we obtain as follows:
+
+```{r, echo=FALSE}
+
+data.frame(Value = cMatrix$byClass)
+
+```
+
+### ROC and AUC
+
+As we know, the **Receiver Operating Characteristic Curves** (ROC) is a great quantitative assessment tool of the model. In order to quantify our model, I will employ as follows:
+
+
+```{r, echo=FALSE}
+# First, let's prepare our function
+rocCurve <- roc(TARGET_FLAG ~ Predict, data = bin_Model_STEP.final)
+
+# Let's plot our RCO curve.
+plot(rocCurve, print.auc=TRUE, legacy.axes = TRUE)
+```
+
+Let's see our confidence intervals for the area under the curve.
+
+```{r, echo=FALSE}
+
+rownames_ci <- c('Lower bound', 'Estimated value', 'Higher bound')
+crime.ci <- data.frame(AUC = ci(rocCurve))
+rownames(crime.ci) <- rownames_ci
+crime.ci
+
+```
+
+
+### Binary STEP MODIFIED Model
+
+In this case, I will add 1 to the following variables and then I will calculate the log, thus to avoid errors since some entries reported 0 and log(0) will produce errors, also I will remove the variable HOMEKIDS; let's take a look as follows:
+
+- Log(1 + INCOME)
+- Log(1 + HOME_VAL)
+- Log(1 + BLUEBOOK)
+- Log(1 + OLDCLAIM)
+- HOMEKIDS <-- Remove
+
+```{r, echo=FALSE}
+bin_Model_STEP_modified <- glm(formula = TARGET_FLAG ~ IS_URBAN + MVR_PTS + log(1+HOME_VAL) + IS_CAR_PRIVATE_USE + 
+                              log(1+BLUEBOOK) + IS_SINGLE_PARENT + IS_LIC_REVOKED + JOBManager + 
+                              TRAVTIME + TIF + KIDSDRIV + CLM_FREQ + CAR_TYPESports.Car + 
+                              CAR_TYPEz_SUV + IS_MARRIED + log(1+INCOME) + JOBClerical + log(1+OLDCLAIM) + 
+                              CAR_TYPEPickup + CAR_TYPEVan + CAR_TYPEPanel.Truck + JOBDoctor + 
+                              EDUCATIONBachelors + EDUCATIONMasters + EDUCATIONPhD  + 
+                              YOJ, family = binomial(link = "logit"), data = data.train.bin)
+```
+
+Let's see the results:
+
+```{r, echo=FALSE}
+summary(bin_Model_STEP_modified)
+```
+
+As we can see, this transformation produced similar entries compared to our automatically selected model but it seems to be slightly better since the AIC is lower than the automatically selected model by the STEP procedure.
+    
+#### Plot of standardized residuals
+
+The below plot shows our fitted models vs the deviance standardized residuals.
+
+```{r, echo=FALSE}
+
+plot(fitted(bin_Model_STEP_modified),
+     rstandard(bin_Model_STEP_modified),
+     main = 'Standarize residuals for binary data',
+     xlab = 'Fitted values',
+     ylab = 'Standarized Deviance Residuals',
+     col = 'blue')
+
+```
+
+### Confusion Matrix
+
+Let's start by building a confusion matrix in order to obtain valuable insights.
+
+```{r, echo=FALSE}
+
+bin_Model_STEP_modified.final <- data.train.bin
+bin_Model_STEP_modified.final$Predict = predict(bin_Model_STEP_modified,type="response")
+bin_Model_STEP_modified.final$TARGET_FLAG_Predict <- round(bin_Model_STEP_modified.final$Predict)
+
+```
+
+```{r, echo=FALSE}
+
+cMatrix <- confusionMatrix(data = as.factor(bin_Model_STEP_modified.final$TARGET_FLAG_Predict),
+                           reference = as.factor(bin_Model_STEP_modified.final$TARGET_FLAG),
+                           positive = '1')
+cMatrix
+
+```
+
+Is interesting to note that the reported Accuracy is `r cMatrix$overall[[1]]`.
+
+From the above results, we obtain as follows:
+
+```{r, echo=FALSE}
+data.frame(Value = cMatrix$byClass)
+```
+
+### ROC and AUC
+
+As we know, the **Receiver Operating Characteristic Curves** (ROC) is a great quantitative assessment tool of the model. In order to quantify our model, I will employ as follows:
+
+
+```{r, echo=FALSE}
+# First, let's prepare our function
+rocCurve <- roc(TARGET_FLAG ~ Predict, data = bin_Model_STEP_modified.final)
+
+# Let's plot our RCO curve.
+plot(rocCurve, print.auc=TRUE, legacy.axes = TRUE)
+```
+
+Let's see our confidence intervals for the area under the curve.
+
+```{r, echo=FALSE}
+
+rownames_ci <- c('Lower bound', 'Estimated value', 'Higher bound')
+crime.ci <- data.frame(AUC = ci(rocCurve))
+rownames(crime.ci) <- rownames_ci
+crime.ci
+
+```
+
+
+**IMPORTANT** 
+
+If we check our theory, the **AIC** defines as follows: *the smaller the value for AIC the better the model*; in this case, we can easily observe how the by adding certain variables, our AIC values decrease making it a better model.
+
+### Binary MODEL SELECTION
+
+In this case, I will select the model returned in the STEP procedure, that is:
+
+```{r, echo=TRUE}
+
+bin_Model_FINAL <- bin_Model_STEP
+
+```
+
+The reasons are explained below:
+
+- This model returned the second lowest **Akaike's Information Criterion** AIC.
+
+- This model returned the second nearest to zero median value.
+
+- This model displayed the smallest standard errors for the considered predictor variables.
+
+- This model present the smallest rate of change for all predictor variables.
+
+- This model returned the second lowest residual deviance.
+
+- From the below table we can see how the probability of being higher than the $\chi^2$ are very low.
+
+```{r, echo=FALSE}
+Anova(bin_Model_FINAL, type="II", test="Wald")
+```
+
+### Test Binary model
+
+From the above chosen model, I will create a reduced data frame containing only the variables needed in order to run our model. The selected variables are:
+
+```{r, echo=FALSE}
+# Need to extract variables from the Final selected model
+vars <- rownames(data.frame((bin_Model_FINAL$coefficients)))
+vars[1] <- "TARGET_FLAG"
+
+data.train.final <- data.train[vars]
+data.frame(vars)
+
+```
+
+#### Final Model Comparisons
+
+From here, I will define a NULL model with the chosen variables in order to compare results with the FINAL model.
+
+```{r, echo=FALSE}
+
+bin_Model_NULL = glm(TARGET_FLAG ~ 1,
+                       data=data.train.final,
+                       family = binomial(link="logit"))
+
+summary(bin_Model_NULL)
+
+```
+
+#### Analysis of Deviance Table
+
+The below table, will display a Deviance analysis by employing the $\chi^2$ test.
+
+```{r, echo=FALSE}
+
+bin_ANOVA <- anova(bin_Model_FINAL,
+                   bin_Model_NULL,
+                   test="Chisq")
+bin_ANOVA
+
+```
+
+In the above results, we can easily compare our Residual Deviance in which our model has better results compared to the null model since the null model's deviance will change in `r bin_ANOVA$Deviance[2]` units compared to our final model. 
+
+
+## Multiple Linear Regression Model
+
+Now, that we have build our Binary Model, I will proceed to build a Multiple Linear Regression Model in order to predict the `TARGET_AMT` for the records indicating that an accident happened.
+
+```{r, echo=FALSE}
+
+TARGET_FLAG_0 <- data.train[data.train$TARGET_FLAG == 0,]
+TARGET_FLAG_1 <- data.train[data.train$TARGET_FLAG == 1,]
+
+```
+
+### Summaries
+
+In order to have a better understanding of our current data, I will present a summary table for all the records that have accidents only.
+
+```{r, echo=FALSE}
+
+TARGET_FLAG_1.summary <- get_df_summary(TARGET_FLAG_1)
+TARGET_FLAG_1.summary
+
+```
+
+### Transformations
+
+Notice how some variables present $0$ as minimum input; that is **INCOME, HOME_VAL** and **OLDCLAIM**. This is very important since I will perform some transformations as follows:
+
+- **TARGET_AMT**: will be transformed to **log(TARGET_AMT)**.
+
+- **INCOME**: will be transformed to **log(1 + INCOME)** <- To avoid $log(0)$ problem.
+
+- **HOME_VAL**: will be transformed to **log(1 + HOME_VAL)** <- To avoid $log(0)$ problem.
+
+- **BLUEBOOK**: will be transformed to **log(BLUEBOOK)**.
+
+- **OLDCLAIM**: will be transformed to **log(1 + OLDCLAIM)** <- To avoid $log(0)$ problem.
+
+
+```{r, echo=FALSE}
+# Function that calculate diverse log functions
+find_log_values <- function(df){
+  
+  df$log_INCOME <- log(1 + df$INCOME)
+  df$log_HOME_VAL <- log(1 + df$HOME_VAL)
+  df$log_BLUEBOOK <- log(df$BLUEBOOK)
+  df$log_OLDCLAIM <- log(1 + df$OLDCLAIM)
+  df$log_TARGET_AMT <- log(df$TARGET_AMT)
+  
+  return(df)
+}
+
+TARGET_FLAG_1 <- find_log_values(TARGET_FLAG_1)
+
+#TARGET_FLAG_1$log_INCOME <- log(1 + TARGET_FLAG_1$INCOME)
+#TARGET_FLAG_1$log_HOME_VAL <- log(1 + TARGET_FLAG_1$HOME_VAL)
+#TARGET_FLAG_1$log_BLUEBOOK <- log(TARGET_FLAG_1$BLUEBOOK)
+#TARGET_FLAG_1$log_OLDCLAIM <- log(1 + TARGET_FLAG_1$OLDCLAIM)
+#TARGET_FLAG_1$log_TARGET_AMT <- log(TARGET_FLAG_1$TARGET_AMT)
+
+```
+
+```{r, echo=FALSE}
+
+remove_cols <- names(TARGET_FLAG_1) %in% c('TARGET_AMT', 'INCOME', 'HOME_VAL', 'BLUEBOOK', 'OLDCLAIM')
+TARGET_FLAG_1 <- TARGET_FLAG_1[!remove_cols]
+
+```
+
+### Visualizations
+
+Let's see if could find some linear relationships in terms of linearity among `TARGET_AMT` vs other variables.
+
+```{r, echo=FALSE}
+
+par(mfrow=c(2,2)) 
+plot(TARGET_FLAG_1$log_INCOME, TARGET_FLAG_1$log_TARGET_AMT, ylab='log(TARGET_AMT)', xlab = 'log(1 + INCOME)')
+plot(TARGET_FLAG_1$log_HOME_VAL, TARGET_FLAG_1$log_TARGET_AMT, ylab='log(TARGET_AMT)', xlab = 'log(1 + HOME_VAL)')
+plot(TARGET_FLAG_1$log_BLUEBOOK, TARGET_FLAG_1$log_TARGET_AMT, ylab='log(TARGET_AMT)', xlab = 'log(BLUEBOOK)')
+plot(TARGET_FLAG_1$log_OLDCLAIM, TARGET_FLAG_1$log_TARGET_AMT, ylab='log(TARGET_AMT)', xlab = 'log(1 + OLDCLAIM)')
+
+``` 
+
+From the above graphs, we could seems to identify some sort of linearity in the given data set, also, we notice how the **log(1 + VARIABLE)** has some effect in the plots.
+
+### Leverage and Outliers
+
+In this section, I will try to identify and build a list of Leverage points alongside outliers.
+
+```{r, echo=FALSE}
+IsOutlier <- function(target, variable){
+  
+    l.mean <- mean(variable, na.rm = TRUE)
+    l.n <- length(variable)
+    
+    x_minus_xhat_sqrd <- (variable - l.mean)^2
+    l.sum <- sum(x_minus_xhat_sqrd)
+    
+    # Obtaining leverage formula for each value
+    leverage_manual <- round(1/l.n + x_minus_xhat_sqrd/l.sum,3)
+    
+    # Identifiying leverage points
+    leverage <- data.frame(leverage = leverage_manual)
+    leverage$is_leverage <- 0
+    leverage$is_leverage[which(leverage$leverage > 4/l.n)] <- 1
+    
+    # Obtaining regular unchanged linear model in order to obtain original residuals
+    leverage.lm <- lm(target ~ variable)
+    #summary(leverage.lm)
+    
+    # Extracting residuals
+    leverage$residuals <- round(leverage.lm$residuals,3)
+    
+    # Obtaining standardize residuals
+    leverage.sd <- (1/(l.n - 2) * sum(leverage$residuals^2))^(1/2)
+    leverage$r <- round(leverage.lm$residuals / (leverage.sd *(1 - leverage$leverage)^(1/2)),3)
+    
+    # Identifying outliers
+    leverage$outlier <- 0
+    leverage$outlier[which(abs(leverage$r) > 2)] <- 1
+    
+    return(leverage$outlier)
+}
+```
+
+```{r, echo=FALSE}
+TARGET_FLAG_1$INCOME_Outlier <- IsOutlier(TARGET_FLAG_1$log_TARGET_AMT, TARGET_FLAG_1$log_INCOME)
+TARGET_FLAG_1$HOME_VAL_Outlier <- IsOutlier(TARGET_FLAG_1$log_TARGET_AMT, TARGET_FLAG_1$log_HOME_VAL)
+TARGET_FLAG_1$BLUEBOOK_Outlier <- IsOutlier(TARGET_FLAG_1$log_TARGET_AMT, TARGET_FLAG_1$log_BLUEBOOK)
+TARGET_FLAG_1$OLDCLAIM_Outlier <- IsOutlier(TARGET_FLAG_1$log_TARGET_AMT, TARGET_FLAG_1$log_OLDCLAIM)
+```
+
+
+### Multiple Regression NULL Model 
+
+Let's start with a null model in order to start having a better understanding. This model will be considered to be valid and will be considered as we advance.
+
+```{r, echo=FALSE}
+
+lm_Model_NULL <- lm(log_TARGET_AMT ~ 1, data = TARGET_FLAG_1)
+
+summary(lm_Model_NULL)
+```
+
+### Multiple Regression FULL Model 
+
+In this section, I will build a FULL model, thus in order to keep having a better understanding of the model. This model will be considered to be valid and will be considered as we advance.
+
+```{r, echo=FALSE}
+
+lm_Model_FULL <- lm(log_TARGET_AMT ~ ., data = TARGET_FLAG_1)
+
+summary(lm_Model_FULL)
+```
+
+Interesting to see only a few statistically significant variables while the $R^2$ shows to be low. The p-value is very low and the median is considered to be near zero.
+
+### Multiple Regression STEP Model 
+
+In this section, I will build a model by employing the STEP function from R, thus in order to keep having a better understanding of the model. This model will be considered to be valid and will be considered as we advance.
+
+
+```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+
+lm_Model_STEP <- step(lm_Model_NULL,
+                    scope = list(upper=lm_Model_FULL),
+                    direction="both",
+                    test="Chisq",
+                    data=TARGET_FLAG_1)
+
+```
+
+```{r, echo=FALSE}
+
+summary(lm_Model_STEP)
+
+```
+
+Something interesting from the above results is that it shows non statistical significant values as part of the model. That is IS_FEMALE and CLM_FREQ are not statistically significant.
+
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(lm_Model_STEP)
+```
+
+From the above graphs, we can quickly identify the **lobster shape** figure, which indicates that this model seems to be some how appropriate due to being some how homoscedastic, plus the Normal Q-Q line seems to differ on the lower end but not by much on the upper end which will be more problematic due to the nature of paying out insurance money. 
+
+#### ANOVA results
+
+Let's check an ANOVA table based on the above testing results.
+
+```{r, echo=FALSE}
+
+lm_Model_STEP$anova
+
+```
+
+### Multiple Regression STEP MODIFIED Model 
+
+In this section, I will create a manual model in order to try to overcome the previous identify problems. In this case, I will add an iteration `AGE:IS_FEMALE` and I will keep the statistically significant values provided above.
+
+```{r, echo=FALSE}
+
+lm_Model_STEP_Modified <- lm(formula = log_TARGET_AMT ~ BLUEBOOK_Outlier + log_BLUEBOOK + IS_MARRIED + INCOME_Outlier + HOME_VAL_Outlier + MVR_PTS + EDUCATIONBachelors, data = TARGET_FLAG_1)
+
+summary(lm_Model_STEP_Modified)
+
+```
+
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(lm_Model_STEP_Modified)
+```
+
+Something interesting to note is that in this case, all predictors are statistically significant, the Normal Q-Q plot seems to follow a line for almost all the values with only a slight overpriced on the top but with an under prediction on the bottom left. The Residuals vs the Fitted lobster shape figure seems to be homoscedastic, my only concern will be the Multiple $R^2$ which is very low but I will consider this to be OK due to previous correlations showed that the correlations are very low as well.
+
+### Multiple Linear Regression MODEL SELECTION
+
+Below, I will describe why I have chosen the  **Multiple Regression STEP MODIFIED Model** to be my selected model for the multiple linear regression model.
+
+```{r, echo=TRUE}
+
+lm_Model_FINAL <- lm_Model_STEP_Modified
+
+```
+
+- The generated ANOVA table shows this combination of variables to be have lowest AIC.
+
+- The coefficients make sense.
+
+- The Median is near Zero.
+
+- The coefficients are considered low, alongside the standard errors as well.
+
+- The Residuals vs the Fitted values seems to be homoscedastic.
+
+- The residuals and the normal Q-Q plot also make sense and follow "good" standards for data analysis.
+
+- My only concerns will be the $R^2$ to be too low but it was noted the low correlation among variables.
+
+
+# Predictions
+
+In this section, I will proceed to predict values from the evaluation data set.
+
+## Evaluation data transformations
+
+In this section I will transform our evaluation data same as our original data has.
+
+```{r, echo = FALSE}
+data.eval_ORIGINAL <- data.eval
+# Transformation: From factor to numeric
+data.eval <- factor_to_numeric(data.eval)
+
+# Transformation: From factor to numeric
+data.eval <- factor_to_dummy(data.eval)
+
+# get_missing_NA_p(data.eval)
+
+# Transformation: Fill Missing NAs
+data.eval <- fill_missing_na(data.eval, data.train.summary)
+
+# Tranformation of logs
+data.eval <- find_log_values(data.eval)
+
+```
+
+
+## Predict TARGET_FLAG
+
+In this section, I will predict the probability of having an accident or no accident and categorize it in the TARGET_FLAG variable.
+
+### Accident Predictions Table
+
+In this section, I will predict the values on the **evaluation** data set employing the **training** data set.
+
+```{r, echo=FALSE}
+
+prob = predict(bin_Model_FINAL, newdata=data.eval, type = 'response')
+
+data.eval_ORIGINAL$TARGET_FLAG <-round(prob,0)
+
+```
+
+Let's see a table for the first 20 records.
+
+```{r, echo=FALSE}
+head(data.eval_ORIGINAL[1:2],20)
+```
+
+
+
+## Predict TARGET_AMT
+
+In this section, I will predict the amount based on the final linear model selected. In order to accomplish this goal, I need to do as follows:
+
+Since there’s no way to indicate if the new values are considered outliers or not, I will assign a zero instead; then I will re-evaluate with the given values.
+
+- data.eval$BLUEBOOK_Outlier <- 0
+- data.eval$INCOME_Outlier <- 0
+- data.eval$HOME_VAL_Outlier <- 0
+
+```{r, echo=FALSE}
+
+data.eval$BLUEBOOK_Outlier <- 0
+data.eval$INCOME_Outlier <- 0
+data.eval$HOME_VAL_Outlier <- 0
+
+```
+
+```{r, echo=FALSE}
+
+log_amount = predict(lm_Model_FINAL, newdata=data.eval)
+
+data.eval$log_TARGET_AMT <- log_amount
+data.eval_ORIGINAL$TARGET_AMT <- data.eval_ORIGINAL$TARGET_FLAG * round(exp(log_amount),2)
+
+```
+
+Let's see the first 20 records of the first run for the predicted data set.
+
+```{r,echo=FALSE}
+head(data.eval_ORIGINAL[1:3],20)
+```
+
+```{r, echo=FALSE}
+hist(data.eval_ORIGINAL$TARGET_AMT, freq = TRUE, 
+     main = paste('Predicted Amount: First Run'),
+     xlab = 'AMOUNT')
+```
+
+Now, the above values were calculated assuming that all outliers were ZERO. Let's recalculate and see if new Outliers can be found in order to refine our values.
+
+```{r, echo=FALSE}
+summary(data.eval_ORIGINAL$TARGET_AMT)
+```
+
+
+```{r, echo=FALSE}
+data.eval$INCOME_Outlier <- IsOutlier(data.eval$log_TARGET_AMT, data.eval$log_INCOME)
+data.eval$HOME_VAL_Outlier <- IsOutlier(data.eval$log_TARGET_AMT, data.eval$log_HOME_VAL)
+data.eval$BLUEBOOK_Outlier <- IsOutlier(data.eval$log_TARGET_AMT, data.eval$log_BLUEBOOK)
+```
+
+```{r, echo=FALSE}
+
+log_amount = predict(lm_Model_FINAL, newdata=data.eval)
+
+data.eval$log_TARGET_AMT <- log_amount
+data.eval_ORIGINAL$TARGET_AMT <- data.eval_ORIGINAL$TARGET_FLAG * round(exp(log_amount),2)
+
+```
+
+Let's see the first 20 records of the final predicted data set.
+
+```{r,echo=FALSE}
+head(data.eval_ORIGINAL[1:3],20)
+```
+
+```{r, echo=FALSE}
+hist(data.eval_ORIGINAL$TARGET_AMT, freq = TRUE, 
+     main = paste('Predicted Amount'),
+     xlab = 'AMOUNT')
+```
+
+```{r, echo=FALSE}
+summary(data.eval_ORIGINAL$TARGET_AMT)
+```
+
+## Export file
+
+In order to provide a csv output for the predictions table.
+
+```{r, eval=FALSE}
+write.csv(data.eval_ORIGINAL, file = "insurance-my-evaluated-data.csv",row.names=FALSE)
+```
+
+
+
+
+
+
+
+
