@@ -2,39 +2,30 @@
 
 ## Overview
 
-In this homework assignment, you will explore, analyze and model a data set containing approximately $8000$ records representing a customer at an auto insurance company. Each record has two response variables. The first response variable, **TARGET_FLAG**, is a $1$ or a $0$. A "$1$" means that the person was in a car crash. A zero means that the person was not in a car crash. The second response variable is **TARGET_AMT**. This value is zero if the person did not crash their car. But if they did crash their car, this number will be a value greater than zero.
+In this homework assignment, you will explore, analyze and model a data set containing information on approximately 12,000 commercially available wines. The variables are mostly related to the chemical properties of the wine being sold. The response variable is the number of sample cases of wine that were purchased by wine distribution companies after sampling a wine. These cases would be used to provide tasting samples to restaurants and wine stores around the United States. The more sample cases purchased, the more likely is a
+wine to be sold at a high end restaurant. A large wine manufacturer is studying the data in order to predict the number of wine cases ordered based upon the wine characteristics. If the wine manufacturer can predict the number of cases, then that manufacturer will be able to adjust their wine offering to maximize sales.
 
 ## Objective
 
-Your objective is to build multiple linear regression and binary logistic regression models on the training data to predict the probability that a person will crash their car and also the amount of money it will cost if the person does crash their car. You can only use the variables given to you (or variables that you derive from the variables provided).
+Your objective is to build a count regression model to predict the number of cases of wine that will be sold given certain properties of the wine. HINT: Sometimes, the fact that a variable is missing is actually predictive of the target. You can only use the variables given to you (or variables that you derive from the variables provided).
 
 ## Description
 
 Below is a short description of the variables of interest in the data set:
 
-- **INDEX**	Identification Variable (do not use)
-- **TARGET_FLAG**	Was Car in a crash? 1=YES 0=NO
-- **TARGET_AMT**	If car was in a crash, what was the cost
-- **AGE**	Age of Driver
-- **BLUEBOOK**	Value of Vehicle
-- **CAR_AGE**	Vehicle Age
-- **CAR_TYPE**	Type of Car
-- **CAR_USE**	Vehicle Use
-- **CLM_FREQ**	# Claims (Past 5 Years)
-- **EDUCATION**	Max Education Level
-- **HOMEKIDS**	# Children at Home
-- **HOME_VAL**	Home Value
-- **INCOME**	Income
-- **JOB**	Job Category
-- **KIDSDRIV**	# Driving Children
-- **MSTATUS**	Marital Status
-- **MVR_PTS**	Motor Vehicle Record Points
-- **OLDCLAIM**	Total Claims (Past 5 Years)
-- **PARENT1**	Single Parent
-- **RED_CAR**	A Red Car
-- **REVOKED**	License Revoked (Past 7 Years)
-- **SEX**	Gender
-- **TIF**	Time in Force
-- **TRAVTIME**	Distance to Work
-- **URBANICITY**	Home/Work Area
-- **YOJ**	Years on Job
+- **INDEX** Identification Variable (do not use)
+- **TARGET** Number of Cases Purchased
+- **AcidIndex**	Proprietary method of testing total acidity of wine by using a weighted average
+- **Alcohol** Alcohol Content
+- **Chlorides** Chloride content of wine
+- **CitricAcid** Citric Acid Content
+- **Density** Density of Wine
+- **FixedAcidity** Fixed Acidity of Wine
+- **FreeSulfurDioxide** Sulfur Dioxide content of wine
+- **LabelAppeal** Marketing Score indicating the appeal of label design for consumers. High numbers suggest customers like the label design. Negative numbers suggest customes don't like the design.
+- **ResidualSugar** Residual Sugar of wine
+- **STARS** Wine rating by a team of experts. 4 Stars = Excellent, 1 Star = Poor A high number of stars suggests high sales
+- **Sulphates** Sulfate conten of wine
+- **TotalSulfurDioxide** Total Sulfur Dioxide of Wine
+- **VolatileAcidity** Volatile Acid content of wine
+- **pH** pH of wine
