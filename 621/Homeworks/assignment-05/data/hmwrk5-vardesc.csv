@@ -1,4 +1,4 @@
-VARIABLE NAME,DEFINITION,THEORETICAL EFFECT
+VARIABLE_NAME,DEFINITION,THEORETICAL_EFFECT
 INDEX,Identification Variable (do not use) ,None
 TARGET,Number of Cases Purchased,None
 AcidIndex, Proprietary method of testing total acidity of wine by using a weighted average,
