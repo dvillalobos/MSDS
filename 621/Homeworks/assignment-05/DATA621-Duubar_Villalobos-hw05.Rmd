@@ -1,0 +1,1475 @@
+---
+title: "Homework 05"
+author: "Duubar Villalobos Jimenez   mydvtech@gmail.com"
+date: "December 09, 2018"
+output:
+  pdf_document:
+      highlight: zenburn
+      toc: true
+      toc_depth: 4
+      number_sections: true
+      df_print: kable
+      
+  html_document:
+      df_print: paged
+      code_folding: hide
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+    toc: yes
+    df_print: paged
+subtitle: CUNY MSDS DATA 621
+fontsize: 10pt
+geometry: margin=1in
+---
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+library(knitr)
+library(dplyr)
+library(car)
+library(stringr)
+library(kableExtra)
+library(corrplot)
+library(MASS)
+library(pscl)
+#library(PerformanceAnalytics)
+#library(caret)
+#library(pROC)
+#library(lmtest)
+
+#library(random)
+#library(psych)
+#
+#library(caret)
+#library(lmtest)
+#library(PerformanceAnalytics)
+#library(pROC)
+#library(psych)
+
+#library(reshape)
+#
+#library(tibble)
+
+```
+
+\newpage
+# HOMEWORK
+
+## Overview
+
+In this homework assignment, you will explore, analyze and model a data set containing information on approximately 12,000 commercially available wines. The variables are mostly related to the chemical properties of the wine being sold. The response variable is the number of sample cases of wine that were purchased by wine distribution companies after sampling a wine. These cases would be used to provide tasting samples to restaurants and wine stores around the United States. The more sample cases purchased, the more likely is a wine to be sold at a high end restaurant. A large wine manufacturer is studying the data in order to predict the number of wine cases ordered based upon the wine characteristics. If the wine manufacturer can predict the number of cases, then that manufacturer will be able to adjust their wine offering to maximize sales.
+
+## Objective
+
+Your objective is to build a count regression model to predict the number of cases of wine that will be sold given certain properties of the wine. HINT: Sometimes, the fact that a variable is missing is actually predictive of the target. You can only use the variables given to you (or variables that you derive from the variables provided).
+
+## Dataset description
+
+```{r, echo=FALSE}
+
+git_user <- 'dvillalobos'
+git_user <- paste('https://raw.githubusercontent.com/',git_user,sep = "")
+git_dir <- '/MSDS/master/621/Homeworks/assignment-05/data/'
+
+data.desc <- read.csv(paste(git_user, git_dir, "hmwrk5-vardesc.csv", sep = "")) 
+data.desc$VARIABLE_NAME <- str_trim(data.desc$VARIABLE_NAME)
+data.desc$DEFINITION <- str_trim(data.desc$DEFINITION)
+data.desc$THEORETICAL_EFFECT <- str_trim(data.desc$THEORETICAL_EFFECT)
+```
+
+### Variable definitions
+
+The below list represent the definitions for each given variable.
+
+```{r, echo=FALSE}
+#data.desc[,c("VARIABLE_NAME", "DEFINITION")]
+
+kable(data.desc[,c("VARIABLE_NAME", "DEFINITION")], "latex", booktabs = T) %>%
+  column_spec(2, width = "12cm")
+
+```
+
+
+### Theoretical effect of variables
+
+The below list represent the theoretical effects for each given variable.
+
+```{r, echo=FALSE}
+
+kable(data.desc[,c("VARIABLE_NAME", "THEORETICAL_EFFECT")], "latex", booktabs = T) %>%
+  column_spec(2, width = "12cm")
+
+```
+
+## Deliverables
+
+- A write-up submitted in PDF format. Your write-up should have four sections. Each one is described below. You may assume you are addressing me as a fellow data scientist, so do not need to shy away from technical details.
+
+- Assigned predictions (number of cases of wine sold) for the evaluation data set.
+
+- Include your R statistical programming code in an Appendix.
+
+\newpage
+# DATA EXPLORATION
+
+## Data acquisition
+
+For reproducibility purposes, I have included the original data sets in my Git Hub account, I will read it as a data frame from that location.
+
+```{r, echo=FALSE}
+get_data <- function(git_user, git_dir, file){
+
+  file_loc <- paste(git_user, git_dir, file, sep = "") 
+  data <- read.csv(file_loc, stringsAsFactors=TRUE)
+  return(data)
+  
+}
+```
+
+```{r}
+
+data.train <- get_data(git_user, git_dir, 'wine-training-data.csv') 
+data.eval <- get_data(git_user, git_dir, 'wine-evaluation-data.csv') 
+
+```
+
+## General exploration
+
+The below process will help us obtain insights from our given data.
+
+### Dimensions
+
+Let's see the dimensions of our training data set.
+
+```{r, echo=FALSE}
+
+get_dims <- function(df){
+  
+  dimensions <- dim(df)
+  dimensions <- data.frame('Records' = dimensions[1],
+                           'Variables' = dimensions[2])
+  return(dimensions)
+}
+
+```
+
+```{r, echo=FALSE}
+dimensions <- get_dims(data.train)
+dimensions
+```
+
+From the above table, we can see how the training data set has a total of `r dimensions$Records[1]` different records and `r dimensions$Variables[1]` variables including **INDEX** and **TARGET**. These variables do not represent much of the initial insights since they correspond to our response variables and do not offer a theoretical effect.
+
+For simplicity reasons, I will discard the **INDEX** column.
+
+```{r, echo=FALSE}
+
+remove_cols <- names(data.train) %in% c('INDEX')
+data.train <- data.train[!remove_cols]
+
+```
+
+
+### Structure
+
+The below structure is currently present in the data, for simplicity reasons, I have previously loaded and treated this data set as a data frame in which all the variables with decimals are numeric.
+
+
+```{r, echo=FALSE}
+# Taken from https://gist.github.com/jbryer/4a0a5ab9fe7e1cf3be0e
+
+# strtable that provides the information str.data.frame does but returns the results as a data.frame. 
+# This provides much more flexibility for controlling how the output is formatted. 
+# Specifically, it will return a data.frame with four columns: variable, class, levels, and examples.
+  
+strtable <- function(df, n=4, width=60, 
+					 n.levels=n, width.levels=width, 
+					 factor.values=as.character) {
+	stopifnot(is.data.frame(df))
+	tab <- data.frame(variable=names(df),
+					  class=rep(as.character(NA), ncol(df)),
+					  levels=rep(as.character(NA), ncol(df)),
+					  examples=rep(as.character(NA), ncol(df)),
+					  stringsAsFactors=FALSE)
+	collapse.values <- function(col, n, width) {
+		result <- NA
+		for(j in 1:min(n, length(col))) {
+			el <- ifelse(is.numeric(col),
+						 paste0(col[1:j], collapse=', '),
+						 paste0('"', col[1:j], '"', collapse=', '))
+			if(nchar(el) <= width) {
+				result <- el
+			} else {
+				break
+			}
+		}
+		if(length(col) > n) {
+			return(paste0(result, ', ...'))
+		} else {
+			return(result)
+		}
+	}
+	
+	for(i in seq_along(df)) {
+		if(is.factor(df[,i])) {
+			tab[i,]$class <- paste0('Factor w/ ', nlevels(df[,i]), ' levels')
+			tab[i,]$levels <- collapse.values(levels(df[,i]), n=n.levels, width=width.levels)
+			tab[i,]$examples <- collapse.values(factor.values(df[,i]), n=n, width=width)
+		} else {
+			tab[i,]$class <- class(df[,i])[1]
+			tab[i,]$examples <- collapse.values(df[,i], n=n, width=width)
+		}
+		
+	}
+	
+	class(tab) <- c('strtable', 'data.frame')
+	return(tab)
+}
+
+#' Prints the results of \code{\link{strtable}}.
+#' @param x result of code \code{\link{strtable}}.
+#' @param ... other parameters passed to \code{\link{print.data.frame}}.
+#' @export
+print.strtable <- function(x, ...) {
+	NextMethod(x, row.names=FALSE, ...)
+}
+```
+
+```{r, echo=FALSE}
+
+#str(data.train)
+str.data.train <- strtable(data.train)[,c(1:3)]
+str.data.train
+
+```
+
+From the above table, we can notice how we need to take care of certain values that could be treated as factors. This will be addressed in more detail as we advance in case of this becoming a need.
+
+
+## Summaries
+
+Let's find some summary statistics about our given data, for that; I will get a little bit more insights for all the columns including the **TARGET** variable.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Function that extract summary values into a
+get_df_summary <- function(df){
+  df.summary <- data.frame(unclass(summary(df)), 
+                          check.names = FALSE, 
+                          row.names = NULL,
+                          stringsAsFactors = FALSE)
+  
+  # Let's transpose the resulting data frame
+  df.summary <- data.frame(t(df.summary))
+  
+  # Let's rename the columns
+  if ( length(colnames(df.summary)) > 6 ){
+    colnames(df.summary) <- c('Min', '1st Qu', 'Median', 'Mean', '3rd Qu', 'Max', 'Other')
+    df.summary$Other <- as.character(df.summary$Other)
+  } else {
+    colnames(df.summary) <- c('Min', '1st Qu', 'Median', 'Mean', '3rd Qu', 'Max')
+    
+  }
+  
+  # Let's extract numeric values
+  df.summary$Min <- as.numeric(gsub('Min.   :', '', df.summary$Min))
+  df.summary$`1st Qu` <- as.numeric(gsub('1st Qu.:', '', df.summary$`1st Qu`))
+  df.summary$Median <- as.numeric(gsub('Median :', '', df.summary$Median))
+  df.summary$Mean <- as.numeric(gsub('Mean   :', '', df.summary$Mean))
+  df.summary$`3rd Qu` <- as.numeric(gsub('3rd Qu.:', '', df.summary$`3rd Qu`))
+  df.summary$Max <- as.numeric(gsub('Max.   :', '', df.summary$Max))
+  
+  df.summary[is.na(df.summary)] <- ""
+  row.names(df.summary) <- str_trim(row.names(df.summary))
+  return(df.summary)
+
+}
+
+```
+
+### Combined Summary
+
+In this section, we will explore the combined results as introductory insights.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+data.train.summary <- get_df_summary(data.train)
+data.train.summary
+
+```
+
+Please note that this is for introductory insights and should not be considered as complete results.
+
+## Findings
+
+From the above table, is interesting to note as follows:
+
+- The training data-set shows the presence of missing values or **NAs** in some columns; that can be seeing in the **Other** column. This will be addressed as we prepare our data down the road.
+
+- Interesting to see a lot of negative values.
+
+- Some variables could suggest non continuity of values such as `LabelAppeal`, `AcidIndex` and `STARS`; these variables could be interpreted as to be categorical variables.
+
+\newpage
+# DATA PREPARATION
+
+In this section, I will prepare our given data-set. For that I will need to address a few things, like categorical variables and missing data.
+
+## Data conversion
+
+In this section, I will describe the conversion of the data that is required in order to have a more manageable understanding of it.
+
+### New Variable: `LabelAppealDISLIKE`
+
+In this section, I will create a new variable named `LabelAppealDISLIKE` in which I will assign the value of $1$ if the value `LabelAppeal` $< 0$; also, I will assign a value of $0$ otherwise.
+
+```{r, echo=FALSE}
+
+create_LabelAppealDISLIKE <- function(df){
+  
+  df$LabelAppealDISLIKE <- 0
+  df$LabelAppealDISLIKE[df$LabelAppeal < 0 ] <- 1
+  
+  return(df)
+}
+```
+
+```{r, echo=TRUE}
+
+data.train <- create_LabelAppealDISLIKE(data.train)
+
+```
+
+### New Variable: `LabelAppealBETTER_SALES`
+
+In this section, I will create a new variable named `LabelAppealBETTER_SALES` in which I will assign the value of $1$ if the value `LabelAppeal` $= 2$; also, I will assign a value of $0$ otherwise.
+
+```{r, echo=FALSE}
+
+create_LabelAppealBETTER_SALES <- function(df){
+  
+  df$LabelAppealBETTER_SALES <- 0
+  df$LabelAppealBETTER_SALES[df$LabelAppeal == 2 ] <- 1
+  
+  return(df)
+}
+```
+
+```{r, echo=TRUE}
+
+data.train <- create_LabelAppealBETTER_SALES(data.train)
+
+```
+
+### New Variable: `STARS_BETTER_SALES`
+
+In this section, I will create a new variable named `STARS_BETTER_SALES` in which I will assign the value of $1$ if the value `STARS` $= 4$; also, I will assign a value of $0$ otherwise.
+
+```{r, echo=FALSE}
+
+create_STARS_BETTER_SALES <- function(df){
+  
+  df$STARS_BETTER_SALES <- 0
+  df$STARS_BETTER_SALES[df$STARS == 4 ] <- 1
+  
+  return(df)
+}
+```
+
+```{r, echo=TRUE}
+
+data.train <- create_STARS_BETTER_SALES(data.train)
+
+```
+
+## NA findings
+
+Let's calculate the proportion of missing values in order to determine the best approach for these variables.
+
+```{r, echo=FALSE} 
+
+get_missing_NA_p <- function(df, recs){
+  
+  df$NAs <- as.numeric(gsub("NA's   :", '', df$Other))
+  df$`NAs %` <- round(df$NAs/recs*100,2)
+  df <- subset(df, `NAs %` > 0, select = c("NAs %"))
+  
+  return(df)
+}
+
+```
+
+
+The below list display the combined missing percentage values for each variable.
+
+```{r, echo=FALSE}
+
+get_missing_NA_p(data.train.summary, dim(data.train)[1])
+
+```
+
+From the above results we can identify a lot of problematic missing data. It is easy to identify that the only one that could be considered as a discrete variable will be STARS.
+
+### Complete Cases & NA findings
+
+Let's compare the complete cases vs all given records.
+
+```{r, echo = FALSE}
+df <- data.train
+df <- df[complete.cases(data.train), ]
+```
+
+```{r, echo = FALSE}
+
+df.diff <- data.frame(get_dims(df)[1], get_dims(data.train)[1])
+colnames(df.diff) <- c("Complete Cases", "All Cases")
+df.diff$`Difference %` <- round((1 - df.diff$`Complete Cases` / df.diff$`All Cases`) * 100,2)
+df.diff
+
+```
+
+Now, let's compare the means of the complete cases vs the means of all the given original records.
+
+```{r, echo=FALSE}
+
+df.diff <- data.frame(get_df_summary(df)[4], get_df_summary(data.train)[4])
+colnames(df.diff) <- c("Mean Complete Cases", "Mean All Cases")
+rownames(df.diff) <- str_trim(rownames(df.diff))
+df.diff$`Difference %` <- round((1 - df.diff$`Mean Complete Cases` / df.diff$`Mean All Cases`) * 100,2)
+df.diff
+
+```
+
+From the above table, we notice how by sub-setting the data, we might run the risk of over-performing our lineal model by over estimating `TARGET` by about `r -df.diff["TARGET","Difference %"]` $\%$ higher.
+
+Also, we can easily observe how if the `LabelAppeal` variable is considered in the model as an estimator, this could mislead in about `r df.diff["LabelAppeal","Difference %"]` $\%$ for that single estimator value in the remaining $50 \%$ of the data set.
+
+From the above, it is evident that we need to be careful on how to approach these missing values due to high variability of results on both cases.
+
+### New Variable: `STARS_NA`
+
+In this section, I will create a new variable named `STARS_NA` in which I will assign the value of $1$ if the value `STARS` $= NA$; also, I will assign a value of $0$ otherwise; on top of that I will assign a value of ZERO to all NAs present in the `STARS` column. The idea is to increase the number of records that could be used. The idea is to see how we could correct those problematic differences evidenced above.
+
+```{r, echo=FALSE}
+
+create_STARS_NA <- function(df){
+  
+  df$STARS_NA <- 0
+  df$STARS_NA[is.na(df$STARS)] <- 1
+  df$STARS[is.na(df$STARS)] <- 0
+  
+  return(df)
+}
+```
+
+```{r, echo=TRUE}
+
+data.train <- create_STARS_NA(data.train)
+
+```
+
+### New NA findings
+
+Let's calculate the proportion of missing values after the above work was performed in order to determine the best approach from now on.
+
+The below list display the combined missing percentage values for each variable.
+
+```{r, echo = FALSE}
+
+data.train.complete <- data.train[complete.cases(data.train), ]
+
+```
+
+```{r, echo = FALSE}
+
+df.diff <- data.frame(get_dims(data.train.complete)[1], get_dims(data.train)[1])
+colnames(df.diff) <- c("Complete Cases", "All Cases")
+df.diff$`Difference %` <- round((1 - df.diff$`Complete Cases` / df.diff$`All Cases`) * 100,2)
+df.diff
+
+```
+
+We can note an increase of records and the difference now is much less than before.
+
+Now, let's compare the means of the complete cases vs all the given original records.
+
+```{r, echo=FALSE}
+
+df.diff <- data.frame(get_df_summary(data.train.complete)[4], get_df_summary(data.train)[4])
+colnames(df.diff) <- c("Mean Complete Cases", "Mean All Cases")
+rownames(df.diff) <- str_trim(rownames(df.diff))
+df.diff$`Difference %` <- round((1 - df.diff$`Mean Complete Cases` / df.diff$`Mean All Cases`) * 100,2)
+df.diff
+
+```
+
+Now, we can easily identify a more approachable data set since the percentage value of the difference of the means are not that far apart. Even the value corresponding to `LabelAppeal` is much more manageable.
+
+## Fill in remaining NAs
+
+From the previous table, it was observed some percentages of missing values. Let's recap them.
+
+```{r, echo=FALSE}
+
+data.train.summary <-  get_df_summary(data.train)
+get_missing_NA_p(data.train.summary, dim(data.train)[1])
+
+```
+
+Please note that the `STARS` variable missing values were previously addressed by assigning ZERO values and by creating a new variable `STARS_NA` indicating that it was missing.
+
+In this section, I will replace all the remaining missing values with randomly generated values from the minimum value to the maximum value for each variable. That is considered since the distributions seems to follow a normal curve as seeing in the below graphs.
+
+```{r, echo=FALSE}
+
+df <- data.train.complete
+par(mfrow=c(2,2))
+hist(df$ResidualSugar, 
+     freq = FALSE,
+     main = "ResidualSugar",
+     ylab = "Density",
+     xlab = "ResidualSugar",
+     col = heat.colors(16, alpha = 0.65))
+lines(density(df$ResidualSugar), col="red")
+lines(seq(min(df$ResidualSugar), max(df$ResidualSugar), by=.5), 
+    dnorm(seq(min(df$ResidualSugar), max(df$ResidualSugar), by=.5),
+          mean(df$ResidualSugar), 
+          sd(df$ResidualSugar)), 
+    col="blue")
+#lnames <- c('Empirical', 'Normal')
+#legend('topleft', lnames, col = c('red','blue'), lty = 1) 
+hist(data.train$Chlorides, 
+     freq = FALSE,
+     main = "Chlorides",
+     ylab = "Density",
+     xlab = "Chlorides",
+     col = heat.colors(16, alpha = 0.65))
+lines(density(df$Chlorides), col="red")
+lines(seq(min(df$Chlorides), max(df$Chlorides), by=.05), 
+    dnorm(seq(min(df$Chlorides), max(df$Chlorides), by=.05),
+          mean(df$Chlorides), 
+          sd(df$Chlorides)), 
+    col="blue")
+
+hist(data.train$FreeSulfurDioxide, 
+     freq = FALSE,
+     main = "FreeSulfurDioxide",
+     ylab = "Density",
+     xlab = "FreeSulfurDioxide",
+     col = heat.colors(16, alpha = 0.65))
+lines(density(df$FreeSulfurDioxide), col="red")
+lines(seq(min(df$FreeSulfurDioxide), max(df$FreeSulfurDioxide), by=.5), 
+    dnorm(seq(min(df$FreeSulfurDioxide), max(df$FreeSulfurDioxide), by=.5),
+          mean(df$FreeSulfurDioxide), 
+          sd(df$FreeSulfurDioxide)), 
+    col="blue")
+hist(data.train$TotalSulfurDioxide, 
+     freq = FALSE,
+     main = "TotalSulfurDioxide",
+     ylab = "Density",
+     xlab = "TotalSulfurDioxide",
+     col = heat.colors(16, alpha = 0.65))
+lines(density(df$TotalSulfurDioxide), col="red")
+lines(seq(min(df$TotalSulfurDioxide), max(df$TotalSulfurDioxide), by=.5), 
+    dnorm(seq(min(df$TotalSulfurDioxide), max(df$TotalSulfurDioxide), by=.5),
+          mean(df$TotalSulfurDioxide), 
+          sd(df$TotalSulfurDioxide)), 
+    col="blue")
+
+
+```
+
+```{r, echo=FALSE}
+
+par(mfrow=c(2,2))
+hist(data.train$pH, 
+     freq = FALSE,
+     main = "pH",
+     ylab = "Density",
+     xlab = "pH",
+     col = heat.colors(16, alpha = 0.65))
+lines(density(df$pH), col="red")
+lines(seq(min(df$pH), max(df$pH), by=.05), 
+    dnorm(seq(min(df$pH), max(df$pH), by=0.05),
+          mean(df$pH), 
+          sd(df$pH)), 
+    col="blue")
+hist(data.train$Sulphates, 
+     freq = FALSE,
+     main = "Sulphates",
+     ylab = "Density",
+     xlab = "Sulphates",
+     col = heat.colors(16, alpha = 0.65))
+lines(density(df$Sulphates), col="red")
+lines(seq(min(df$Sulphates), max(df$Sulphates), by=.05), 
+    dnorm(seq(min(df$Sulphates), max(df$Sulphates), by=.05),
+          mean(df$Sulphates), 
+          sd(df$Sulphates)), 
+    col="blue")
+hist(data.train$Alcohol, 
+     freq = FALSE,
+     main = "Alcohol",
+     ylab = "Density",
+     xlab = "Alcohol",
+     col = heat.colors(16, alpha = 0.65))
+lines(density(df$Alcohol), col="red")
+lines(seq(min(df$Alcohol), max(df$Alcohol), by=.5), 
+    dnorm(seq(min(df$Alcohol), max(df$Alcohol), by=.5),
+          mean(df$Alcohol), 
+          sd(df$Alcohol)), 
+    col="blue")
+hist(data.train$TARGET, 
+     main = "TARGET & Frequency",
+      ylab = "Frequency",
+      xlab = "TARGET",
+     col = heat.colors(16, alpha = 0.65))
+```
+
+```{r, echo=FALSE}
+# Function that replace missing values with randomly generated values from the minimum to maximum values.
+fill_missing_na <- function(df){
+  
+  set.seed(123)
+  ResidualSugar <- sample(min(df$ResidualSugar, na.rm = TRUE):max(df$ResidualSugar, na.rm = TRUE),
+                        size=sum(is.na(df$ResidualSugar)), 
+                        replace = TRUE)
+  Chlorides <- sample(min(df$Chlorides, na.rm = TRUE):max(df$Chlorides, na.rm = TRUE),
+                        size=sum(is.na(df$Chlorides)), 
+                        replace = TRUE)
+  FreeSulfurDioxide <- sample(min(df$FreeSulfurDioxide, na.rm = TRUE):max(df$FreeSulfurDioxide, na.rm = TRUE),
+                        size=sum(is.na(df$FreeSulfurDioxide)), 
+                        replace = TRUE)
+  TotalSulfurDioxide <- sample(min(df$TotalSulfurDioxide, na.rm = TRUE):max(df$TotalSulfurDioxide, na.rm = TRUE),
+                        size=sum(is.na(df$TotalSulfurDioxide)), 
+                        replace = TRUE)
+  pH <- sample(min(df$pH, na.rm = TRUE):max(df$pH, na.rm = TRUE),
+                        size=sum(is.na(df$pH)), 
+                        replace = TRUE)
+  Sulphates <- sample(min(df$Sulphates, na.rm = TRUE):max(df$Sulphates, na.rm = TRUE),
+                        size=sum(is.na(df$Sulphates)), 
+                        replace = TRUE)
+  Alcohol <- sample(min(df$Alcohol, na.rm = TRUE):max(df$Alcohol, na.rm = TRUE),
+                        size=sum(is.na(df$Alcohol)), 
+                        replace = TRUE)  
+  
+  
+  df$ResidualSugar[is.na(df$ResidualSugar)] <- ResidualSugar
+  df$Chlorides[is.na(df$Chlorides)] <- Chlorides
+  df$FreeSulfurDioxide[is.na(df$FreeSulfurDioxide)] <- FreeSulfurDioxide
+  df$TotalSulfurDioxide[is.na(df$TotalSulfurDioxide)] <- TotalSulfurDioxide
+  df$pH[is.na(df$pH)] <- pH
+  df$Sulphates[is.na(df$Sulphates)] <- Sulphates
+  df$Alcohol[is.na(df$Alcohol)] <- Alcohol
+  
+  return(df)
+}
+```
+
+```{r, echo=TRUE}
+data.train <- fill_missing_na(data.train)
+```
+
+## Tranformations
+
+In order to make our data more "linear", I will transform the values of some variables in the following form.
+
+$log\_var = log(|min(var)| + var + 1)$
+
+That is, the absolute value of the minimum value for that variable plus the same variable plus one, thus in order to satisfy logarithmic properties.
+
+```{r, echo=FALSE}
+
+# Function that transform the values for the desired variables
+transform_vars <- function(df){
+
+  df$log_FixedAcidity <- log(abs(min(df$FixedAcidity)) + df$FixedAcidity + 1)
+  df$log_VolatileAcidity <- log(abs(min(df$VolatileAcidity)) + df$VolatileAcidity + 1)
+  df$log_CitricAcid <- log(abs(min(df$CitricAcid)) + df$CitricAcid + 1)
+  df$log_ResidualSugar <- log(abs(min(df$ResidualSugar)) + df$ResidualSugar + 1)
+  df$log_Chlorides <- log(abs(min(df$Chlorides)) + df$Chlorides + 1)
+  df$log_FreeSulfurDioxide <- log(abs(min(df$FreeSulfurDioxide)) + df$FreeSulfurDioxide + 1)
+  df$TotalSulfurDioxide <-  log(abs(min(df$TotalSulfurDioxide)) + df$TotalSulfurDioxide + 1)
+  df$log_Density <- log(abs(min(df$Density)) + df$Density + 1)
+  df$log_PH <- log(abs(min(df$pH)) + df$pH + 1)
+  df$log_Sulphates <- log(abs(min(df$Sulphates)) + df$Sulphates + 1)
+  df$log_Alcohol <- log(abs(min(df$Alcohol)) + df$Alcohol + 1)
+  
+  return(df)
+  
+}
+```
+
+```{r,echo=TRUE}
+data.train <- transform_vars(data.train)
+data.train <- data.train[c(1,13:29)]
+```
+
+## Visualizations
+
+Let's create a few visualizations in order to get a better understanding.
+
+### `TARGET` density
+
+Let's visualize the frequency of `TARGET`.
+
+```{r, echo=FALSE}
+
+barplot(prop.table(table(data.train$TARGET)),
+        ylab = "Frequency",
+        xlab = "TARGET",
+        col = heat.colors(16, alpha = 0.65))
+```
+
+The above visualization, shows that `TARGET` seems to follow a normal frequency distribution pattern for all `TARGET` values higher than ZERO. Interesting to see a lot of ZERO cases in the `TARGET` variable, I was not expecting to see those many records displaying that frequency.
+
+### `TARGET` vs `LabelAppeal`
+
+Let's visualize the label appeal.
+
+```{r, echo=FALSE}
+
+boxplot(data.train$TARGET ~ data.train$LabelAppeal,
+        main = "TARGET vs LabelAppeal",
+        ylab = "TARGET",
+        xlab = "LabelAppeal",
+        col = heat.colors(5, alpha = 0.65))
+
+```
+
+From the above graph, we can easily identify a linear trend in which the higher the appeal the higher the `TARGET`.
+
+### `TARGET` vs `AcidIndex`
+
+Let's see if we could identify some sort of pattern in the below graph.
+
+```{r, echo=FALSE}
+
+boxplot(data.train$TARGET ~ data.train$AcidIndex, 
+        main = "TARGET vs AcidIndex",
+        ylab = "TARGET",
+        xlab = "AcidIndex",
+        col = heat.colors(14, alpha = 0.65))
+
+```
+
+The above results seem to be interesting and they suggest some sort of downward relationship; that is, the higher the `AcidIndex` the lower the `TARGET`. However, there seems to be the presence of outliers as well.
+
+### `TARGET` vs `STARS`
+
+In this case, we must keep in mind that NAs were assigned a ZERO value.
+
+```{r, echo=FALSE}
+
+boxplot(data.train$TARGET ~ data.train$STARS, 
+        main = "TARGET vs STARS",
+        ylab = "TARGET",
+        xlab = "STARS",
+        col = heat.colors(5, alpha = 0.65))
+
+```
+
+From the above graph, we can easily start some analysis to confirm the theoretical effect in which a high number of `STARS` could suggest a high number of sales.
+
+
+## Correlations
+
+Let's create some visualizations for the correlation matrix.
+
+Let's start with a combined correlation in between `TARGET` and the other variables.
+
+```{r,echo=FALSE}
+
+my_matrix <- data.train
+cor_res <- cor(my_matrix, use = "na.or.complete")
+
+```
+
+### Graphical correlations
+
+First, let's create a visual representation of correlations with a heat-map as a guide.
+
+```{r, warning=FALSE, echo=FALSE}
+
+corrplot(cor_res, 
+         type = "upper", 
+         order = "original", 
+         tl.col = "black", 
+         tl.srt = 45, 
+         tl.cex = 0.35)
+cor_res <- data.frame(cor_res)
+```
+
+In the correlation matrix, We notice some very strong correlations in the above plot. We also can note some strong negative correlations in between `LabelAppeal` and `LabelAppealDISLIKE`; this makes sense since I have purposely created this relationship in negative terms. Also, the same applies for `STARS` and `STARS_NA`.
+
+### Numerical correlation
+
+From the above graph, we can easily identify some sort of correlations in between the response variables `TARGET` and other variables.
+
+Let's read our correlations table to gain extra insights.
+
+```{r, echo=FALSE}
+
+df.c <- cor_res[c(1)]
+df.c
+
+```
+
+Interesting to note how `STARS` now show to have the strongest correlation. Let's see if we could take some variables in which the absolute value could be higher or equal than let's say $0.25$.
+
+
+```{r, echo=FALSE}
+
+subset(df.c, abs(df.c$TARGET) >= 0.25, select = c("TARGET"))
+
+```
+
+From the above table, we can now narrow it down to the "strongest" correlations related to `TARGET`; we can easily identify some positive and some negative correlations which I consider interesting. I will keep these variables in mind for later on in case I need to refine some models.
+
+
+\newpage
+# BUILD MODELS
+
+At this point, we are getting ready to start building models, however I would like to point out that in this case is a little bit difficult to determine what data transformation could be used in order to refine our models.
+
+## Multiple Linear Regression Models
+
+In this section I will present multiple models, build with the linear model.
+
+### NULL Model
+
+Let's start with a null model in order to start having a better understanding. This model will be considered to be valid and will be considered as we advance.
+
+```{r, echo=FALSE}
+
+lm_Model_NULL <- lm(TARGET ~ 1, data = data.train)
+
+summary(lm_Model_NULL)
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+par(mfrow=c(2,2))
+plot(lm_Model_NULL)
+```
+
+In this model, we can see a constant value of $3$ cases for all diverse options; in somehow it agrees with the data since the majority of cases sold were from 3 to 4 cases but since it's constant, we should take it as a baseline.
+
+
+### FULL Model 
+
+In this section, I will build a FULL model, thus in order to keep having a better understanding of the model. This model will be considered to be valid and will be considered as we advance.
+
+```{r, echo=FALSE}
+
+lm_Model_FULL <- lm(TARGET ~ ., data = data.train)
+
+summary(lm_Model_FULL)
+```
+
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(lm_Model_FULL)
+```
+
+In the above results, we can notice how some predictors are statistically significant while others are not. Also, we noticed how the $R^2$ is presenting a "moderate" rate in which just about $53 \%$ of the variability is fully explained by this model. Also, we can notice how the residual values vs the fitted values do not seem to be homoescedastic.
+
+### STEP Model 
+
+In this section, I will build a model by employing the STEP function from R, thus in order to keep having a better understanding of the model. This model will be considered to be valid and will be considered as we advance.
+
+
+```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+
+lm_Model_STEP <- step(lm_Model_NULL,
+                    scope = list(upper=lm_Model_FULL),
+                    direction="both",
+                    test="Chisq",
+                    data=data.train)
+
+```
+
+```{r, echo=FALSE}
+
+summary(lm_Model_STEP)
+
+```
+
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(lm_Model_STEP)
+```
+
+Interesting to note that not much was gained from the above model generated from the STEP Model. From the above plot, we can notice how the fitted values vs the fitted values do not seems to be homoscedastic; the normal quantile to quantile line seems to be followed with an exception to the top values.
+
+
+### STEP Model Modified
+
+In this section, I will build a model by making a modification of the STEP model given above. I will remove `log_CitricAcid log_Alcohol log_Density LabelAppealBETTER_SALES log_Sulphates`.
+
+```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+
+lm_Model_STEP_Modified <- update(lm_Model_STEP, . ~ . - log_CitricAcid - log_Alcohol - log_Density - LabelAppealBETTER_SALES - log_Sulphates)
+
+```
+
+```{r, echo=FALSE}
+
+summary(lm_Model_STEP_Modified)
+
+```
+
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(lm_Model_STEP_Modified)
+```
+
+Very similar plots and results to the previous one, not much gain.
+
+## Poisson Regression Models
+
+In this section I will present multiple models, build using the generalized linear model. Poisson regression is often used for modeling count data. Poisson regression has a number of extensions useful for count models.
+
+### NULL Model
+
+Let's start with a null model in order to have better understanding. This model will be considered to be valid and will be considered as we advance.
+
+```{r, echo=FALSE}
+
+glm_P_Model_NULL <- glm(TARGET ~ 1, data = data.train, family = "poisson")
+
+summary(glm_P_Model_NULL)
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+par(mfrow=c(2,2))
+plot(glm_P_Model_NULL)
+```
+
+In this particular case, we notice how the number of cases has decreased to about 1 for all the complete cases.
+
+### FULL Model
+
+Let's build a full model in order to keep having a better understanding. This model will be considered to be valid and will be considered as we advance.
+
+```{r, echo=FALSE}
+
+glm_P_Model_FULL <- glm(TARGET ~ ., data = data.train, family = "poisson")
+
+summary(glm_P_Model_FULL)
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+par(mfrow=c(2,2))
+plot(glm_P_Model_FULL)
+```
+
+From above, we notice that the residuals vs fitted seems no to be homoescedastic, also the normal Q-Q line is followed in certain areas, also we can notice how the p-values for some predictors, make them not statistically significant.
+
+### STEP Model
+
+Let's build an automated STEP model in order to keep having a better understanding.
+
+```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+
+glm_P_Model_STEP <- step(glm_P_Model_NULL,
+                    scope = list(upper=glm_P_Model_FULL),
+                    direction="both",
+                    test="Chisq",
+                    data=data.train)
+
+```
+
+```{r, echo=FALSE}
+
+summary(glm_P_Model_STEP)
+
+```
+
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(glm_P_Model_STEP)
+```
+
+From above, we can notice how the residuals vs the fitted values do not seems to be homoescedastic, also the normal q-q seems to follow in some how the given line.
+
+#### ANOVA 
+
+Let's see the generated ANOVA table based on the above testing results. 
+
+```{r, echo=FALSE}
+
+glm_P_Model_STEP$anova
+
+```
+
+### STEP Model Modified
+
+In this section, I will build a modified model from the above STEP model. I will remove `log_Sulphates`.
+
+```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+
+glm_P_Model_STEP_Modified <- update(glm_P_Model_STEP, . ~ . - log_Sulphates)
+
+```
+
+```{r, echo=FALSE}
+
+summary(glm_P_Model_STEP_Modified)
+
+```
+
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(glm_P_Model_STEP_Modified)
+```
+
+Once again, it seems that we are still getting a downward direction of the above residuals vs fitted; the normal q-q seems to follow the line with some values under captured in some sections of the line.
+
+
+## Negative Binomial Regression Models
+
+In this section I will present multiple models, build using the generalized linear model. Negative binomial regression can be used for over-dispersed count data, that is when the conditional variance exceeds the conditional mean. It can be considered as a generalization of Poisson regression since it has the same mean structure as Poisson regression and it has an extra parameter to model the over-dispersion. If the conditional distribution of the outcome variable is over-dispersed, the confidence intervals for the Negative binomial regression are likely to be narrower as compared to those from a Poisson regression model [1].
+
+### NULL Model
+
+Let's start with a null model in order to have better understanding. This model will be considered to be valid and will be considered as we advance.
+
+```{r, echo=FALSE}
+
+glm_B_Model_NULL <- glm.nb(TARGET ~ 1, data = data.train)
+
+summary(glm_B_Model_NULL)
+```
+
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+par(mfrow=c(2,2))
+plot(glm_B_Model_NULL)
+```
+
+In this particular case, we notice how the number of cases has decreased to about 1 for all the complete cases.
+
+### FULL Model
+
+Let's build a full model in order to keep having a better understanding. This model will be considered to be valid and will be considered as we advance.
+
+```{r, echo=FALSE}
+
+glm_B_Model_FULL <- glm.nb(TARGET ~ ., data = data.train)
+
+summary(glm_B_Model_FULL)
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+par(mfrow=c(2,2))
+plot(glm_B_Model_FULL)
+```
+
+From above, we notice that the residuals vs fitted seems no to be homoescedastic, also the normal Q-Q line is followed in certain areas, also we can notice how the p-values for some predictors, make them not statistically significant.
+
+### STEP Model
+
+Let's build an automated STEP model in order to keep having a better understanding.
+
+```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+
+glm_B_Model_STEP <- step(glm_B_Model_NULL,
+                    scope = list(upper=glm_B_Model_FULL),
+                    direction="both",
+                    test="Chisq",
+                    data=data.train)
+
+```
+
+```{r, echo=FALSE}
+
+summary(glm_B_Model_STEP)
+
+```
+
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(glm_B_Model_STEP)
+```
+
+From above, we can notice how the residuals vs the fitted values do not seems to be homoscedastic, also the normal q-q seems to follow in some how the given line.
+
+#### ANOVA 
+
+Let's see the generated ANOVA table based on the above testing results. 
+
+```{r, echo=FALSE}
+
+glm_B_Model_STEP$anova
+
+```
+
+### STEP Model Modified
+
+In this section, I will build a modified model from the above STEP model. I will remove `log_Sulphates`.
+
+```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+
+glm_B_Model_STEP_Modified <- update(glm_B_Model_STEP, . ~ . - log_Sulphates)
+
+```
+
+```{r, echo=FALSE}
+
+summary(glm_B_Model_STEP_Modified)
+
+```
+
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(glm_B_Model_STEP_Modified)
+```
+
+Once again, it seems that we are still getting a downward direction of the above residuals vs fitted; the normal q-q seems to follow the line with some values under captured in some sections of the line.
+
+## Comparing Poisson vs Negative Binomial
+
+It is interesting to note that the Poisson and the Negative Binomial models return the same results up to 4 decimals. We can be compare as follows:
+
+```{r, echo = FALSE}
+# Compare coefficients for two different models
+compare_coefficients <- function(model1, model2){
+  
+  poisson_coeff <- round(model1$coefficients,4)
+  nbinomial_coeff <- round(model2$coefficients,4)
+  compare <- round(model1$coefficients,4) == round(model2$coefficients,4)
+  
+  compare_coeff <-- data.frame(poisson_coeff, nbinomial_coeff, compare)
+  compare_coeff$compare[compare_coeff$compare == -1] <- "TRUE"
+  compare_coeff$compare[compare_coeff$compare == 0] <- "Rounding Aproximation"
+  colnames(compare_coeff) <- c("Poisson", "Negative Binomial", "Similar Coefficients")
+  
+  return(compare_coeff)
+}
+```
+
+### Comparing FULL Models
+
+Let's compare both FULL models; that is the coefficients generated from the Poisson FULL model vs the coefficients returned by the Negative Binomial FULL Model.
+
+```{r, echo=FALSE}
+compare_coefficients(glm_P_Model_FULL, glm_B_Model_FULL)
+```
+
+### Comparing STEP Models
+
+Let's compare both STEP models; that is the coefficients generated from the Poisson STEP model vs the coefficients returned by the Negative Binomial STEP Model.
+
+```{r, echo=FALSE}
+compare_coefficients(glm_P_Model_STEP, glm_B_Model_STEP)
+```
+
+### Comparing STEP Models Modified
+
+Let's compare both STEP models Modified; that is the coefficients generated from the Poisson STEP model Modified vs the coefficients returned by the Negative Binomial STEP Model Modified.
+
+```{r, echo=FALSE}
+compare_coefficients(glm_P_Model_STEP_Modified, glm_B_Model_STEP_Modified)
+```
+
+## Zero-Inflated Poisson Regression Models
+
+In this section I will present multiple models, build using the `pscl` package in order to build a Zero-inflated Poisson regression linear model. Zero-inflated Poisson regression is used to model count data that has an excess of zero counts. Further, theory suggests that the excess zeros are generated by a separate process from the count values and that the excess zeros can be modeled independently. Thus, the generated model has two parts, a Poisson count model and the logit model for predicting excess zeros [2].
+
+### NULL Model
+
+Let's start with a null model in order to have better understanding. This model will be considered to be valid and will be considered as we advance.
+
+```{r, echo=FALSE}
+
+zeroinfl_P_Model_NULL <- zeroinfl(TARGET ~ 1, dist = "poisson", data = data.train)
+
+summary(zeroinfl_P_Model_NULL)
+
+```
+
+In this case is interesting to note how the Zero-Inflated model actually lowered the intercept from 1 case to about -1 case, making this model not realistic based on our assumptions that we need at least ZERO cases for the TARGET variable.
+
+### FULL Model
+
+Let's build a full model in order to keep having a better understanding. This model will be considered to be valid and will be considered as we advance.
+
+```{r, echo=FALSE}
+
+zeroinfl_P_Model_FULL <- zeroinfl(TARGET ~ ., dist = "poisson", data = data.train)
+
+summary(zeroinfl_P_Model_FULL)
+```
+
+In this particular case is interesting to notice how the two models return different coefficients and different statistical significance for many variables.
+
+## Zero-Inflated Negative Binomial Regression Models
+
+In this section I will present multiple models, build using the `pscl` package in order to build a Zero-inflated Negative Binomial regression linear model. Zero-inflated negative binomial regression is for modeling count variables with excessive zeros and it is usually for over-dispersed count outcome variables. Furthermore, theory suggests that the excess zeros are generated by a separate process from the count values and that the excess zeros can be modeled independently [3].
+
+A zero-inflated model assumes that zero outcome is due to two different processes. The two parts of the a zero-inflated model are a binary model, usually a logit model to model which of the two processes the zero outcome is associated with and a count model, in this case, a negative binomial model, to model the count process. The expected count is expressed as a combination of the two processes.
+
+### NULL Model
+
+Let's start with a null model in order to have better understanding. This model will be considered to be valid and will be considered as we advance.
+
+```{r, echo=FALSE}
+
+zeroinfl_nB_Model_NULL <- zeroinfl(TARGET ~ 1, dist = "negbin", data = data.train)
+
+summary(zeroinfl_nB_Model_NULL)
+
+```
+
+In this case is interesting to note how the Zero-Inflated model actually lowered the intercept from 1 case to about -1 case, making this model not realistic based on our assumptions that we need at least ZERO cases for the TARGET variable.
+
+### FULL Model
+
+Let's build a full model in order to keep having a better understanding. This model will be considered to be valid and will be considered as we advance.
+
+```{r, echo=FALSE}
+
+zeroinfl_nB_Model_FULL <- zeroinfl(TARGET ~ ., dist = "negbin", data = data.train)
+
+summary(zeroinfl_nB_Model_FULL)
+```
+
+In this particular case is interesting to notice how the two models return different coefficients and different statistical significance for many variables.
+
+Also, something considerable to mention is the similitude of the coefficients on both models the Zero-Inflated Poison model and the Zero-Inflated Negative Binomial.
+
+## Comparing Zero-Inflated Model Coefficients
+
+In this section I will proceed to make a small comparison of coefficients for both Zero inflated models that is The Zero-Inflated Poisson FULL Model and the Zero-Inflated Negative-Binomial FULL Model. In this case, we can see how the differences keep up to 3, 4 or even five or mode decimals.
+
+```{r, echo=FALSE}
+
+zeroinf_coeff <- data.frame("Poisson" = zeroinfl_P_Model_FULL$coefficients$zero, "neg Bin" = zeroinfl_nB_Model_FULL$coefficients$zero)
+colnames(zeroinf_coeff) <- c("Poisson", "Neg Binomial")
+zeroinf_coeff$Difference <- round(zeroinf_coeff$Poisson - zeroinf_coeff$`Neg Binomial`,4)
+zeroinf_coeff
+```
+
+
+
+What is interesting once again are the similar values returned on both models. Also, by looking at the p-values and the level of significance, we notice close similarities.
+
+# MODEL SELECTION
+
+In this section, I will describe the process in order to select the final model.
+
+In particular case, I would like to select the `Linear Model STEP Modified` as my final model. The reasons are as follows:
+
+- The `Linear Model STEP Modified` follows most of the normal quantile to quantile plot.
+
+- The quantile to quantile plot deviated just a little bit towards the top.
+
+- The Median is considered to be near zero.
+
+- The $R^2$ is some how significant in terms that this model describe about $54\%$ of the variation of the data. 
+
+- Even though there's a lot of problems in terms of correlation with the data, I believe this to be the "best" model from the ones that I have previously build.
+
+- However, the Poisson model is a great choice for counts, it seems to follow the trends as well.
+
+- The Median in the Poisson model shows to be near zero.
+
+- Is very difficult to decide at this point; let's run both models and see what might come up.
+
+# PREDICTIONS
+
+In this section, I will proceed to predict values from the evaluation data set.
+
+## Evaluation data transformations
+
+In this section I will transform our evaluation data same as our original data has.
+
+```{r, echo = TRUE}
+
+# Let's create a backup in order to transform our data
+df <- data.eval
+
+# Create New Variable: LabelAppealDISLIKE
+df <- create_LabelAppealDISLIKE(df)
+
+# Create New Variable: LabelAppealBETTER_SALES
+df <- create_LabelAppealBETTER_SALES(df)
+
+# Create New Variable: STARS_BETTER_SALES
+df <- create_STARS_BETTER_SALES(df)
+
+# Create New Variable: STARS_NA
+df <- create_STARS_NA(df)
+
+# Fill in missing NAs
+df <- fill_missing_na(df)
+
+# Transform variables into "log_var = log(|min(var)| + var + 1)"
+df <- transform_vars(df)
+
+# Extracting new and transformed columns
+df <- df[c(1:2,14:30)]
+
+```
+
+## Predict TARGET
+
+In this section, I will predict the number of cases based on the final linear model selected. In order to accomplish this goal, I need to do as follows:
+
+First, I need to predict the number of cases and the I need to round the final results to zero decimals since the goal is to predict whole cases.
+
+### Predicted table: Linear STEP Modified Model
+
+The below is a table in which the records show the generated predicted number of cases for the first 20 records employing the linear STEP Modified model.
+
+```{r, echo=FALSE}
+
+lm_cases_amount <- predict(lm_Model_STEP_Modified, newdata=df)
+
+data.eval$TARGET <- round(lm_cases_amount,0)
+
+head(data.eval,20)[1:8]
+```
+
+#### Visuals
+
+In this section, I am presenting the compared graphs for the predicted values vs the values from the training data-set.
+
+```{r, echo=FALSE}
+par(mfrow=c(1,2))
+barplot(prop.table(table(data.eval$TARGET)),
+        main = "Predicted Values",
+        ylab = "Frequency",
+        xlab = "TARGET",
+        col = "gray")
+
+barplot(prop.table(table(data.train$TARGET)),
+        main = "Train Data-Set",
+        ylab = "Frequency",
+        xlab = "TARGET",
+        col = heat.colors(16, alpha = 0.65))
+```
+
+#### Summaries
+
+In this section I am presenting some count summaries by predicted `TARGET` which represents the number of cases predicted from the evaluation data-set.
+
+```{r, echo=FALSE}
+data.eval %>% group_by(TARGET) %>% summarize(count=n())
+```
+
+It is interesting to note the presence of $1$ case in which shows the predicted value of $-1$; this is considered not to be a true value since we can not order $-1$ cases unless the product is so bad that we need to return the one case of wine.
+
+### Predicted table: Poisson Modified Model
+
+The below is a table in which the records show the generated predicted number of cases for the first 20 records employing the Poisson Modified model.
+
+```{r, echo=FALSE}
+
+glm_P_cases_amount <- predict(glm_P_Model_STEP_Modified, newdata=df, type="response")
+
+data.eval$TARGET <- round(glm_P_cases_amount,0)
+
+head(data.eval,20)[1:8]
+```
+
+#### Visuals
+
+In this section, I am presenting the compared graphs for the predicted values vs the values from the training data-set.
+
+```{r, echo=FALSE}
+par(mfrow=c(1,2))
+barplot(prop.table(table(data.eval$TARGET)),
+        main = "Predicted Values",
+        ylab = "Frequency",
+        xlab = "TARGET",
+        col = "gray")
+
+barplot(prop.table(table(data.train$TARGET)),
+        main = "Train Data-Set",
+        ylab = "Frequency",
+        xlab = "TARGET",
+        col = heat.colors(16, alpha = 0.65))
+```
+
+
+#### Summaries
+
+In this section I am presenting some count summaries by predicted `TARGET` which represents the number of cases predicted from the evaluation data-set.
+
+```{r, echo=FALSE}
+data.eval %>% group_by(TARGET) %>% summarize(count=n())
+```
+
+It is interesting to note that in this case, the Poisson STEP Modified Model shows a better fit for the values that we are looking, that is in between ZERO and EIGHT. It is also notable that in this case the number of cases with the value of 1 have increased considerable compared to our linear model just in a tiny fraction while the other values seems to follow accordingly.
+
+## Comparing predictions
+
+In this section, I will compare the predictions from the Linear model and the Poisson model; the theoretical effect should be of a small difference that is, maybe one digit in difference in between cases.
+
+```{r, echo=FALSE}
+
+df.compare <- data.frame("linear" = round(lm_cases_amount,0), 
+                         "Poisson" = round(glm_P_cases_amount,0))
+
+df.compare$Difference <- df.compare$Poisson - df.compare$linear
+
+```
+
+Let's see the frequency of differences.
+
+```{r, echo=FALSE}
+barplot(prop.table(table(df.compare$Difference)),
+        main = "Differences",
+        ylab = "Frequency",
+        xlab = "Value",
+        col = heat.colors(16, alpha = 0.65))
+```
+
+Let's take a look at the counts.
+
+```{r, echo=FALSE}
+df.compare %>% group_by(Difference) %>% summarize(count=n())
+```
+
+In effect, those results display that even though there's only one value with two units difference, is actually a good approximation; we notice how the majority of the values fit very well and the maximum difference in cases is only one, that is one short or one over; which could be perceived as a very good approximation.
+
+# FINAL MODEL
+
+From above, I will pick the `Poisson STEP Modified Model` as my final model; as previously compared in the ANOVA table, that model shows a low AIC and follows the normal quantile to quantile line very accurately, also, from the above summaries, we noticed that it provides values for all desired counts. Perhaps it could be refined even further. Also, is remarkable to note that similitude with the Negative Binomial STEP Modified Model, which could be picked as well but for consistency reasons I will stick with the Poisson STEP Modified Model.
+
+```{r, echo=TRUE}
+
+selected_FINAL_MODEL <- glm_P_Model_STEP_Modified
+
+```
+
+## Export file
+
+In order to provide a csv output for the predictions table.
+
+```{r, eval=FALSE}
+write.csv(data.eval, file = "wine-my-evaluated-data.csv",row.names=FALSE)
+```
+
+
+
+
+# REFERENCES
+
+[1] https://stats.idre.ucla.edu/r/dae/negative-binomial-regression/
+
+[2] https://stats.idre.ucla.edu/r/dae/zip/
+
+[3] https://stats.idre.ucla.edu/r/dae/zinb/
