@@ -40,6 +40,6 @@ https://data.cityofnewyork.us/Education/2012-SAT-Results/f9bf-2cp4
 The following is the analysis and write-up based upon our interpretation of the data in order to predict the
 average SAT scores based upon demographic school data.
 
-#KEYWORDS
+# KEYWORDS
 
 NY City schools, NYC SAT, NYC student demographics, data609.
