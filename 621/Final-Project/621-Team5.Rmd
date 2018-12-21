@@ -1,0 +1,389 @@
+---
+title: "DATA 621 - Final Project"
+header-includes: # allows you to add in your own Latex packages
+- \usepackage{titling}
+- \pretitle{\begin{center}\LARGE\includegraphics[width=6in]{logo.png}\\[\bigskipamount]}
+- \posttitle{\end{center}}
+
+- \usepackage{float} #use the 'float' package
+- \floatplacement{figure}{H} #make every figure with caption = h
+subtitle: "CUNY SPS Masters in Data Science - DATA 621"
+
+#author: 
+#- Albina Gallyavova
+#- Chad Smith
+#- Duubar Villalobos Jimenez
+#- Nkasi Nedd
+#- Raghunathan Ramnath
+
+date: "December 20, 2018"
+
+output:
+  pdf_document:
+      highlight: tango
+      toc: true
+      toc_depth: 4
+      number_sections: true
+      df_print: kable
+      fig_width: 7
+      fig_height: 6
+      fig_caption: true
+      #template: quarterly-report.tex
+      #includes:
+      #  in_header: preamble.tex
+      #  before_body: doc-prefix.tex
+      #  after_body: doc-suffix.tex
+      
+      #citation_package: natbib
+      keep_tex: true
+      
+  html_document:
+      df_print: paged
+      code_folding: hide
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+    toc: yes
+    df_print: paged
+    
+
+geometry: margin=1in
+
+fontfamily: mathpazo
+fontsize: 11pt
+#spacing: double
+
+bibliography: bibliography.bib
+#biblio-style: "apalike"
+link-citations: yes
+
+---
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.pos = 'h')
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(kableExtra) # latex tables
+```
+
+
+\newpage
+
+
+**Prime awards model for the New York Department of Education grants from the federal and non-federal government**
+
+
+# Abstract 
+
+Education investment is crucial to the well-being of nation's future. It has already proven that investing in education help reduce unemployment; fight against crime and over all strengthens communities.  
+
+On the other hand, as we also know very well, how schools are currently struggling to keep up with the high demand of quality education, inclusiveness and no child left behind policies, thus, add extra expenses and require extra resources to satisfy the need, securing funds for investing in education is highly desirable. 
+
+Child care expenses, characteristics of teachers and student loans are some of the spotlight that affects the condition of education. There is an assumption that the funds are not equally spread or spent towards certain geographies. 
+
+In this Project, we were trying to get an insight on the grants provided historically and based on that predict for the next two years. 
+
+
+# Key words 
+
+New York, education, federal and non-federal grants, funding allocation. 
+
+
+# Introduction 
+
+As we all know, we can all come to an agreement that education investment is crucial to the well-being of our future. It has already proven that investing in education help reduce unemployment; fight against crime and over all strengthens communities. On the other hand, as we also know very well, are how schools are currently struggling to keep up with the high demand of quality education, inclusiveness and no child left behind policies, thus, add extra expenses and require extra resources to satisfy the need, securing funds for investing in education is highly desirable. An example can be seeing when teachers -in many cases- are obligated to put part of their salary in order to purchase classroom supplies, another example will be to purchase meals in order to keep the young minds alert and ready to learn. 
+
+From the above, we can deduct that lack of funds and high education expectations seems to be in opposite sides and currently not necessarily working together. High demand of resources and great diversity experienced -especially here in the great state of New York- claim for a fair need of funds in order to satisfy this quest. 
+
+The proposal review will analyze and discuss the economical, geographical and spatial aspects for government education funding for the state of New York.
+
+
+# Literature review 
+
+
+## Education impact on economic growth 
+
+
+The importance of education for the society overall cannot be underestimated. Education allows us to grow and develop as individuals, provides skills to become eligible for the workforce, trains self-discipline to be able to achieve the life goals, and much more. More educated people create a platform for a higher quality labor, living standards and solving problems more efficiently. In general, education—as a critical component of a country's human capital—increases the efficiency of each individual worker and helps economies to move up the value chain beyond manual tasks or simple production processes (WEF 2016).  Education has been long viewed as a backbone of economic well-being. Throughout his career, Robert Barro produced numerous papers suggesting positive relations between years of schooling and economic growth (Barro, 1991, 1997). 2013 meta-regression analysis conducted by Benos and Zotou (Benos, Zotou, 2013) provided evidence that different measures of education give rise to different coefficients of the size effect of education on growth. 
+
+Hanushek and Woessmann (2010) provide an extensive literature review on the topic, however, they argue the empirical evidence on the impact of education on economic growth has long been mixed mostly due to measurement problems. 
+
+Although most studies use measurements such as years of schooling or overall cognitive skills based on test results, a question arises whether government spending has an impact on quality of education, i.e., students' performance, and consequently on economic growth. 
+
+
+## Funding impact on education 
+
+
+The early years of research were not supportive of the view that government spending could have a positive impact on the quality of education. The famous Coleman report (Coleman et al., 1966) suggested that families are the most important determinant of student achievement. Despite the report, the government has implemented a number of educational reforms affecting spending structure.  
+
+The resources have not necessarily yielded positive results in general improvement of student achievement (Hanushek, 2003). 
+
+More recent studies, however, provide an opposite view. Using data available from The World Bank's World Development Indicators (WDI) database, it is possible to estimate the bivariate relationship between government education expenditure and GDP across a large sample of countries. The estimates show that for every dollar the government spends on education, GDP grows on average by \$20.
+
+```{r fig1, echo=FALSE, out.width='100%', fig.cap="\\label{fig:fig1}Government expenditure on education and GDP growth from 1990.99.", fig.pos = 'h'}
+knitr::include_graphics('/home/mydvtech/Documents/621/images/Rplot1.png')
+```
+
+According to Jackson, Johnson and Persico (2015), event-study and instrumental variable models reveal that a 10 percent increase in per-pupil spending each year for all twelve years of public school leads to 0.27 more completed years of education, 7.25 percent higher wages, and a 3.67 percentage-point reduction in the annual incidence of adult poverty; effects are much more pronounced for children from low-income families. Exogenous spending increases were associated with sizable improvements in measured school quality, including reductions in student-to-teacher ratios, increases in teacher salaries, and longer school years.  
+
+In most recent studies of spending impact on student performance, further evidence was provided that following court-ordered finance reforms taking place between 1989 and 2000, the highest poverty quartile in a treated state experienced a 11.5 to 12.1 percent increase in per-pupil spending and a 6.8 to 11.5 percentage point increase in graduation rates (Candelaria and Shores, 2017).
+
+
+## Funding allocation 
+
+
+Education is one of the largest single components of government spending, amassing 6.1\% of GDP across federal, state, and local expenditures (OECD, 2015). According to the US Department of Education, funds come predominantly from State, local and private sources, and this is especially true at the elementary and secondary level, where about 92 percent of the funds will come from non-Federal sources. However, due to those resources mostly coming from taxes, many argue that the system creates inequality in funding allocation often causing underprivileged layers of population also be educationally underfunded. In the Funding Gaps 2018 report, The Education Trust highlights that school districts that serve large populations of students of color and students from low-income families receive far less funding than those serving white and more affluent students.
+
+
+# Methodology 
+
+
+Initially, we looked at the data and tried to determine if multiple linear regression models were appropriate to model the grants data-set. First, we tried getting insights from the data-set; some of them are as follows:  
+
+- The data-set is currently composed of 18160 records and 73 variables. 
+
+- Many variables had high percentages of missing values.  
+
+- The data-set did not include a dictionary and additional research had to be done in order to find meaningful insights from the given variables. 
+
+- Many records were duplicated and a “cleanup” process had to be implemented. 
+
+
+Based on the number of variables and data, first we tried to build a multiple linear regression model from the given variables in order to predict the grant values. Since this data-set is not complete, we had to abandon the idea due to lack of data and improper results. Based on the above, we decided that in order to obtain the maximum information possible, we had to discard the use of many variables and put our focus into the following variables: 
+
+- `action_date`: Original request date in which a grant application was initiated. The original date format was in the standard *"mm/dd/yyyy"* format; from there, we focused and extracted the year only in the following format *"yyyy"*. 
+
+- `award_id`: Individual grant identifier. It was quickly identified that many records presented modifications and the *"duplicate"* records were discarded. 
+
+- `modification_number`: Incremental value that indicates the number of modifications a grant has had over time. It is assumed that the higher the number the most recent the modification was. Based on that, only the records that have the unique `award_id` with the highest modification_number were kept for the analysis. 
+
+- `recipient_zip_code`: Variable that denotes the zip code of the school requesting the grant. 
+
+- `recipient_county_code`: Variable that denotes the County code of the school requesting the grant. 
+
+- `recipient_congressional_district`: Variable that denotes the Congressional District code of the school requesting the grant. 
+
+- `total_funding_amount`: Considered to be the variable that holds the grant amount. Later on, due to the magnitude of the values given, we had to divide by one million ($1000000$) since much of the data was reported in the millions. 
+
+  
+
+It is noted that the variable total_funding_amount presented some negative values which were surprising to us; the reason why, is because we did not expect to find negative grants. 
+
+
+# Experimentation and Results 
+
+ 
+Once we thought-out of the negative values, we decided to treat these negative grants as a separate entity called “Adjustments” or “Subtractions” in this way, we separate the data in two ways as follows: 
+
+
+1) **Positive Grants**: Holding the positive grants for which the schools applied. 
+
+2) **Negative Grants**: Holding the negative values listed in the data-set, we treated these to be as “Adjustments” from the yearly grants. 
+
+3) **Net Grants**: That is, we subtracted from the positive grants, the negative grants. 
+
+  
+
+ From the above, we decided to group our remaining data in groups, that is: 
+
+  
+
+1) `Group by Year and Zip Code`: We summarize the values by adding the `total_funding_amount`. 
+
+2) `Group by Year and County Code`: We summarize the values by adding the `total_funding_amount`. 
+
+3) `Group by Year and Congressional District Code`: We summarize the values by adding the `total_funding_amount`. 
+
+  
+
+From these 3 groups, we ended up with nine different matrices from which we were able to predict values for the years 2019\* and 2020\*; that is: 
+ 
+
+**Matrix Group 1**:  
+
+    Group by Year and Zip Code <- Add Grants 
+
+    Group by Year and Zip Code <- Subtract Grants 
+
+    Group by Year and Zip Code <- Net Grants 
+
+  
+
+ **Matrix Group 2**:  
+
+    Group by Year and County Code <- Add Grants 
+
+    Group by Year and County Code <- Subtract Grants 
+
+    Group by Year and County Code <- Net Grants 
+
+  
+
+**Matrix Group 3**:  
+
+    Group by Year and Congressional District Code <- Add Grants 
+
+    Group by Year and Congressional District Code <- Subtract Grants 
+
+    Group by Year and Congressional District Code <- Net Grants 
+    
+
+The process to predict the values from the above matrices, were very simple but tedious. The way we implemented, was by predicting unique linear models for each `Zip Code`, `County Code` and `Congressional District Code` available in the data-set. We did this in a one by one basis; that is, every single combination returned a different set of coefficients for every given variable. Once we were able to obtain the unique linear model coefficients, we were able to find the predicted values for the years 2019\* and 2020\*. 
+
+
+The models employed were very simple linear regression models as a combination. That is, in some cases we used a standard linear regression model when the generalized linear model could not be applied to the given values returned in the data-set due to missing values or linearity in the data, which returns errors. 
+ 
+
+Example of simple linear models in R applied to our data set. 
+
+```{r, echo = TRUE, eval = FALSE}
+y <- log(as.numeric(y))
+
+# Simple linear model
+lm <- lm(y ~ x)
+
+# Compare to least squares linear model
+lm_p <- gls(y ~ x)
+```
+
+
+$y$: represented the values returned in the summarized values for each Grouped matrix for each individual column identifier.  
+
+$y = \{y_{1,j}, y_{2,j}, … y_{13,j} \}$ for each $j$ column present on each matrix group listed above. 
+
+  
+
+$x$: represented the number of years given in the data-set. That is,  
+
+$x = \{0, 1, 2, … , 12\}$ representing the years from 2006 through 2018 in a consecutive form. 
+
+
+From the above, we ended up calculating as follows: 
+
+- **449** different linear models were employed for the `Zip code predictions`. 
+
+- **62** different linear models were employed for the `County predictions`. 
+
+- **29** different linear models were employed for the `Congressional District predictions`. 
+
+
+All the models transformed our Grant values divided into one million and then into a log scale for easier linearity transformations. 
+
+With the combination of those predictions, we were able to create a predictive visualization of the results as seeing in the appendix tables and maps as seeing below. 
+
+
+\newpage
+# Results
+
+
+The below results were obtained after our linear regression analysis was completed. Also, we can see their respective visualization found in the appendix.
+
+```{r table1, echo=FALSE}
+file <- '/home/mydvtech/Documents/621/data/yearly-table.csv'
+csv.table1 <- read.csv(file)
+
+
+kable_caption <- "\\label{tab:table1}Net funding by year with respective request type in millions of US dollars. Prediction years show a star (*) next to the year."
+
+kable(csv.table1, "latex", caption = kable_caption, booktabs = T, longtable = T) %>%
+  kable_styling(font_size = 8,
+                latex_options = c("repeat_header")) 
+
+```
+
+
+
+\newpage
+# Conclusions 
+
+
+Based on the grant analysis, the only thing we are sure of is that grant funding has gradually increased for the last ten years and that the location of where grants are rewarded have mostly been rural areas.  Since many high-population areas are funded by non-federal sources, this makes sense to spread out grant funding to low-populated areas. What is difficult to define is whether the funding has made a significant difference in the level of education in these areas.  
+
+Based on the initial exploratory analysis, we were encouraged to see so many different variables that described the dataset.  However, shortly after we discovered most were unusable.  It's highly probable that anyone you ask would say that education is a high priority, thought the lack of effort in organizing the data and explaining it is poor.  With millions of dollars being distributed every year, it should be rare to find a record with as much missing data as we've seen.  And with our analysis consisting of only New York grants, standardization across other states may or may not be needed if other states collect grant information with different variables. 
+
+With the complicated process of applying for grants, many schools or districts may be discouraged to apply for them at all.  We judge this by an increasing trend of asking money from the community through websites like DonorsChoose.org. and GoFundMe.com 
+
+This dataset should be very valuable when analyzed with other data about test scores and graduation rates across New York.  Future analysis of this dataset combined with other data could be used to see how grant funding impacts the lives of teachers, researchers and students.  The issue is whether the data set can be relied upon as more care in the backend of data collection is needed. 
+
+
+\newpage
+# Appendix
+
+
+```{r fig4, echo=FALSE, out.width='100%', fig.cap="\\label{fig:fig4}Total funding in millions of US dollars by request type. The scale is set to logarithmic. The graph includes predictions for 2019 and 2020. Prediction years show a star (*) next to the year.", fig.pos = 'h'}
+knitr::include_graphics('/home/mydvtech/Documents/621/images/Rplot4.png')
+```
+
+\newpage
+```{r fig5, echo=FALSE, out.width='100%', fig.cap="\\label{fig:fig5}Net funding in millions of US dollars. The scale is set to logarithmic. The graph includes predictions for 2019 and 2020. Prediction years show a star (*) next to the year.", fig.pos = 'h'}
+knitr::include_graphics('/home/mydvtech/Documents/621/images/Rplot5.png')
+```
+
+\newpage
+```{r fig2, echo=FALSE, out.width='100%', fig.cap="\\label{fig:fig2}Zip code Grants and predicted values in a map.", fig.pos = 'h'}
+knitr::include_graphics('/home/mydvtech/Documents/621/images/Rplot2.png')
+```
+
+
+```{r fig3, echo=FALSE, out.width='100%', fig.cap="\\label{fig:fig3}County Grants and predicted values in a map.", fig.pos = 'h'}
+knitr::include_graphics('/home/mydvtech/Documents/621/images/Rplot3.png')
+```
+
+
+\newpage
+```{r table2, echo=FALSE}
+file <- '/home/mydvtech/Documents/621/data/Cong-District-table.csv'
+csv.table2 <- read.csv(file)
+
+
+kable_caption <- "\\label{tab:table2}Net funding by year with respective Congressional District in millions of US dollars. Prediction years show a star (*) next to the year."
+
+kable(csv.table2, "latex", caption = kable_caption, booktabs = T, longtable = T) %>%
+  kable_styling(font_size = 8,
+                latex_options = c("repeat_header")) 
+
+```
+
+
+\newpage
+```{r table3, echo=FALSE}
+file <- '/home/mydvtech/Documents/621/data/County-table.csv'
+csv.table2 <- read.csv(file)
+
+
+kable_caption <- "\\label{tab:table3}Net funding by year with respective County in millions of US dollars. Prediction years show a star (*) next to the year."
+
+kable(csv.table2, "latex", caption = kable_caption, booktabs = T, longtable = T) %>%
+  kable_styling(font_size = 8,
+                latex_options = c("repeat_header")) 
+
+```
+
+\newpage
+```{r table4, echo=FALSE}
+file <- '/home/mydvtech/Documents/621/data/ZipCode-table.csv'
+csv.table2 <- read.csv(file)
+
+
+kable_caption <- "\\label{tab:table4}Net funding by year with respective Zipcode in millions of US dollars. Prediction years show a star (*) next to the year."
+
+kable(csv.table2, "latex", caption = kable_caption, booktabs = T, longtable = T) %>%
+  kable_styling(font_size = 8,
+                latex_options = c("repeat_header")) 
+
+```
+
+
+
+\newpage
+# References
+
+---
+nocite: |
+  @R, @grants, @ihaka:1996, @AModernApproachWithR,
+  @duns, @sam, @wef, @education-growth, @ed-growth,
+  @Meta-Regression, @school-effects, @ed-and-growth
+...
+
+
