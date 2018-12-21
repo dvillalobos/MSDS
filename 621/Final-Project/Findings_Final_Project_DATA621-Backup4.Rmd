@@ -1,0 +1,1302 @@
+---
+title: "Final Project"
+author: 
+- Albina Gallyavova
+- Chad Smith
+- Duubar Villalobos Jimenez
+- Nkasi Nedd
+- Raghunathan Ramnath
+
+
+date: "December 20, 2018"
+
+output:
+  pdf_document:
+      highlight: tango
+      toc: true
+      toc_depth: 4
+      number_sections: true
+      df_print: kable
+      fig_width: 7
+      fig_height: 6
+      fig_caption: true
+      #template: quarterly-report.tex
+      #includes:
+      #  in_header: preamble.tex
+      #  before_body: doc-prefix.tex
+      #  after_body: doc-suffix.tex
+      
+      #citation_package: natbib
+      keep_tex: true
+      
+  html_document:
+      df_print: paged
+      code_folding: hide
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+    toc: yes
+    df_print: paged
+    
+subtitle: 
+- CUNY SPS Masters in Data Science - DATA 621
+
+geometry: margin=1in
+
+fontfamily: mathpazo
+fontsize: 11pt
+#spacing: double
+
+bibliography: bibliography.bib
+#biblio-style: "apalike"
+link-citations: yes
+
+
+---
+
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, fig.pos = 'H')
+
+```
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+
+library(kableExtra) # latex tables
+library(stringr)    # strings
+library(psych)      # describe a data frame
+library(zipcode)    # zipcode library
+library(dplyr)      # data wrangling
+library(tidyr)      # data wrangling
+library(reshape2)   # data wrangling
+library(nlme)       # generalized linear model
+library(lattice)    # plotting
+library(fastDummies)# dummy variables
+library(ggplot2)    # graphical plots
+library(ggpubr)     # plots
+library(grid)       # map plots
+library(gridExtra)
+
+theme_set(theme_pubclean())
+
+#library(devtools)
+#install_github('arilamstein/choroplethrZip@v1.3.0')
+# Is gdal installed ? .... Solution : sudo apt install libgdal-dev libudunits2-dev : Provides /usr/bin/gdal-config
+library(choroplethrZip)
+library(choroplethr)
+
+```
+
+```{r, echo=FALSE}
+# Obtain dimensions of dataset
+get_dims <- function(df){
+  
+  dimensions <- dim(df)
+  dimensions <- data.frame('Records' = dimensions[1],
+                           'Variables' = dimensions[2])
+  return(dimensions)
+}
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Function that extract summary values into a
+get_df_summary <- function(df){
+  df.summary <- data.frame(unclass(summary(df)), 
+                          check.names = FALSE, 
+                          row.names = NULL,
+                          stringsAsFactors = FALSE)
+  
+  # Let's transpose the resulting data frame
+  df.summary <- data.frame(t(df.summary))
+  
+  # Let's rename the columns
+  if ( length(colnames(df.summary)) > 6 ){
+    colnames(df.summary) <- c('Min', '1st Qu', 'Median', 'Mean', '3rd Qu', 'Max', 'Other')
+    df.summary$Other <- as.character(df.summary$Other)
+  } else {
+    colnames(df.summary) <- c('Min', '1st Qu', 'Median', 'Mean', '3rd Qu', 'Max')
+    
+  }
+  
+  # Let's extract numeric values
+  df.summary$Min <- as.numeric(gsub('Min.   :', '', df.summary$Min))
+  df.summary$`1st Qu` <- as.numeric(gsub('1st Qu.:', '', df.summary$`1st Qu`))
+  df.summary$Median <- as.numeric(gsub('Median :', '', df.summary$Median))
+  df.summary$Mean <- as.numeric(gsub('Mean   :', '', df.summary$Mean))
+  df.summary$`3rd Qu` <- as.numeric(gsub('3rd Qu.:', '', df.summary$`3rd Qu`))
+  df.summary$Max <- as.numeric(gsub('Max.   :', '', df.summary$Max))
+  
+  df.summary[is.na(df.summary)] <- ""
+  row.names(df.summary) <- str_trim(row.names(df.summary))
+  return(df.summary)
+
+}
+
+```
+
+
+```{r, echo=FALSE, eval=FALSE}
+# Load files from gitHub script.
+github <- 'https://raw.githubusercontent.com/dvillalobos/MSDS/master/621/Final-Project/data/NY_all_assistance_prime_transactions_'
+
+file_name <- c('10012006-09302007.csv',
+               '10012007-09302008.csv',
+               '10012008-09302009.csv',
+               '10012009-09302010.csv',
+               '10012010-09302011.csv',
+               '10012011-09302012.csv',
+               '10012012-09302013.csv',
+               '10012013-09302014.csv',
+               '10012014-09302015.csv',
+               '10012015-09302016.csv',
+               '10012016-09302017.csv',
+               '10012017-09302018.csv')
+
+in_bool <- 1
+for (file in file_name){
+  temp <- read.csv(paste(github,file, sep = ""))
+  if (in_bool == 1){dset <- temp; in_bool <- 0}
+  else{
+    dset <- rbind(dset, temp)
+  }
+}
+
+head(dset)
+
+
+write.csv(dset, file = "all-assistance-data.csv",row.names=FALSE)
+
+```
+
+```{r, echo=FALSE}
+# read local file instead
+file <- '/home/mydvtech/Dropbox/CUNY/Courses/DATA621/FinalProject/data/all-assistance-data.csv'
+dset <- read.csv(file)
+
+# read local sentiment file instead
+# A sentiment analysis was performed on the description of the award.
+file <- '/home/mydvtech/Dropbox/CUNY/Courses/DATA621/FinalProject/data/all_awards_sentiment.csv'
+dset_sentiment <- read.csv(file)
+```
+
+```{r, echo=FALSE}
+dset$sentiment <- dset_sentiment$Sentiment
+```
+
+
+```{r dset_NA, echo=FALSE}
+# Replacing values for NA
+
+dset$sai_number <- as.character(dset$sai_number)
+dset$sai_number[dset$sai_number =='SAI NOT AVAILABLE'] <- NA
+dset$sai_number[dset$sai_number ==''] <- NA
+
+dset$period_of_performance_start_date <- as.character(dset$period_of_performance_start_date)
+dset$period_of_performance_start_date[dset$period_of_performance_start_date =='0011-07-15'] <- '2011-07-15'
+dset$period_of_performance_start_date[dset$period_of_performance_start_date ==''] <- NA
+
+dset$period_of_performance_current_end_date <- as.character(dset$period_of_performance_current_end_date)
+dset$period_of_performance_current_end_date[dset$period_of_performance_current_end_date =='0011-07-14'] <- '2011-07-14'
+dset$period_of_performance_current_end_date[dset$period_of_performance_current_end_date ==''] <- NA
+
+# Need to replace values
+dset$business_types_code[dset$business_types_code == '00'] <- '0'
+dset$business_types_code[dset$business_types_code == '02'] <- '2'
+dset$business_types_code[dset$business_types_code == '05'] <- '5'
+dset$business_types_code[dset$business_types_code == '06'] <- '6'
+
+levels(dset$business_types_code)[2] <- '0'
+levels(dset$business_types_code)[2] <- '1'
+levels(dset$business_types_code)[3] <- '2'
+levels(dset$business_types_code)[4] <- '5'
+levels(dset$business_types_code)[5] <- '6'
+
+# Need to fix zip code
+dset$recipient_zip_code <- gsub('6390', '06390', dset$recipient_zip_code)
+
+```
+
+
+```{r tab.var_dim, echo=FALSE}
+dimensions <- get_dims(dset)
+```
+
+\newpage
+# INSIGHTS
+
+The current data set is composed of `r dimensions$Records[1]` records and `r dimensions$Variables[1]` variables.
+
+From the data set it is noted that this is not only for given grants, but for adjustments to previous requested grants as well; it is noted that the adjustments in negative form will be treated as `Subtractions`.
+
+# How did we solve the predictions problem?
+
+Initially we looked at the data and tried to determine if a multiple linear regression model was in some how appropriate to model the data set with the given variables; it was quickly identifies the need to work with missing values and the need to work with duplicate entries in the data set.
+
+In order to obtain these insights, we discarded all duplicate entries for the individual identifiers, we limit the data to the latest available entry entry available in the data set; we assume that the latest entry indicated the correct information for the individual grant.
+
+Once we limit the data, we proceeded to divide the data set in two separate parts, one for **Additions** and one for **Subtractions**. It was quickly identified the presence of negative values indicating modifications to the individual grant; hence, we treated as a subtraction over all.
+
+Once that was performed; we focused on 4 more variables in order to predict future values. That is, we took the `action_date` and took the year only. We took the `recipient_zip_code`, `recipient_county_code` and `recipient_congressional_district_code`. The below analysis was performed in those focused areas as described in the project proposal.
+
+Once, we divided the data into different sections, we focused on linear model predictions, we transformed the `Grants` by dividing into 1 Million; this due to high numbers involved; we the applied log scale in order to make it more linear and workable.
+
+Once we did the, we took each and every single "object" such as `Zip Code`, `County Code` and `Congressional Distric Code` with respective Grant and Subtraction; we calculated both linear regression models individually for each object; one by one employing all the years as the sum of grants for individual years.
+
+The linear model employed was a combination of a simple linear regression model for cases in which the generalized linear model could not be applied due to missing values. In case of a missing value, we replaced those missing values with the mean of the remaining data for that "object" and the respective year. Please note the while calculating the regression model, we did not use the whole year but it's equivalent starting from zero (0) for 2006 to twelve (12) for 2018 for which an "n" value was generated. 
+
+Basically the final regression model was the most simple; that is:
+
+$n = {0,1,2 .. , 12}$
+
+**Simple linear regression model:**
+
+for occasions in which the gls model could not be employed.
+
+**lm <- lm(Grant ~ n)** 
+
+**Generalized linear square model:**
+
+for better performance when the data permitted.
+
+**gls <- gls(Grant ~ n)**
+
+Once we obtained the individual regression model for the "object" and the year, we proceeded to calculate the predicted value for 2019\* and 2020\*.
+
+
+
+
+```{r, echo= FALSE, warning =FALSE}
+
+# Defining new data frame in order to keep original data frame
+dset.df <- dset
+
+# Need to clean Zip Codes
+dset.df$recipient_zip_code <- as.character(dset.df$recipient_zip_code)
+dset.df$recipient_zip_code <- str_extract(dset.df$recipient_zip_code, "\\d{5}")
+dset.df$recipient_zip_code <- clean.zipcodes(dset.df$recipient_zip_code)
+dset.df$recipient_zip_code <- as.factor(dset.df$recipient_zip_code)
+
+# Need transformations
+dset.df$action_date <- as.Date(dset.df$action_date) # New variable: action_year; 2006 represent year 0
+
+dset.df$year <- format(dset.df$action_date, '%Y')
+dset.df$n.action_year <- as.numeric(dset.df$year) - 2006
+
+dset.df$year <- as.factor(dset.df$year)
+dset.df$n.action_year <- as.factor(dset.df$n.action_year)
+
+date_start <- as.Date(dset.df$period_of_performance_start_date)
+date_end <- as.Date(dset.df$period_of_performance_current_end_date)
+dset.df$grant_days_lenght <- as.numeric(date_end) - as.numeric(date_start) # New variable: number of days for which the grant is set to be funded
+
+```
+
+```{r, echo=FALSE}
+# Need to curate data, that is, to find the mean value for the total funding and the maximum number of modifications for each award
+# With the number of records on each award_id_fain
+
+dset.df_unique_award <- dset.df %>% group_by(award_id_fain) %>% summarize(records=n(),
+                                                                  modification_number = max(modification_number), 
+                                                                  mean_total_funding_amount = round(mean(total_funding_amount),0))
+                                                                    
+
+```
+
+
+```{r, echo=FALSE, warning = FALSE}
+# Function that returns the grant type
+get_Request <- function(df){
+  df$Request <- "Add"
+  df$Request[df$mean_total_funding_amount < 0] <- "Subtract"
+  df$pos_mean_total_funding_amount <- df$mean_total_funding_amount
+  df$pos_mean_total_funding_amount[df$pos_mean_total_funding_amount < 0] <- -1 * df$pos_mean_total_funding_amount[df$pos_mean_total_funding_amount < 0]
+  #df$Request[df$mean_total_funding_amount < 0] 
+  df$Request <- as.factor(df$Request)
+  return(df)
+}
+```
+
+
+```{r  fig.add_subs, eval=FALSE, echo=FALSE, warning=FALSE, fig.cap="\\label{fig:fig.add_subs}Mean of funding request registered for each request for all years.", fig.pos = 'H'}
+
+df_ggplot <- get_Request(dset.df_unique_award)
+ggplot(df_ggplot, aes(x=Request, y=log(pos_mean_total_funding_amount + 1), fill=Request)) +
+    geom_boxplot(varwidth = TRUE, alpha=0.2) +
+    theme(legend.position="none") +
+    scale_x_discrete(labels=as.character(levels(df_ggplot$Request)))+
+  theme_pubclean()+
+  labs(x = "Request", y = "Total Funding", title = "Mean of funding for all years")
+```
+
+
+
+
+
+
+```{r, echo=FALSE}
+# Need to merge correct records for respective lines.
+
+x <- dset.df_unique_award
+y <- dset.df
+by <- c('award_id_fain','modification_number')
+dset.df_unique_award  <- merge(x, y, by.x = by, by.y = by, all.x = TRUE)
+
+```
+
+```{r, echo=FALSE}
+
+dset.df_unique_award$Request <- "Add"
+dset.df_unique_award$Request[dset.df_unique_award$total_funding_amount < 0] <- "Subtract"
+dset.df_unique_award$pos_total_funding_amount <- dset.df_unique_award$total_funding_amount
+dset.df_unique_award$pos_total_funding_amount[dset.df_unique_award$pos_total_funding_amount < 0] <- -1 * dset.df_unique_award$pos_total_funding_amount[dset.df_unique_award$pos_total_funding_amount < 0]
+dset.df_unique_award$Request <- as.factor(dset.df_unique_award$Request)
+
+
+```
+
+
+```{r, echo=FALSE}
+# Need values that are higher than $1
+dset.df_unique_award <- dset.df_unique_award[dset.df_unique_award$pos_total_funding_amount > 1,]
+
+
+# Need to divide in millions
+dset.df_unique_award$funding_amount <- round(dset.df_unique_award$pos_total_funding_amount / 1000000, 2)
+
+# Need to group by year and type of request to predict new values for 2019 & 2020
+dset.df_yR_grouped <- dset.df_unique_award %>% group_by(year, Request) %>% summarize(funding_amount = round(sum(funding_amount),0))
+
+
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+# Procedure to predict new values from given values
+
+get_lm_coef <- function(y){
+
+  #  y <- k_table_Subtract[,c]
+  # Need to onbain the x values
+  x <- c(0:(length(y) - 1))
+  
+  # Need vector to be numeric
+  y <- log(as.numeric(y))
+
+  if (!is.na(sum(y))){
+    
+    # Need to make sure the values are not constant
+    lm <- lm(y ~ x)
+
+    lm <- c(lm$coefficients[[1]], lm$coefficients[[2]])
+     
+    if (round(lm[2],10) != 0){
+  
+  
+      lm_p <- gls(y ~ x)
+      
+      # Need to make sure to return proper values
+      lm <- c(lm_p$coefficients[[1]], lm_p$coefficients[[2]])
+    }
+  } else{ 
+    lm <- c(0,0)
+  }
+  # Need to return the linear model
+  return(lm)
+  
+}
+```
+
+```{r, echo = FALSE}
+
+# Need to separate values                                                                    
+k_table <- spread(dset.df_yR_grouped, Request, funding_amount, fill = 0, convert = FALSE, drop = TRUE,  sep = NULL)
+
+# Procedure to find the linear models for add and Subtract
+model_Add <- get_lm_coef(k_table$Add)
+model_Subtract <- get_lm_coef(k_table$Subtract)
+```
+
+```{r, echo = FALSE, warning =FALSE}
+
+dset.df_yR_grouped$year <- as.character(dset.df_yR_grouped$year) 
+dset.df_yR_grouped$Request <- as.character(dset.df_yR_grouped$Request)
+
+dset.df_yR_grouped[25,"year"] <- '2019*'
+dset.df_yR_grouped[25,"Request"] <- 'Add'
+dset.df_yR_grouped[25,"funding_amount"] <- exp(model_Add[1] + model_Add[2] * 13)
+
+dset.df_yR_grouped[26,"year"] <- '2019*'
+dset.df_yR_grouped[26,"Request"] <- 'Subtract'
+dset.df_yR_grouped[26,"funding_amount"] <- exp(model_Subtract[1] + model_Subtract[2] * 13)
+
+dset.df_yR_grouped[27,"year"] <- '2020*'
+dset.df_yR_grouped[27,"Request"] <- 'Add'
+dset.df_yR_grouped[27,"funding_amount"] <- exp(model_Add[1] + model_Add[2] * 14)
+
+dset.df_yR_grouped[28,"year"] <- '2020*'
+dset.df_yR_grouped[28,"Request"] <- 'Subtract'
+dset.df_yR_grouped[28,"funding_amount"] <- exp(model_Subtract[1] + model_Subtract[2] * 14)
+
+dset.df_yR_grouped$year <- as.factor(dset.df_yR_grouped$year) 
+dset.df_yR_grouped$Request <- as.factor(dset.df_yR_grouped$Request)
+```
+
+
+
+```{r  fig.tot.by_year.add_subs, echo=FALSE, warning=FALSE, fig.cap="\\label{fig:tot.by_year.add_subs}Total funding in millions of US dollars by request type. The scale is set to logarithmic. The graph include predictions for 2019 and 2020. Prediction years show a star (*) next to the year.", fig.pos = 'H'}
+
+p <- ggplot(dset.df_yR_grouped, aes(x = year, y = log(funding_amount))) +
+  geom_bar(
+    aes(color = Request, fill = Request),
+    stat = "identity", position = position_dodge(0.8),
+    width = 0.7
+    ) +
+  scale_color_manual(values = c("#76689a" , "#ffb200"))+
+  scale_fill_manual(values = c("#76689a" , "#ffb200"))+
+  theme_pubclean()+
+  labs(x = "Year", y = "Total Funding", title = "Total funding by year")
+p
+
+```
+
+
+
+```{r  fig.tot.by_year.diff, echo=FALSE, warning=FALSE, fig.cap="\\label{fig:tot.by_year.diff}Net funding in millions of US dollars. The scale is set to logarithmic. The graph include predictions for 2019 and 2020. Prediction years show a star (*) next to the year.", fig.pos = 'H'}
+
+# Need to separate values                                                                    
+k_table <- spread(dset.df_yR_grouped, Request, funding_amount, fill = 0, convert = FALSE, drop = TRUE,  sep = NULL)
+
+# Need to Subtract in order to get remaining balance
+k_table$Total <- log(k_table$Add) - log(k_table$Subtract)
+
+
+p <- ggplot(k_table, aes(x = year, y = Total)) +
+  geom_bar(
+    stat = "identity", position = position_dodge(0.8), width = 0.7, fill="#ffa31a", colour="#cc7a00"
+    ) +
+  scale_color_manual(values = c("#76689a" , "#ffb200"))+
+  scale_fill_manual(values = c("#76689a" , "#ffb200"))+
+  theme_pubclean()+
+  labs(x = "Year", y = "Net Funding", title = "Net funding after Subtractions by year")
+p
+
+```
+
+
+```{r tab.tot.by_year.add_subs, echo=FALSE, warning=FALSE, message=FALSE}
+# List of possible variables to be considered as predictors and it's final structure
+
+
+# Need to separate values once again after input of predictions                                                                   
+k_table <- spread(dset.df_yR_grouped, Request, funding_amount, fill = 0, convert = FALSE, drop = TRUE,  sep = NULL)
+
+k_table$Add <- round(k_table$Add,2)
+k_table$Subtract <- round(k_table$Subtract,2)
+k_table$Net <- k_table$Add - k_table$Subtract
+
+kable_caption <- "\\label{tab:tab.tot.by_year.add_subs}Net funding by year with respective request type in millions of US dollars. Prediction years show a star (*) next to the year."
+
+kable(k_table, "latex", caption = kable_caption, booktabs = T, longtable = T) %>%
+  kable_styling(font_size = 8,
+                latex_options = c("repeat_header")) 
+
+```
+
+
+
+# By Zip Code.
+
+```{r, echo=FALSE}
+
+# Need to group by congressional district and year
+dset.df_zipCode_grouped <- dset.df_unique_award %>% group_by(year, Request, recipient_zip_code) %>% summarize(funding_amount = round(sum(pos_total_funding_amount),0))
+
+# Need to separate values                                                                    
+k_table <- spread(dset.df_zipCode_grouped, Request, funding_amount, fill = NA, convert = FALSE, drop = TRUE,  sep = NULL)
+
+# Need to create separate
+k_table_Add <- k_table[1:3]
+k_table_Subtract <- k_table[c(1:2,4)]
+
+k_table_Add <- spread(k_table_Add, recipient_zip_code, Add, fill = NA, convert = FALSE, drop = TRUE,  sep = NULL)
+k_table_Subtract <- spread(k_table_Subtract, recipient_zip_code, Subtract, fill = NA, convert = FALSE, drop = TRUE,  sep = NULL)
+
+k_table_Add <- data.frame(k_table_Add)
+k_table_Subtract <- data.frame(k_table_Subtract)
+
+
+# Need to work NA 
+k_table_Add_T <- k_table_Add
+k_table_Subtract_T <- k_table_Subtract
+
+# Need to set year as character
+k_table_Add$year <- as.character(k_table_Add$year) 
+k_table_Subtract$year <- as.character(k_table_Subtract$year) 
+
+# Need to create predictive years
+k_table_Add[13,"year"] <- '2019*'
+k_table_Add[14,"year"] <- '2020*'
+
+k_table_Subtract[13,"year"] <- '2019*'
+k_table_Subtract[14,"year"] <- '2020*'
+
+# Need to set year as factor
+k_table_Add$year <- as.character(k_table_Add$year) 
+k_table_Subtract$year <- as.character(k_table_Subtract$year) 
+
+# Need to create new data based on Subtractions Add - Subtract named Final
+k_table_Final <- k_table_Add
+
+
+
+# Procedure to do predictions
+for (c in 2:dim(k_table_Add_T)[2]){
+
+  # Adding values for 'Add' values
+  k_table_Add_T[is.na(k_table_Add_T[,c]),c] <- mean(k_table_Add_T[,c], na.rm = TRUE)
+  lm_model <- get_lm_coef(k_table_Add_T[,c])
+  
+  k_table_Add[13,c] <- exp(lm_model[1] + lm_model[2] * 13)
+  k_table_Add[14,c] <- exp(lm_model[1] + lm_model[2] * 14)
+  
+  # Adding values for 'Subtract' values
+  k_table_Subtract_T[is.na(k_table_Subtract_T[,c]),c] <- mean(k_table_Subtract_T[,c], na.rm = TRUE)
+  lm_model <- get_lm_coef(k_table_Subtract_T[,c])
+  
+  k_table_Subtract[13,c] <- exp(lm_model[1] + lm_model[2] * 13)
+  k_table_Subtract[14,c] <- exp(lm_model[1] + lm_model[2] * 14)
+
+  # Subtracting values in order to have a Final Table
+  k_Add <- k_table_Add[,c]
+  k_Subtract <- k_table_Subtract[,c]
+  
+  k_Add[is.na(k_Add)] <- 0
+  k_Subtract[is.na(k_Subtract)] <- 0
+  
+  final <- round(k_Add - k_Subtract,0)
+  
+  # Need to assign Zero if the subatraction will be less than zero
+  if (final[13] < 0){final[13] <- 0}
+  if (final[14] < 0){final[14] <- 0}
+  
+  k_table_Final[,c] <- final
+
+}
+
+```
+
+```{r, echo = FALSE}
+
+zipCode_data_Add       <- melt(k_table_Add, id = "year")
+zipCode_data_Subtract <- melt(k_table_Subtract, id = "year")
+zipCode_data_final     <- melt(k_table_Final, id = "year")
+
+colnames(zipCode_data_Add) <- c('year','ZipCode','Grant')
+colnames(zipCode_data_Subtract) <- c('year','ZipCode','Grant')
+colnames(zipCode_data_final) <- c('year','ZipCode','Grant')
+
+# Need to replace X
+zipCode_data_Add$ZipCode <- gsub('X', '', zipCode_data_Add$ZipCode)
+zipCode_data_Subtract$ZipCode <- gsub('X', '', zipCode_data_Subtract$ZipCode)
+zipCode_data_final$ZipCode <- gsub('X', '', zipCode_data_final$ZipCode)
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+zipCode_final <- melt(k_table_Final[1:4], id = "year")
+colnames(zipCode_final) <- c('year','ZipCode','Grant')
+
+# Need to replace X
+zipCode_final$ZipCode <- gsub('X', '', zipCode_final$ZipCode)
+```
+
+
+\newpage
+```{r tab.Zip_data_Add, echo=FALSE, warning=FALSE, message=FALSE}
+
+#zipCode_data_Add
+#zipCode_data_Subtract
+#zipCode_data_final
+
+zipCode_data_Add$Grant <- round(zipCode_data_Add$Grant / 1000000, 2)
+
+# Need to separate values once again after input of predictions                                                                   
+k_table <- spread(zipCode_data_Add, year, Grant, fill = 0, convert = FALSE, drop = TRUE,  sep = NULL)
+
+kable_caption <- "\\label{tab:tab.Zip_data_Add}Total funding by year with respective Zip Code in millions of US dollars. Prediction years show a star (*) next to the year."
+
+kable(k_table, "latex", caption = kable_caption, booktabs = T, longtable = T) %>%
+  kable_styling(font_size = 8,
+                latex_options = c("repeat_header")) 
+
+# Export to csv
+# write.csv(k_table, file = "ZipCode-table.csv",row.names=FALSE)
+```
+
+\newpage
+```{r tab.Zip_data_final, echo=FALSE, warning=FALSE, message=FALSE}
+
+#zipCode_data_Add
+#zipCode_data_Subtract
+#zipCode_data_final
+
+zipCode_data_final$Grant <- round(zipCode_data_final$Grant / 1000000, 2)
+
+# Need to separate values once again after input of predictions                                                                   
+k_table <- spread(zipCode_data_final, year, Grant, fill = 0, convert = FALSE, drop = TRUE,  sep = NULL)
+
+kable_caption <- "\\label{tab:tab.Zip_data_final}Net funding by year with respective Zip Code in millions of US dollars. Prediction years show a star (*) next to the year."
+
+kable(k_table, "latex", caption = kable_caption, booktabs = T, longtable = T) %>%
+  kable_styling(font_size = 8,
+                latex_options = c("repeat_header")) 
+
+```
+
+
+```{r  fig.tot.by_zipCode.final, eval =FALSE, echo=FALSE, warning=FALSE, fig.cap="\\label{fig:fig.tot.by_zipCode.final}Net funding in US dollars by Zip Code. The scale is set to logarithmic. The graph include predictions for 2019 and 2020. Prediction years show a star (*) next to the year.", fig.pos = 'H', fig.width=10, fig.height=11}
+
+p <- ggplot(zipCode_final, aes(x = year, y = log(Grant))) +
+  geom_bar(
+    aes(color = ZipCode, fill = ZipCode),
+    stat = "identity", position = position_dodge(0.8), colour="#cc7a00", width = 0.7
+    ) +
+  scale_color_manual(values = c("#fe8a71", "#f6cd61", "#3da4ab"))+
+  scale_fill_manual(values = c("#fe8a71", "#f6cd61", "#3da4ab"))+
+  theme_pubclean()+
+  labs(x = "Year", y = "Net Funding", title = "Net funding by year")
+p
+
+```
+
+
+
+
+```{r, echo = FALSE}
+
+# Add
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# Need to clear problems for final ADD mapping 
+zipCode_Add <- melt(k_table_Add, id = "year")
+colnames(zipCode_Add) <- c('year','region','value')
+
+# Need to replace X
+zipCode_Add$region <- gsub('X', '', zipCode_Add$region)
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+# Subset dataset by year and grant type
+# 2019* Net Prediction
+new_york.2019_A <- subset(zipCode_Add, year == '2019*', 
+                   select = c(year, region, value))
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+# Subset dataset by year and grant type
+# 2020* Net Prediction
+new_york.2020_A <- subset(zipCode_Add, year == '2020*', 
+                   select = c(year, region, value))
+```
+
+```{r, echo = FALSE}
+
+# Subtract
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# Need to clear problems for final ADD mapping 
+zipCode_Subtract <- melt(k_table_Subtract, id = "year")
+colnames(zipCode_Subtract) <- c('year','region','value')
+
+# Need to replace X
+zipCode_Subtract$region <- gsub('X', '', zipCode_Subtract$region)
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+# Subset dataset by year and grant type
+# 2019* Net Prediction
+new_york.2019_S <- subset(zipCode_Subtract, year == '2019*', 
+                   select = c(year, region, value))
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+# Subset dataset by year and grant type
+# 2020* Net Prediction
+new_york.2020_S <- subset(zipCode_Subtract, year == '2020*', 
+                   select = c(year, region, value))
+```
+
+```{r, echo = FALSE}
+# NET
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# Need to clear problems for final Net mapping 
+zipCode_final <- melt(k_table_Final, id = "year")
+colnames(zipCode_final) <- c('year','region','value')
+
+# Need to replace X
+zipCode_final$region <- gsub('X', '', zipCode_final$region)
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+# Subset dataset by year and grant type
+# 2019* Net Prediction
+new_york.2019 <- subset(zipCode_final, year == '2019*', 
+                   select = c(year, region, value))
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+# Subset dataset by year and grant type
+# 2020* Net Prediction
+new_york.2020 <- subset(zipCode_final, year == '2020*', 
+                   select = c(year, region, value))
+```
+
+```{r warning=FALSE, echo=FALSE}
+
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# 2019* Add prediction Map
+choro1 = ZipChoropleth$new(new_york.2019_A)
+choro1$title = "Grants for 2019*"
+choro1$ggplot_scale = scale_fill_brewer(name="US$", palette=1, drop=FALSE)
+choro1$set_zoom_zip(state_zoom="new york", county_zoom=NULL, msa_zoom=NULL, zip_zoom=NULL)
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# 2020* Add prediction Map
+choro2 = ZipChoropleth$new(new_york.2020_A)
+choro2$title =  "Grants for 2020*"
+choro2$ggplot_scale = scale_fill_brewer(name="US$", palette=1, drop=FALSE)
+choro2$set_zoom_zip(state_zoom="new york", county_zoom=NULL, msa_zoom=NULL, zip_zoom=NULL)
+
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# 2019* Subtract prediction Map
+choro3 = ZipChoropleth$new(new_york.2019_S)
+choro3$title = "Adjustments for 2019*"
+choro3$ggplot_scale = scale_fill_brewer(name="US$", palette=3, drop=FALSE)
+choro3$set_zoom_zip(state_zoom="new york", county_zoom=NULL, msa_zoom=NULL, zip_zoom=NULL)
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# 2020* Subtract prediction Map
+choro4 = ZipChoropleth$new(new_york.2020_S)
+choro4$title =  "Adjustments for 2020*"
+choro4$ggplot_scale = scale_fill_brewer(name="US$", palette=3, drop=FALSE)
+choro4$set_zoom_zip(state_zoom="new york", county_zoom=NULL, msa_zoom=NULL, zip_zoom=NULL)
+
+
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# 2019* Net prediction Map
+choro5 = ZipChoropleth$new(new_york.2019)
+choro5$title = "Net Grants for 2019*"
+choro5$ggplot_scale = scale_fill_brewer(name="US$", palette=2, drop=FALSE)
+choro5$set_zoom_zip(state_zoom="new york", county_zoom=NULL, msa_zoom=NULL, zip_zoom=NULL)
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# 2020* Net prediction Map
+choro6 = ZipChoropleth$new(new_york.2020)
+choro6$title =  "Net Grants for 2020*"
+choro6$ggplot_scale = scale_fill_brewer(name="US$", palette=2, drop=FALSE)
+choro6$set_zoom_zip(state_zoom="new york", county_zoom=NULL, msa_zoom=NULL, zip_zoom=NULL)
+
+
+```
+
+\newpage
+```{r, echo = FALSE,warning = FALSE, echo=FALSE, fig.height=6, fig.width=10}
+# Final maps
+# Plot predicted values for the State of New York
+
+grid.arrange(choro1$render(), choro2$render(), ncol=2)
+```
+
+
+```{r, echo = FALSE,warning = FALSE, echo=FALSE, fig.height=6, fig.width=10}
+# Final maps
+# Plot predicted values for the State of New York
+
+grid.arrange(choro3$render(), choro4$render(),ncol=2)
+```
+
+```{r, echo = FALSE,warning = FALSE, echo=FALSE, fig.height=6, fig.width=10}
+# Final maps
+# Plot predicted values for the State of New York
+
+grid.arrange(choro5$render(), choro6$render(),ncol=2)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+# By Congresional district.
+
+```{r, echo=FALSE}
+
+# Need to group by congressional district and year
+dset.df_cdist_grouped <- dset.df_unique_award %>% group_by(year, Request, recipient_congressional_district) %>% summarize(funding_amount = round(sum(pos_total_funding_amount),0))
+
+# Need to separate values                                                                    
+k_table <- spread(dset.df_cdist_grouped, Request, funding_amount, fill = NA, convert = FALSE, drop = TRUE,  sep = NULL)
+
+# Need to create separate
+k_table_Add <- k_table[1:3]
+k_table_Subtract <- k_table[c(1:2,4)]
+
+k_table_Add <- spread(k_table_Add, recipient_congressional_district, Add, fill = NA, convert = FALSE, drop = TRUE,  sep = NULL)
+k_table_Subtract <- spread(k_table_Subtract, recipient_congressional_district, Subtract, fill = NA, convert = FALSE, drop = TRUE,  sep = NULL)
+
+k_table_Add <- data.frame(k_table_Add)
+k_table_Subtract <- data.frame(k_table_Subtract)
+
+
+# Need to work NA 
+k_table_Add_T <- k_table_Add
+k_table_Subtract_T <- k_table_Subtract
+
+# Need to set year as character
+k_table_Add$year <- as.character(k_table_Add$year) 
+k_table_Subtract$year <- as.character(k_table_Subtract$year) 
+
+# Need to create predictive years
+k_table_Add[13,"year"] <- '2019*'
+k_table_Add[14,"year"] <- '2020*'
+
+k_table_Subtract[13,"year"] <- '2019*'
+k_table_Subtract[14,"year"] <- '2020*'
+
+# Need to set year as factor
+k_table_Add$year <- as.character(k_table_Add$year) 
+k_table_Subtract$year <- as.character(k_table_Subtract$year) 
+
+# Need to create new data based on Subtractions Add - Subtract named Final
+k_table_Final <- k_table_Add
+
+
+
+# Procedure to do predictions
+for (c in 2:dim(k_table_Add_T)[2]){
+
+  # Adding values for 'Add' values
+  k_table_Add_T[is.na(k_table_Add_T[,c]),c] <- mean(k_table_Add_T[,c], na.rm = TRUE)
+  lm_model <- get_lm_coef(k_table_Add_T[,c])
+  
+  k_table_Add[13,c] <- exp(lm_model[1] + lm_model[2] * 13)
+  k_table_Add[14,c] <- exp(lm_model[1] + lm_model[2] * 14)
+  
+  # Adding values for 'Subtract' values
+  k_table_Subtract_T[is.na(k_table_Subtract_T[,c]),c] <- mean(k_table_Subtract_T[,c], na.rm = TRUE)
+  lm_model <- get_lm_coef(k_table_Subtract_T[,c])
+  
+  k_table_Subtract[13,c] <- exp(lm_model[1] + lm_model[2] * 13)
+  k_table_Subtract[14,c] <- exp(lm_model[1] + lm_model[2] * 14)
+
+  # Subtracting values in order to have a Final Table
+  k_Add <- k_table_Add[,c]
+  k_Subtract <- k_table_Subtract[,c]
+  
+  k_Add[is.na(k_Add)] <- 0
+  k_Subtract[is.na(k_Subtract)] <- 0
+  
+  k_table_Final[,c] <- round(k_Add - k_Subtract,0)
+}
+
+```
+
+```{r, echo=FALSE}
+
+dist_data_Add       <- melt(k_table_Add, id = "year")
+dist_data_Subtract <- melt(k_table_Subtract, id = "year")
+dist_data_final     <- melt(k_table_Final, id = "year")
+
+colnames(dist_data_Add) <- c('year','District','Grant')
+colnames(dist_data_Subtract) <- c('year','District','Grant')
+colnames(dist_data_final) <- c('year','District','Grant')
+
+# Need to replace X
+dist_data_Add$District <- gsub('X', '', dist_data_Add$District)
+dist_data_Subtract$District <- gsub('X', '', dist_data_Subtract$District)
+dist_data_final$District <- gsub('X', '', dist_data_final$District)
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+districts_final <- melt(k_table_Final[c(1, 3, 5, 18, 27)], id = "year")
+colnames(districts_final) <- c('year','District','Grant')
+
+# Need to replace X
+districts_final$District <- gsub('X', '', districts_final$District)
+```
+
+
+\newpage
+```{r tab.dist_data_Add, echo=FALSE, warning=FALSE, message=FALSE}
+
+#dist_data_Add
+#dist_data_Subtract
+#dist_data_final
+
+dist_data_Add$Grant <- round(dist_data_Add$Grant / 1000000, 2)
+
+# Need to separate values once again after input of predictions                                                                   
+k_table <- spread(dist_data_Add, year, Grant, fill = 0, convert = FALSE, drop = TRUE,  sep = NULL)
+
+kable_caption <- "\\label{tab:tab.dist_data_Add}Total funding by year with respective District code in millions of US dollars. Prediction years show a star (*) next to the year."
+
+kable(k_table, "latex", caption = kable_caption, booktabs = T, longtable = T) %>%
+  kable_styling(font_size = 8,
+                latex_options = c("repeat_header")) 
+
+# Export to csv.
+# write.csv(k_table, file = "Cong-District-table.csv",row.names=FALSE)
+
+```
+
+\newpage
+```{r tab.dist_data_final, echo=FALSE, warning=FALSE, message=FALSE}
+
+#dist_data_Add
+#dist_data_Subtract
+#dist_data_final
+
+dist_data_final$Grant <- round(dist_data_final$Grant / 1000000, 2)
+
+# Need to separate values once again after input of predictions                                                                   
+k_table <- spread(dist_data_final, year, Grant, fill = 0, convert = FALSE, drop = TRUE,  sep = NULL)
+
+kable_caption <- "\\label{tab:tab.dist_data_final}Net funding by year with respective District code in millions of US dollars. Prediction years show a star (*) next to the year."
+
+kable(k_table, "latex", caption = kable_caption, booktabs = T, longtable = T) %>%
+  kable_styling(font_size = 8,
+                latex_options = c("repeat_header")) 
+
+```
+
+
+```{r  fig.tot.by_cng.dst.final, eval=FALSE, echo=FALSE, warning=FALSE, fig.cap="\\label{fig:fig.tot.by_cng.dst.final}Net funding in US dollars by District. The scale is set to logarithmic. The graph include predictions for 2019 and 2020. Prediction years show a star (*) next to the year.", fig.pos = 'H', fig.width=10, fig.height=11}
+
+p <- ggplot(districts_final, aes(x = year, y = log(Grant))) +
+  geom_bar(
+    aes(color = District, fill = District),
+    stat = "identity", position = position_dodge(0.8), colour="#cc7a00", width = 0.7
+    ) +
+  coord_flip() +
+  scale_color_manual(values = c("#119da4", "#a3bbad", "#e4959e", "#fcde9c"))+
+  scale_fill_manual(values = c("#119da4", "#a3bbad", "#e4959e", "#fcde9c"))+
+  theme_pubclean()+
+  labs(x = "Year", y = "Net Funding", title = "Net funding by year")
+p
+
+```
+
+
+
+
+
+
+\newpage
+# By County.
+
+
+```{r, echo=FALSE}
+
+# Need to group by county and year
+dset.df_county_grouped <- dset.df_unique_award %>% group_by(year, Request, recipient_county_code) %>% summarize(funding_amount = round(sum(pos_total_funding_amount),0))
+
+# Need to separate values                                                                    
+k_table <- spread(dset.df_county_grouped, Request, funding_amount, fill = NA, convert = FALSE, drop = TRUE,  sep = NULL)
+
+# Need to create separate
+k_table_Add <- k_table[1:3]
+k_table_Subtract <- k_table[c(1:2,4)]
+
+k_table_Add <- spread(k_table_Add, recipient_county_code, Add, fill = NA, convert = FALSE, drop = TRUE,  sep = NULL)
+k_table_Subtract <- spread(k_table_Subtract, recipient_county_code, Subtract, fill = NA, convert = FALSE, drop = TRUE,  sep = NULL)
+
+k_table_Add <- data.frame(k_table_Add)
+k_table_Subtract <- data.frame(k_table_Subtract)
+
+
+# Need to work NA 
+k_table_Add_T <- k_table_Add
+k_table_Subtract_T <- k_table_Subtract
+
+# Need to set year as character
+k_table_Add$year <- as.character(k_table_Add$year) 
+k_table_Subtract$year <- as.character(k_table_Subtract$year) 
+
+# Need to create predictive years
+k_table_Add[13,"year"] <- '2019*'
+k_table_Add[14,"year"] <- '2020*'
+
+k_table_Subtract[13,"year"] <- '2019*'
+k_table_Subtract[14,"year"] <- '2020*'
+
+# Need to set year as factor
+k_table_Add$year <- as.character(k_table_Add$year) 
+k_table_Subtract$year <- as.character(k_table_Subtract$year) 
+
+# Need to create new data based on Subtractions Add - Subtract named Final
+k_table_Final <- k_table_Add
+
+
+
+# Procedure to do predictions
+for (c in 2:dim(k_table_Add_T)[2]){
+
+  # Adding values for 'Add' values
+  k_table_Add_T[is.na(k_table_Add_T[,c]),c] <- mean(k_table_Add_T[,c], na.rm = TRUE)
+  lm_model <- get_lm_coef(k_table_Add_T[,c])
+  
+  k_table_Add[13,c] <- exp(lm_model[1] + lm_model[2] * 13)
+  k_table_Add[14,c] <- exp(lm_model[1] + lm_model[2] * 14)
+  
+  # Adding values for 'Subtract' values
+  k_table_Subtract_T[is.na(k_table_Subtract_T[,c]),c] <- mean(k_table_Subtract_T[,c], na.rm = TRUE)
+  lm_model <- get_lm_coef(k_table_Subtract_T[,c])
+  
+  k_table_Subtract[13,c] <- exp(lm_model[1] + lm_model[2] * 13)
+  k_table_Subtract[14,c] <- exp(lm_model[1] + lm_model[2] * 14)
+
+  # Subtracting values in order to have a Final Table
+  k_Add <- k_table_Add[,c]
+  k_Subtract <- k_table_Subtract[,c]
+  
+  k_Add[is.na(k_Add)] <- 0
+  k_Subtract[is.na(k_Subtract)] <- 0
+  
+  k_table_Final[,c] <- round(k_Add - k_Subtract,0)
+}
+
+```
+
+```{r, echo= FALSE}
+county_data_Add       <- melt(k_table_Add, id = "year")
+county_data_Subtract <- melt(k_table_Subtract, id = "year")
+county_data_final     <- melt(k_table_Final, id = "year")
+
+colnames(county_data_Add) <- c('year','County','Grant')
+colnames(county_data_Subtract) <- c('year','County','Grant')
+colnames(county_data_final) <- c('year','County','Grant')
+
+# Need to replace X
+county_data_Add$County <- gsub('X', '', county_data_Add$County)
+county_data_Subtract$County <- gsub('X', '', county_data_Subtract$County)
+county_data_final$County <- gsub('X', '', county_data_final$County)
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+county_final <- melt(k_table_Final[c(1, 3, 5, 18, 27)], id = "year")
+colnames(county_final) <- c('year','County','Grant')
+
+# Need to replace X
+county_final$County <- gsub('X', '', county_final$County)
+```
+
+
+\newpage
+```{r tab.county_data_Add, echo=FALSE, warning=FALSE, message=FALSE}
+
+#county_data_Add
+#county_data_Subtract
+#county_data_final
+
+county_data_Add$Grant <- round(county_data_Add$Grant / 1000000, 2)
+
+# Need to separate values once again after input of predictions                                                                   
+k_table <- spread(county_data_Add, year, Grant, fill = 0, convert = FALSE, drop = TRUE,  sep = NULL)
+
+kable_caption <- "\\label{tab:tab.county_data_Add}Total funding by year with respective county code in millions of US dollars. Prediction years show a star (*) next to the year."
+
+kable(k_table, "latex", caption = kable_caption, booktabs = T, longtable = T) %>%
+  kable_styling(font_size = 8,
+                latex_options = c("repeat_header")) 
+
+# Export to csv.
+# write.csv(k_table, file = "County-table.csv",row.names=FALSE)
+```
+
+\newpage
+```{r tab.county_data_final, echo=FALSE, warning=FALSE, message=FALSE}
+
+#county_data_Add
+#county_data_Subtract
+#county_data_final
+
+county_data_final$Grant <- round(county_data_final$Grant / 1000000, 2)
+
+# Need to separate values once again after input of predictions                                                                   
+k_table <- spread(county_data_final, year, Grant, fill = 0, convert = FALSE, drop = TRUE,  sep = NULL)
+
+kable_caption <- "\\label{tab:tab.county_data_final}Net funding by year with respective county code in millions of US dollars. Prediction years show a star (*) next to the year."
+
+kable(k_table, "latex", caption = kable_caption, booktabs = T, longtable = T) %>%
+  kable_styling(font_size = 8,
+                latex_options = c("repeat_header")) 
+
+```
+
+
+
+
+
+```{r  fig.tot.by_cty.final, eval= FALSE, echo=FALSE, warning=FALSE, fig.cap="\\label{fig:fig.tot.by_cty.final}Net funding in US dollars by District. The scale is set to logarithmic. The graph include predictions for 2019 and 2020. Prediction years show a star (*) next to the year.", fig.pos = 'H', fig.width=10, fig.height=11}
+
+p <- ggplot(county_final, aes(x = year, y = log(Grant))) +
+  geom_bar(
+    aes(color = County, fill = County),
+    stat = "identity", position = position_dodge(0.8), colour="#cc7a00", width = 0.7
+    ) +
+  coord_flip() +
+  scale_color_manual(values = c("#119da4", "#a3bbad", "#e4959e", "#fcde9c"))+
+  scale_fill_manual(values = c("#119da4", "#a3bbad", "#e4959e", "#fcde9c"))+
+  theme_pubclean()+
+  labs(x = "Year", y = "Net Funding", title = "Net funding by year")
+p
+
+```
+
+
+
+
+```{r, echo = FALSE}
+# Need all Counties
+county_final_map <- melt(k_table_Final, id = "year")
+colnames(county_final_map) <- c('year','County','Grant')
+
+# Need to replace X
+county_final_map$County <- gsub('X', '', county_final_map$County)
+
+county_final_2019 <- county_final_map[county_final_map$year == '2019*',]
+county_final_2020 <- county_final_map[county_final_map$year == '2020*',]
+
+# Need to group by county and year
+nzips_by_county <- dset.df_unique_award %>% group_by(recipient_county_code, recipient_zip_code) %>% summarize(n=n())
+
+# Some zip codes are duplicates, it mean county intersections
+nzips_by_county <- nzips_by_county[!duplicated(nzips_by_county[2]),]
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# Need to merge districts with zip codes for mapping 2019*
+x <- nzips_by_county
+y <- county_final_2019
+x$recipient_county_code <- as.factor(x$recipient_county_code)
+y$County <- as.factor(y$County)
+
+county_net_final_2019 <- merge(x, y, by.x = 'recipient_county_code', by.y = 'County', all.y = TRUE)
+
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# Need to merge districts with zip codes for mapping 2020*
+x <- nzips_by_county
+y <- county_final_2020
+x$recipient_county_code <- as.factor(x$recipient_county_code)
+y$County <- as.factor(y$County)
+
+county_net_final_2020 <- merge(x, y, by.x = 'recipient_county_code', by.y = 'County', all.y = TRUE)
+
+```
+
+
+```{r, echo = FALSE}
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+# 2019* Net Prediction by County
+new_york.2019_C_N <- subset(county_net_final_2019, year == '2019*', 
+                   select = c(year, recipient_zip_code, Grant))
+colnames(new_york.2019_C_N) <- c('year','region','value')
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+# 2020* Net Prediction by County
+new_york.2020_C_N <- subset(county_net_final_2020, year == '2020*', 
+                   select = c(year, recipient_zip_code, Grant))
+colnames(new_york.2020_C_N) <- c('year','region','value')
+```
+
+
+```{r warning=FALSE, echo=FALSE}
+
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# 2019* Add prediction Map
+
+new_york.2019_C_N <- new_york.2019_C_N[!duplicated(new_york.2019_C_N$region),]
+
+choro7 = ZipChoropleth$new(new_york.2019_C_N)
+choro7$title = "County Net Grants for 2019*"
+choro7$ggplot_scale = scale_fill_brewer(name="US$", palette=7, drop=FALSE)
+choro7$set_zoom_zip(state_zoom="new york", county_zoom=NULL, msa_zoom=NULL, zip_zoom=NULL)
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# 2020* Add prediction Map
+
+new_york.2020_C_N <- new_york.2020_C_N[!duplicated(new_york.2020_C_N$region),]
+
+choro8 = ZipChoropleth$new(new_york.2020_C_N)
+choro8$title =  "County Net Grants for 2020*"
+choro8$ggplot_scale = scale_fill_brewer(name="US$", palette=7, drop=FALSE)
+choro8$set_zoom_zip(state_zoom="new york", county_zoom=NULL, msa_zoom=NULL, zip_zoom=NULL)
+```
+
+
+```{r, echo = FALSE,warning = FALSE, echo=FALSE, fig.height=6, fig.width=10}
+# Final maps
+# Plot predicted values for the State of New York
+
+grid.arrange(choro7$render(), choro8$render(),ncol=2)
+```
+
+
+
+
+
+
+
+
+
+
+
+\newpage
+# References
+
+
+Eligibility
+
+[1] https://www.grants.gov/web/grants/learn-grants/grant-eligibility.html 
+
+DUNS
+
+[2] https://www.grants.gov/applicants/organization-registration/step-1-obtain-duns-number.html
+
+
+CFDA Catalog of Federal Domestic Assistance
+
+[3] https://beta.sam.gov/
+
+Set seed
+
+[4] https://www.stata.com/manuals13/rsetseed.pdf
+
