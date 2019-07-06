@@ -22,11 +22,8 @@
 <br />
 
 
-<center>
-<a <img src="https://github.com/dvillalobos/MSDS/blob/master/images/computer.png" width="24" height="24" title="Youtube" alt="Youtube"></a>
-
 ![](https://github.com/dvillalobos/MSDS/blob/master/images/computer.png)
-</center>
+
 
 ## Getting Started
 
