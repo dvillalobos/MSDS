@@ -1,14 +1,14 @@
 <center><h1>Welcome to my Git Page</h1></center>
 
-<center>![](/home/mydvtech/CleanGit/MSDS/images/devj-144x144.png)</center>
+<center>![](https://github.com/dvillalobos/MSDS/blob/master/images/devj-144x144.png)</center>
 
 <center>**by** Duubar Villalobos Jimenez</center>
 <center>**Data Scientist**</center>
 <center>[dvillalobos.github.io](https://dvillalobos.github.io)</center>
 
 <center>
-<a href="https://www.linkedin.com/in/duubar/"><img src="/home/mydvtech/CleanGit/MSDS/images/linkedin.png" width="24" height="24" title="Linkedin" alt="Linkedin"></a>
-<a href="https://www.youtube.com/mydvtech"><img src="/home/mydvtech/CleanGit/MSDS/images/youtube.png" width="24" height="24" title="Youtube" alt="Youtube"></a>
+<a href="https://www.linkedin.com/in/duubar/"><img src="https://github.com/dvillalobos/MSDS/blob/master/images/linkedin.png" width="24" height="24" title="Linkedin" alt="Linkedin"></a>
+<a href="https://www.youtube.com/mydvtech"><img src="https://github.com/dvillalobos/MSDS/blob/master/images/youtube.png" width="24" height="24" title="Youtube" alt="Youtube"></a>
 </center>
 
 
@@ -20,7 +20,7 @@
 
 <br />
 
-<center>![](/home/mydvtech/CleanGit/MSDS/images/computer.png)</center>
+<center>![](https://github.com/dvillalobos/MSDS/blob/master/images/computer.png)</center>
 
 ## Getting Started
 
@@ -50,7 +50,7 @@ In this section, I will briefly mention the software needed and how to install t
 <br />
 
 
-![](/home/mydvtech/CleanGit/MSDS/images/tux.png)
+![](https://github.com/dvillalobos/MSDS/blob/master/images/tux.png)
 
 <br />
 
@@ -76,7 +76,7 @@ In this section, I will briefly mention the software needed and how to install t
 
 **My current specs for my Home Server are:**
 
-![](/home/mydvtech/CleanGit/MSDS/images/z420.png)
+![](https://github.com/dvillalobos/MSDS/blob/master/images/z420.png)
 
 - 64 GB Memory.
 - 8 Cores Intel(R) Xeon(R) CPU E5-2670 0 @ 2.60GHz.
@@ -89,7 +89,7 @@ Then, I connected remotely from a **Chromebook** with 4GB of memory.
 
 <br />
 
-![](/home/mydvtech/CleanGit/MSDS/images/R.png)
+![](https://github.com/dvillalobos/MSDS/blob/master/images/R.png)
 
 <br />
 
@@ -102,7 +102,7 @@ Then, I connected remotely from a **Chromebook** with 4GB of memory.
 <br />
 
 
-![](/home/mydvtech/CleanGit/MSDS/images/python.png)
+![](https://github.com/dvillalobos/MSDS/blob/master/images/python.png)
 
 <br />
 
@@ -115,7 +115,7 @@ Then, I connected remotely from a **Chromebook** with 4GB of memory.
 <br />
 
 
-![](/home/mydvtech/CleanGit/MSDS/images/Jupyter.png)
+![](https://github.com/dvillalobos/MSDS/blob/master/images/Jupyter.png)
 
 <br />
 
@@ -127,7 +127,7 @@ Then, I connected remotely from a **Chromebook** with 4GB of memory.
 
 
 
-![](/home/mydvtech/CleanGit/MSDS/images/sql.png)
+![](https://github.com/dvillalobos/MSDS/blob/master/images/sql.png)
 
 <br />
 
