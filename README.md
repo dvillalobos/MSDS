@@ -1,15 +1,16 @@
 <center><h1>Welcome to my Git Page</h1></center>
 
-<center>![](https://github.com/dvillalobos/MSDS/blob/master/images/devj-144x144.png)</center>
+![](https://github.com/dvillalobos/MSDS/blob/master/images/devj-144x144.png)
 
-<center>**by** Duubar Villalobos Jimenez</center>
-<center>**Data Scientist**</center>
-<center>[dvillalobos.github.io](https://dvillalobos.github.io)</center>
+**by** Duubar Villalobos Jimenez
 
-<center>
+**Data Scientist**
+
+[dvillalobos.github.io](https://dvillalobos.github.io)
+
 <a href="https://www.linkedin.com/in/duubar/"><img src="https://github.com/dvillalobos/MSDS/blob/master/images/linkedin.png" width="24" height="24" title="Linkedin" alt="Linkedin"></a>
 <a href="https://www.youtube.com/mydvtech"><img src="https://github.com/dvillalobos/MSDS/blob/master/images/youtube.png" width="24" height="24" title="Youtube" alt="Youtube"></a>
-</center>
+
 
 
 <center><h1>Repository: MSDS</h1></center>
