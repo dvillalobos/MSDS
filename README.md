@@ -20,7 +20,10 @@
 
 <br />
 
-<center>![](https://github.com/dvillalobos/MSDS/blob/master/images/computer.png)</center>
+![](https://github.com/dvillalobos/MSDS/blob/master/images/computer.png)
+<center>
+<a <img src="https://github.com/dvillalobos/MSDS/blob/master/images/computer.png"></a>
+</center>
 
 ## Getting Started
 
