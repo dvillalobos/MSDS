@@ -397,3 +397,18 @@ In this case there's an outlier point producing leverage; and also the residuals
 **Explain why it is important to include appropriate visualizations when analyzing data. Include any visualization(s) you create. (2 pts)**
 
 Appropriate visualizations are important since these help identify outliers and trends; it also helps to visualize the linear model of the plot and whether the residuals have constant variability from the regression line.
+
+
+
+<br />
+<br />
+<br />
+<br />
+
+# Links
+
+- The original code can be found on my GitHub repository [here](https://github.com/dvillalobos/MSDS/tree/master/606/FinalExam).
+
+- My personal blog can be found here: [dvillalobos.github.io](dvillalobos.github.io)
+
+- My Linkedin profile can be found [here](https://www.linkedin.com/in/duubar/).

@@ -35,4 +35,6 @@
 
 - A series of questions need to be answered using R.
 
+- The R code can be found on this location under the name *"Villalobos-FinalExam.Rmd"*.
+
 - The published final response can be seeing in RPubs [here](http://rpubs.com/dvillalobos/DATA606-FinalExam).
