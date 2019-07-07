@@ -1,3 +1,0 @@
-CUNY MSDS
-DATA 606
-Final Exam
