@@ -27,18 +27,6 @@
 
 ## Getting Started
 
-These instructions will get you a copy for **all** the projects ready to run on your local machine for development and testing purposes. See individual deployment notes for each project in order to run on your system.
-
-```
-$ git clone https://github.com/dvillalobos/MSDS.git
-```
-
-### Prerequisites
-
-In this section, I will briefly mention the software needed and how to install them.
-
-<br />
-
 - This repository was created during my studies at [City University of New York School of Professional Studies](https://sps.cuny.edu/academics/graduate/master-science-data-science-ms). In which I was enrolled in a Master's in Data Science.
 
 <br />
@@ -52,12 +40,28 @@ In this section, I will briefly mention the software needed and how to install t
 
 <br />
 
+These instructions will get you a copy for **all** the projects ready to run on your local machine for development and testing purposes. See individual deployment notes for each project in order to run on your system.
+
+```
+$ git clone https://github.com/dvillalobos/MSDS.git
+```
+
+<br />
+
+### Prerequisites
+
+<br />
+
+In this section, I will briefly mention the software needed and how to install them.
+
+<br />
+
 
 ![](https://github.com/dvillalobos/MSDS/blob/master/images/tux.png)
 
 <br />
 
-- My preferred Operating System for the whole masters was **Lubuntu**.
+- My preferred Operating System for the whole masters was [Lubuntu](https://lubuntu.net/).
 
 <br />
 
@@ -96,7 +100,7 @@ Then, I connected remotely from a **Chromebook** with 4GB of memory.
 
 <br />
 
-- My number one choice for Data Science projects is R. In my particular case, I did perform an installation of R server; thus, allowing me to connect using any popular web browser (firefox or chrome). In my personal experience, I find R more suitable for Data Science projects due to the strong statistical capabilities and extensive set of libraries available, alongside the Open Source community which is great!
+- My number one choice for Data Science projects is R. In my particular case, I did perform an installation of [RStudio Server](https://support.rstudio.com/hc/en-us/articles/234653607-Getting-Started-with-RStudio-Server); thus, allowing me to connect using any popular web browser (Firefox or Chrome). In my personal experience, I find R more suitable for Data Science projects due to the strong statistical capabilities and extensive set of libraries available, alongside the Open Source community which is great!
 
 <br />
 
@@ -109,11 +113,11 @@ Then, I connected remotely from a **Chromebook** with 4GB of memory.
 
 <br />
 
-- My second choice for Data Science special projects is Python 3. In my particular case, I did install Spyder and Atom with Hydrogen for local programing use, the beaty of Python, is that I was able to use a text editor in my Chromebook connected through SSH and was a ble to run the code from terminal and exploring the results in a web browser. With Python 3, I've been able to build beautiful dashboards and websites that facilitate the communication with diverse tools such as JavaScript, Html and Database management with NoSQL for example.
+- My second choice for Data Science special projects is Python 3. In my particular case, I did install Spyder and Atom with Hydrogen for local programming use, the beauty of Python, is that I was able to use a text editor in my Chromebook connected through SSH and was able to run the code from terminal and exploring the results in a web browser. With Python 3, I've been able to build beautiful dashboards and websites that facilitate the communication with diverse tools such as JavaScript, Html and Database management with NoSQL for example.
 
 <br /> 
 
-- With Python 3, I was able to create custom containers built in Docker using diverse Linux systems, which then, I uploaded to the cloud and ran them in Amazon AWS EC2 Cloud. Some examples run Flask and JavaScript for website interaction with with geospatial data manipulation employing Dash and Mongo DB alongside plot.ly.
+- With Python 3, I was able to create custom containers built in Docker using diverse Linux systems, which then, I uploaded to the cloud and ran them in Amazon AWS EC2 Cloud. Some examples run Flask and JavaScript for website interaction with with geospatial data manipulation employing Dash and MongoDB alongside plot.ly.
  
 <br />
 
@@ -124,7 +128,7 @@ Then, I connected remotely from a **Chromebook** with 4GB of memory.
 
 - Sometimes, it's easier just to write a small presentation using a notebook; with Jupyter Notebooks I was able to employ diverse kernels from one simple location.
 
-- The beauty of writing your code in a Jupyter notebook, is that you can upload them to GitHub, and then create and share outstanding results employing the [nbviewer](https://nbviewer.jupyter.org/) online tool. I higly recommend this approach too.
+- The beauty of writing your code in a Jupyter notebook, is that you can upload them to GitHub, and then create and share outstanding results employing the [nbviewer](https://nbviewer.jupyter.org/) online tool. I highly recommend this approach too.
 
 <br />
 
