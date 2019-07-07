@@ -47,7 +47,7 @@ library(statsr)
 
 readMariaDBTable <- function(myLocalHost = NULL, myLocalMySQLSchema = NULL, myLocalTableName = NULL){
     
-    url <- "/home/mydvtech/CleanGit/MSDS/606/Projects/data/mysql.csv"
+    url <- "https://github.com/dvillalobos/MSDS/tree/master/606/Projects/data/mysql.csv"
     MySQLConnect <- read.csv(url, header = FALSE, sep = ",", stringsAsFactors=FALSE)
 
     # Remote access definitions
@@ -90,7 +90,7 @@ my.data <- readMariaDBTable(myLocalHost = myLocalHost,
 colnames(my.data) <- c("Job_ID", "Position", "Base", "Annual", "Bonus", "Total", "Skills", "Location")
 ```
 
-![](/home/mydvtech/CleanGit/MSDS/606/Projects/images/datascience.png)
+![](https://github.com/dvillalobos/MSDS/tree/master/606/Projects/images/datascience.png)
 
 # Part 1 - Introduction:
 

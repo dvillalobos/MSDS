@@ -15,7 +15,7 @@ subtitle: CUNY MSDA DATA 606
 
 # Final Project Proposal
 
-![](https://github.com/dvillalobos/MSDS/tree/master/606/Projects/images/datascience.png)
+![](![](https://github.com/dvillalobos/MSDS/tree/master/606/Projects/images/datascience.png)
 
 ## Data Preparation
 
