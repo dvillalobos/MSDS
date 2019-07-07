@@ -13,7 +13,7 @@
 
 
 
-<center><h1>Repository: MSDS/606/FinalExam</center>
+<center><h1>Repository: MSDS/606/Projects/Final-Project-Proposal</center>
 
 **MSDS** stand for: **M**aster'**s** in **D**ata **S**cience.
 
