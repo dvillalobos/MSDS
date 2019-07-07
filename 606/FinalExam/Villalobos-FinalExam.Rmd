@@ -46,7 +46,7 @@ e. car, daysDrive, gasMonth <br />
 
 **A histogram of the GPA of 132 students from this course in Fall 2012 class is presented below. Which estimates of the mean and median are most plausible?**
 
-![](/home/rstudio/Documents/GitHub/MSDA/Spring-2017/606/FinalExam/02.png)
+![](/home/mydvtech/CleanGit/MSDS/606/FinalExam/images/02.png)
 
 a. `mean = 3.3, median = 3.5`   **<- ANSWER** <br />
 b. mean = 3.5, median = 3.3 <br /> 
@@ -81,7 +81,7 @@ The answer will be option **d** since observational studies come in two forms: p
 
 ## 4. Natural Hair color relationship
 
-**A study is designed to test whether there is a relationship between natural hair color (brunette, blond, red) and eye color (blue, green, brown). If a large $χ^2$ test statistic is obtained, this suggests that:**
+**A study is designed to test whether there is a relationship between natural hair color (brunette, blond, red) and eye color (blue, green, brown). If a large $\chi^2$ test statistic is obtained, this suggests that:**
 
 a. `there is a difference` between average eye color and average hair color.   **<- ANSWER** <br />
 b. a person's hair color is determined by his or her eye color. <br />
@@ -147,7 +147,7 @@ Option **d**.
 
 **Figure A below represents the distribution of an observed variable. Figure B below represents the distribution of the mean from 500 random samples of size 30 from A. The mean of A is 5.05 and the mean of B is 5.04. The standard deviations of A and B are 3.22 and 0.58, respectively**
 
-![](/home/rstudio/Documents/GitHub/MSDA/Spring-2017/606/FinalExam/07.png)
+![](/home/mydvtech/CleanGit/MSDS/606/FinalExam/images/07.png)
 
 ### Answer:
 
@@ -407,8 +407,9 @@ Appropriate visualizations are important since these help identify outliers and 
 
 # Links
 
-- The original code can be found on my GitHub repository [here](https://github.com/dvillalobos/MSDS/tree/master/606/FinalExam).
+In order to open, right click and select **"Open Link in New Tab"**.
 
-- My personal blog can be found here: [dvillalobos.github.io](dvillalobos.github.io)
+[dvillalobos.github.io](https://dvillalobos.github.io)
 
-- My Linkedin profile can be found [here](https://www.linkedin.com/in/duubar/).
+[GitHub](https://github.com/dvillalobos/MSDS/tree/master/606/FinalExam) | 
+[Linkedin](https://www.linkedin.com/in/duubar/)
