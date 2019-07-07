@@ -40,6 +40,8 @@
 
 <br />
 
+## Cloning this repository
+
 These instructions will get you a copy for **all** the projects ready to run on your local machine for development and testing purposes. See individual deployment notes for each project in order to run on your system.
 
 ```
