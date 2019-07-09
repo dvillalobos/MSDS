@@ -3,13 +3,13 @@ title: 'Final Project: Are data science skills predictive of salary?'
 author: "Duubar Villalobos Jimenez"
 date: "May 18, 2017"
 output:
+  pdf_document: default
+  html_document:
+    toc: yes
   prettydoc::html_pretty:
     highlight: github
     theme: leonids
     toc: yes
-  html_document:
-    toc: yes
-  pdf_document: default
 subtitle: CUNY MSDA DATA 606
 ---
 
@@ -90,7 +90,7 @@ my.data <- readMariaDBTable(myLocalHost = myLocalHost,
 colnames(my.data) <- c("Job_ID", "Position", "Base", "Annual", "Bonus", "Total", "Skills", "Location")
 ```
 
-![](/home/mydvtech/CleanGit/MSDS/606/Projects/images/datascience.png)
+![](https://github.com/dvillalobos/MSDS/tree/master/606/Projects/images/datascience.png)
 
 # Part 1 - Introduction:
 
