@@ -38,7 +38,7 @@ The easiest way of course, was to read it from a **.csv** file, but who wouldn't
 
 - For this project, I am seeking to answer the following research question: **Are Data Science skills predictive of salary?**
 
-- In order to be able to find an answer to the above question, I will seek to analyse a series of case scenarios. Each case, represent a job posting in the united states. There are 390 observations in the given data set.
+- In order to be able to find an answer to the above question, I will seek to analyse a series of case scenarios. Each case, represent a job posting in the United States. There are 390 observations in the given data set.
 
 - **The Data** was collected by [Paysa](https://www.paysa.com/) as part of the Integrated job posting website during the Spring of 2017. The data was submitted by employers daily.
 
