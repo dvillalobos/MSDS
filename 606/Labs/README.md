@@ -38,8 +38,8 @@ These mini projects will have you explore statistical topics using R. You can us
 1. Introduction to Data (Template)
 2. Probability (Template)
 3.  Distributions of Random Variables (Template)
-4.  Foundations for Statistical Inference
-  A. Sampling Distributions (Template)
+4.  Foundations for Statistical Inference <br />
+  A. Sampling Distributions (Template) <br />
   B. Confidence Levels (Template)
 5. Inference for Numerical Data (Template)
 6. Inference for Categorical Data (Template)
