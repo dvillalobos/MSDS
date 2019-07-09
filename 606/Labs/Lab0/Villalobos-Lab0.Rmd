@@ -25,7 +25,7 @@ get to that stage, however, you need to build some basic fluency in R.  Today we
 begin with the fundamental building blocks of R and RStudio: the interface, 
 reading in data, and basic commands.
 
-![rinterface](/home/mydvtech/CleanGit/MSDS/606/Labs/Lab0/more/rInterface2014.png)
+![rinterface](~/MSDS/606/Labs/Lab0/more/rInterface2014.png)
 
 The panel in the upper right contains your *workspace* as well as a history of 
 the commands that you've previously entered.  Any plots that you generate will 
@@ -45,7 +45,7 @@ To get you started, enter the following command at the R prompt (i.e. right afte
 from this document.
 
 ```{r load-abrbuthnot-data, eval=TRUE}
-source("~/CleanGit/MSDS/606/Labs/Lab0/more/arbuthnot.r")
+source("~/MSDS/606/Labs/Lab0/more/arbuthnot.r")
 ```
 
 This command instructs R to access the OpenIntro website and fetch some data: 
