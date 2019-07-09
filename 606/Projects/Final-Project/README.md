@@ -48,6 +48,6 @@ The easiest way of course, was to read it from a **.csv** file, but who wouldn't
 
 - The published proposal can be found in RPubs [here](http://rpubs.com/dvillalobos/data606-project-proposal).
 
-- The final project results can be found [here](http://rpubs.com/dvillalobos/DATA606-FinalProject)
+- The final project results can be found [here](http://rpubs.com/dvillalobos/DATA606-FinalProject).
 
 - The respective code can be found in the diverse folders named: **"Final-Project-Proposal"** and **"Final-Project"** respectively on this location.
