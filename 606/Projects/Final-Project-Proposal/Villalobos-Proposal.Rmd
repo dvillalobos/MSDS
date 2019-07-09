@@ -15,7 +15,7 @@ subtitle: CUNY MSDA DATA 606
 
 # Final Project Proposal
 
-![](https://github.com/dvillalobos/MSDS/tree/master/606/Projects/images/datascience.png)
+![](~/MSDS/606/Projects/images/datascience.png)
 
 ## Data Preparation
 
@@ -40,7 +40,7 @@ sapply(load_packages, library, character.only = TRUE, quietly = TRUE)
 # Read password and user name from remote location in order to establish connection to MySQL
 # In order to stablish a good connection, you need to update this info with your SQL server's configuation.
 
-url <- "https://github.com/dvillalobos/MSDS/tree/master/606/Projects/data/mysql.csv"
+url <- "https://raw.githubusercontent.com/dvillalobos/MSDS/master/606/Projects/data/mysql.csv"
 MySQLConnect <- read.csv(url, header = FALSE, sep = ",", stringsAsFactors=FALSE)
 
 # Remote access definitions
