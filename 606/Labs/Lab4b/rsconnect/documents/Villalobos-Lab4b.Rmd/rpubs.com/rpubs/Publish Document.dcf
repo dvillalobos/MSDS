@@ -1,8 +1,0 @@
-name: Publish Document
-title:
-account: rpubs
-server: rpubs.com
-appId: https://api.rpubs.com/api/v1/document/257998/f3dbce5ab91941bf8cfe939d74834ef9
-bundleId: https://api.rpubs.com/api/v1/document/257998/f3dbce5ab91941bf8cfe939d74834ef9
-url: http://rpubs.com/dvillalobos/257998
-when: 1489344580.8034
