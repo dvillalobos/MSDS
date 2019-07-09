@@ -31,7 +31,7 @@
 
 This repository contains solutions to projects and assignments that I have submitted during my masters in Data Science at [City University of New York School of Professional Studies](https://sps.cuny.edu/academics/graduate/master-science-data-science-ms).
 
-### Description
+## Description
 
 **DATA 606** - Statistics and Probability for Data Analytics
 
@@ -39,11 +39,42 @@ This repository contains solutions to projects and assignments that I have submi
 
 **Prerequisite:** None.
 
+### Course Description
+
 This course covers basic techniques in probability and statistics that are important in the field of data analytics. Discrete probability models, sampling from infinite and finite populations, statistical distributions, basic Bayesian statistics, and non-parametric statistical techniques for categorical data are covered in this course. Each of these statistical concepts will be applied in a variety of real-world scenarios through the use of case studies and customized data sets.
+Course Learning Outcomes:
+
+### By then end of the course, students should be able to:
+
+- Understand the foundations of probability theory and perform basic probability calculations.
+- Build basic stochastic models for commonly encountered business problems.
+- Model situations involving uncertainty using appropriate probability distributions and conditional techniques.
+- Explore and summarize data using descriptive statistics.
+- Test hypotheses using classical and modern computational techniques.
+- Construct estimators and calculate intervals using classical and modern computational techniques.
+- Perform basic Bayesian statistical techniques for estimation and testing hypotheses.
+
+### Program Learning Outcomes addressed by the course:
+
+- Business Understanding. Learn when probabilistic techniques apply to certain categories of business problems, discuss the sorts of solutions that are possible, and understand the limitations of these techniques.
+- Foundational Math Skills. Explore and analyze data, build probabilistic and statistical models, construct estimators, and test hypotheses.
+- Predictive Modeling. Learn foundational techniques that underlie predictive modeling algorithms, such as Naïve Bayes.
+- Presentation. Complete and submit collaborative assignments using techniques from the course.
+
+### How is this course relevant for data analytics professionals?
+
+Probabilistic techniques are the foundation of many data science applications from data exploration and visualization to outlier analysis, stochastic modelling, and data mining algorithms. This course will ensure that students have a strong understanding of these foundations.
+
+
+### How This Course Works:
+
+This course is conducted entirely online. Each week, you will have various resources made available, including weekly readings from the textbooks and occasionally additional readings provided by the instructor. Most weeks will have homework assignments to be submitted. There will also be a presentation required and a forum post introduction required. You are expected to complete all assignments by their due dates.
+
+Meetup presentations will comprise the solution and presentation to the class of one of the suggested problems for study from the weekly materials (not the graded homework problems). Each student must present one problem throughout the semester. Problems are chosen by entering your name and problem in the Google Spreadsheet. Note there is a maximum of three presentatiosn per meetup and presentations should be no more than five minutes. Additionally, prepare your presentation so that the slides or document (I suggest using R Markdown) will be shared on the course website. Problems are assigned first come, first served, so any problem not already chosen by another student is available.
 
 **Website:** [https://data606.net/](https://data606.net/)
 
-### Textbooks
+## Textbooks
 
 **Required**
 
