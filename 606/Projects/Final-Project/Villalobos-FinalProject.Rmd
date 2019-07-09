@@ -47,7 +47,7 @@ library(statsr)
 
 readMariaDBTable <- function(myLocalHost = NULL, myLocalMySQLSchema = NULL, myLocalTableName = NULL){
     
-    url <- "https://github.com/dvillalobos/MSDS/tree/master/606/Projects/data/mysql.csv"
+    url <- "https://raw.githubusercontent.com/dvillalobos/MSDS/master/606/Projects/data/mysql.csv"
     MySQLConnect <- read.csv(url, header = FALSE, sep = ",", stringsAsFactors=FALSE)
 
     # Remote access definitions
@@ -90,11 +90,11 @@ my.data <- readMariaDBTable(myLocalHost = myLocalHost,
 colnames(my.data) <- c("Job_ID", "Position", "Base", "Annual", "Bonus", "Total", "Skills", "Location")
 ```
 
-![](https://github.com/dvillalobos/MSDS/tree/master/606/Projects/images/datascience.png)
+![](/home/mydvtech/CleanGit/MSDS/606/Projects/images/datascience.png)
 
 # Part 1 - Introduction:
 
-Noways with the increase in data collection and processing; companies, governments and agencies have a need to extract and produce educated decisions based on factual data.  Extracting that kind of information and knowledge from large, heterogeneous, and noisy data sets requires not only powerful computing resources, but the programming abstractions to use them effectively.
+Nowadays with the increase in data collection and processing; companies, governments and agencies have a need to extract and produce educated decisions based on factual data.  Extracting that kind of information and knowledge from large, heterogeneous, and noisy data sets requires not only powerful computing resources, but the programming abstractions to use them effectively.
 
 In that context, data scientist need to have the skills in order to overcome the challenges that implies to work diverse structures in a given data science project.
 
