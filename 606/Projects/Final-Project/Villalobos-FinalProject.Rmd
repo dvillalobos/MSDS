@@ -13,9 +13,10 @@ output:
 subtitle: CUNY MSDA DATA 606
 ---
 
+![](~/MSDS/606/Projects/images/datascience.png)
 
 
-```{r library_definitions, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE}
+```{r library_definitions, echo=FALSE, warning=FALSE, error=FALSE, cache=FALSE, results='hide', message=FALSE, warning=FALSE}
 ### Data Preparation
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -41,7 +42,7 @@ library(DATA606)
 library(statsr)
 
 ### MySQL connection setup
-# Read password and user name from remote location in order to establish connection to MySQL
+# Read password and user name from remote location in order to establish connection to MySQL server
 # Connect to my-db as defined in /etc/my.cnf
 # Remote definitions
 
@@ -90,7 +91,6 @@ my.data <- readMariaDBTable(myLocalHost = myLocalHost,
 colnames(my.data) <- c("Job_ID", "Position", "Base", "Annual", "Bonus", "Total", "Skills", "Location")
 ```
 
-![](https://github.com/dvillalobos/MSDS/tree/master/606/Projects/images/datascience.png)
 
 # Part 1 - Introduction:
 
@@ -118,7 +118,7 @@ $H_1:$ Data Science skills are predictive of salary; that is, at least one mean 
 
 The data that I will be working with, is collected by `Paysa` and is available online here: http://paysa.com
 
-For this project, the data was extracted by copying and pasting a job search of *"Data Science"* on March 16, 2017 into a text file, then cleaned and uploaded into a table in a remote MySQL server.
+For this project, the data was extracted by copying and pasting a job search of *"Data Science"* on March 16, 2017 into a text file, then cleaned and uploaded into a table in a local MySQL server.
 
 This data is collected by Paysa as part of the integrated job posting website and this data is submitted by employers daily.
 
@@ -126,7 +126,7 @@ This data is collected by Paysa as part of the integrated job posting website an
 
 The below table display all job listings compiled from Paysa.
 
-```{r displayJobsTable, echo=FALSE}
+```{r displayJobsTable, echo=FALSE, message=FALSE, warning=FALSE}
 datatable(my.data, options = list( pageLength = 5, lengthMenu = c(5, 10, 40),   initComplete = JS(
     "function(settings, json) {",
     "$(this.api().table().header()).css({'background-color': '#01975b', 'color': '#fff'});",
@@ -154,7 +154,7 @@ The response variable is `Base Salary` and is numerical.
 From the above table I will focus on the `Base Salary` and combination of `Skills` as follows:
 
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 my.skills.data <- subset(my.data, select = c("Job_ID", "Base", "Skills"))
 
 my.skills.data$Base <-  str_trim(str_replace_all(my.skills.data$Base, "Base Salary",""))
@@ -170,7 +170,7 @@ my.skills.data$Skills <-  str_trim(str_replace_all(my.skills.data$Skills, "\\.",
 
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 datatable(my.skills.data, options = list( pageLength = 5, lengthMenu = c(5, 10, 40),   initComplete = JS(
     "function(settings, json) {",
     "$(this.api().table().header()).css({'background-color': '#01975b', 'color': '#fff'});",
@@ -180,12 +180,12 @@ datatable(my.skills.data, options = list( pageLength = 5, lengthMenu = c(5, 10, 
 
 ## Skill value per job listing
 
-Since each case list multiple skills combined for a single base salary. For this study purposes, I will assign an "Skill Value" salary per skill listed on each listing; that is, by taking the base salary and dividing it by the number of skills listed for that study case.
+Since each case list multiple skills combined for a single base salary. For this study purposes, I will assign a "Skill Value" salary per skill listed on each listing; that is, by taking the base salary and dividing it by the number of skills listed for that study case.
 
 For example: In the first case, there is a base salary of \$253000 with 6 skills listed (Distributed Systems, Big Data, Algorithms, Data Science, Strategy, Databases). By taking \$253000 and dividing it by 6, we obtain an average of \$42167. That is, each skill value will be taken as \$42167 in the first case study. Similar process will be applied for the rest of the cases.
 
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 
 my.skills.data_long <- separate_rows(my.skills.data, 
                                      Skills,
@@ -204,7 +204,7 @@ my.skills.data_new$`Skill Value` <- as.numeric(round(my.skills.data_new$Base / m
 
 The below table shows the number of skills per job listing and also shows the "average" base salary for each skill in that listing.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 datatable(my.skills.data_new, options = list( pageLength = 5, lengthMenu = c(5, 10, 40),   initComplete = JS(
     "function(settings, json) {",
     "$(this.api().table().header()).css({'background-color': '#01975b', 'color': '#fff'});",
@@ -216,7 +216,7 @@ datatable(my.skills.data_new, options = list( pageLength = 5, lengthMenu = c(5, 
 
 From the above table, we have defined a series of `Skill Value` for each skill listed on each job posting.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 my.skills.data_long <- separate_rows(my.skills.data_new, 
                                      Skills,
                                      sep = ", ")
@@ -227,7 +227,7 @@ my.skills.data_long <- subset(my.skills.data_long, select = c(Skills, `Skill Val
 
 From the raw data, we have a total of `r nrow(my.skills.data_long)` skills listed in the `r length(unique(my.data$Job_ID))` job postings.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 datatable(my.skills.data_long, options = list( pageLength = 5, lengthMenu = c(5, 10, 40),   initComplete = JS(
     "function(settings, json) {",
     "$(this.api().table().header()).css({'background-color': '#01975b', 'color': '#fff'});",
@@ -238,7 +238,7 @@ datatable(my.skills.data_long, options = list( pageLength = 5, lengthMenu = c(5,
 
 Below is a summary of the individual skills data.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 summary(my.skills.data_long)
 ```
 
@@ -246,7 +246,7 @@ From the above summary table, we can quickly identify that the minimum skill val
 
 ## Count, Mean and Standard deviation
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 n_mean_sd <- my.skills.data_long %>%
                     group_by(Skills) %>%
                     dplyr::summarise(Frequency=n(),
@@ -259,7 +259,7 @@ n_mean_sd <- my.skills.data_long %>%
                     arrange(Skills)
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 datatable(n_mean_sd, options = list( pageLength = 5, lengthMenu = c(5, 10, 40),   initComplete = JS(
     "function(settings, json) {",
     "$(this.api().table().header()).css({'background-color': '#01975b', 'color': '#fff'});",
@@ -267,7 +267,7 @@ datatable(n_mean_sd, options = list( pageLength = 5, lengthMenu = c(5, 10, 40), 
 ```
 
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 boxplot(data=my.skills.data_long, `Skill Value`~Skills, main="Skills and Salary Value", xlab="Data Science Skills", ylab="Skill Value", col="#ffcc80")
 ```
 
@@ -277,15 +277,15 @@ From the above plot, as an initial inspection of the data, it suggests that ther
 
 From the above set of box plots we can quickly identify that there are some outliers in the remaining data set, while the different medians seems to vary depending on the skill; this could be taking as an indication that the skills could be predictive of salary as established in our introduction.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 hist(my.skills.data_long$`Skill Value`, breaks = 100, main="Salary Value Frequency", xlab="Skill Value", col="#ffcc80")
 ```
 
 From the above histogram we can visualize some sort of normality and skewness to the right, also we can confirm the outliers as well.
 
-For visualization purposes, I will include a new density histogram with a limited domain in the as follows:
+For visualization purposes, I will include a new density histogram with a limited domain as follows:
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 hist(my.skills.data_long$`Skill Value`, breaks = 100, main="Salary Value Density", xlab="Skill Value", probability = TRUE, xlim = c(13000, 50000), col="#ffcc80")
 ```
 
@@ -294,22 +294,22 @@ hist(my.skills.data_long$`Skill Value`, breaks = 100, main="Salary Value Density
 From the calculated medians, we can have the following histograms:
 
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 hist(n_mean_sd$`Median Value`, breaks = 100, main="Median Value Frequency", xlab="Median Value", col="#ffcc80")
 ```
 
 From the above histogram we can still visualize some sort of normality and skewness to the right, also we can confirm the presence of outliers, performing leverage.
 
-For visualization purposes, I will include a new density histogram with a limited domain in the as follows:
+For visualization purposes, I will include a new density histogram with a limited domain as follows:
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 
 hist(n_mean_sd$`Median Value`, breaks = 100, main="Median Salary Value Density", xlab="Median Skills Value", probability = TRUE, xlim = c(15000, 35000), col="#ffcc80")
 
 ```
 
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 qqnorm(n_mean_sd$`Median Value`)
 qqline(n_mean_sd$`Median Value`)
 ```
@@ -332,7 +332,7 @@ Hence, the conditions for inference seems to be satisfied.
 
 ## ANOVA
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 # For some reason this function did not render when knitin; it did run in RStudio.
 #inference(y = SkillValue, x = Skills, "mean", type = "ht", null = 0, alternative = "greater", method = "theoretical")
 ```
@@ -348,7 +348,7 @@ From the above results, the model output indicates some evidence of a difference
 
 ### Results
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 anova(Anova)
 ```
 
