@@ -3,13 +3,13 @@ title: "Introduction to Data"
 author: 'Completed by: Duubar Villalobos Jimenez   mydvtech@gmail.com'
 date: "February 5, 2017"
 output:
+  pdf_document: default
+  html_document:
+    toc: yes
   prettydoc::html_pretty:
     highlight: github
     theme: leonids
     toc: yes
-  html_document:
-    toc: yes
-  pdf_document: default
 subtitle: CUNY MSDA - IS606 - Lab 1
 ---
 
@@ -554,5 +554,5 @@ In order to open, right click and select **"Open Link in New Tab"**.
 
 [dvillalobos.github.io](https://dvillalobos.github.io)
 
-[GitHub](https://github.com/dvillalobos/MSDS/tree/master/606/Projects) | 
+[GitHub](https://github.com/dvillalobos/MSDS/tree/master/606/Labs) | 
 [Linkedin](https://www.linkedin.com/in/duubar/)
