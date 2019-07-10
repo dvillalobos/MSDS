@@ -32,10 +32,10 @@
 
 ### Labs
 
-These mini projects will have you explore statistical topics using R. You can use the `startLab` function in the `DATA606` package to get started, or copy the templates from the links below. **Please submit a PDF (preferred) or HTML file along with your Rmarkdown file**. Be sure to answer all questions in lab, not just the on your own section.
+These mini projects will have you explore statistical topics using R. You can use the `startLab` function in the `DATA606` package to get started, or copy the templates from the links below. **Please submit a PDF (preferred) or HTML file along with your Rmarkdown file**. Be sure to answer all questions in lab, not just the blank space on your own section.
 
 0. Introduction to R and RStudio ([RPubs](http://rpubs.com/dvillalobos/IS606-lab0))
-1. Introduction to Data (Template)
+1. Introduction to Data ([Rpubs](http://rpubs.com/dvillalobos/IS606-lab1))
 2. Probability (Template)
 3.  Distributions of Random Variables (Template)
 4.  Foundations for Statistical Inference <br />
